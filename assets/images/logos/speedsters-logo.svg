@@ -1,0 +1,70 @@
+<svg width="200" height="120" viewBox="0 0 200 120" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle with stripes -->
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#1e40af;stop-opacity:1" />
+      <stop offset="25%" style="stop-color:#3b82f6;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#1e40af;stop-opacity:1" />
+      <stop offset="75%" style="stop-color:#3b82f6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1e40af;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Main background circle -->
+  <ellipse cx="100" cy="50" rx="45" ry="35" fill="url(#bgGradient)" stroke="#1e3a8a" stroke-width="3"/>
+  
+  <!-- Bowling pin -->
+  <ellipse cx="65" cy="45" rx="8" ry="25" fill="white" stroke="#e5e7eb" stroke-width="1"/>
+  <ellipse cx="65" cy="35" rx="6" ry="8" fill="white" stroke="#e5e7eb" stroke-width="1"/>
+  <rect x="61" y="25" width="8" height="20" fill="white" stroke="#e5e7eb" stroke-width="1"/>
+  <ellipse cx="65" cy="25" rx="4" ry="6" fill="white" stroke="#e5e7eb" stroke-width="1"/>
+  <!-- Pin stripes -->
+  <rect x="61" y="30" width="8" height="2" fill="#ef4444"/>
+  <rect x="61" y="35" width="8" height="2" fill="#ef4444"/>
+  
+  <!-- Turtle body -->
+  <ellipse cx="100" cy="55" rx="25" ry="20" fill="#16a34a" stroke="#15803d" stroke-width="2"/>
+  
+  <!-- Turtle shell -->
+  <ellipse cx="100" cy="55" rx="20" ry="15" fill="#a16207" stroke="#92400e" stroke-width="1"/>
+  <!-- Shell segments -->
+  <ellipse cx="95" cy="50" rx="3" ry="3" fill="#92400e"/>
+  <ellipse cx="105" cy="50" rx="3" ry="3" fill="#92400e"/>
+  <ellipse cx="100" cy="60" rx="3" ry="3" fill="#92400e"/>
+  
+  <!-- Turtle head -->
+  <ellipse cx="100" cy="40" rx="8" ry="6" fill="#16a34a" stroke="#15803d" stroke-width="1"/>
+  
+  <!-- Turtle eyes -->
+  <circle cx="97" cy="38" r="1.5" fill="white"/>
+  <circle cx="103" cy="38" r="1.5" fill="white"/>
+  <circle cx="97" cy="38" r="0.8" fill="black"/>
+  <circle cx="103" cy="38" r="0.8" fill="black"/>
+  
+  <!-- Angry eyebrows -->
+  <path d="M 94 36 Q 96 34 98 36" stroke="#15803d" stroke-width="1.5" fill="none"/>
+  <path d="M 102 36 Q 104 34 106 36" stroke="#15803d" stroke-width="1.5" fill="none"/>
+  
+  <!-- Headband -->
+  <rect x="92" y="35" width="16" height="3" fill="#3b82f6" rx="1.5"/>
+  
+  <!-- Turtle arms holding bowling ball -->
+  <ellipse cx="85" cy="50" rx="4" ry="8" fill="#16a34a" stroke="#15803d" stroke-width="1"/>
+  <ellipse cx="115" cy="50" rx="4" ry="8" fill="#16a34a" stroke="#15803d" stroke-width="1"/>
+  
+  <!-- Bowling ball -->
+  <circle cx="100" cy="50" r="12" fill="#ef4444" stroke="#dc2626" stroke-width="1"/>
+  <!-- Ball holes -->
+  <circle cx="97" cy="47" r="1.5" fill="black"/>
+  <circle cx="103" cy="47" r="1.5" fill="black"/>
+  <circle cx="100" cy="53" r="1.5" fill="black"/>
+  
+  <!-- Motion bubbles -->
+  <circle cx="55" cy="60" r="2" fill="#3b82f6" opacity="0.6"/>
+  <circle cx="58" cy="65" r="1.5" fill="#3b82f6" opacity="0.4"/>
+  <circle cx="52" cy="68" r="1" fill="#3b82f6" opacity="0.3"/>
+  
+  <!-- SPEEDSTERS text banner -->
+  <rect x="30" y="85" width="140" height="25" fill="#1e3a8a" rx="3"/>
+  <text x="100" y="102" font-family="Arial, sans-serif" font-size="18" font-weight="bold" text-anchor="middle" fill="white" stroke="#0f172a" stroke-width="0.5">SPEEDSTERS</text>
+</svg> 
