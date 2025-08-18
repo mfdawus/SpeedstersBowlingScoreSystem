@@ -5,7 +5,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>SPEEDSTERS - Bowling System Dashboard</title>
-  <link rel="shortcut icon" type="image/png" href="./assets/images/logos/favicon.png" />
+  <link rel="shortcut icon" type="image/png" href="./assets/images/logos/speedster main logo.png" />
   <link rel="stylesheet" href="./assets/css/styles.min.css" />
   <style>
     .bg-gradient-primary {
@@ -32,8 +32,9 @@
       <!-- Sidebar scroll-->
       <div>
         <div class="brand-logo d-flex align-items-center justify-content-between">
-          <a href="./index.php" class="text-nowrap logo-img">
-            <img src="assets/images/logos/logo.svg" alt="" />
+          <a href="./index.php" class="text-nowrap logo-img d-flex flex-column align-items-start text-decoration-none">
+            <img src="assets/images/logos/speedster main logo.png" alt="SPEEDSTERS Logo" width="90" />
+            <span class="text-muted fw-semibold mt-1" style="font-size: 0.75rem; letter-spacing: 0.5px;">Bowling Score System</span>
           </a>
           <div class="close-btn d-xl-none d-block sidebartoggler cursor-pointer" id="sidebarCollapse">
             <i class="ti ti-x fs-6"></i>
