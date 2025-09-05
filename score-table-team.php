@@ -105,6 +105,12 @@
               </a>
             </li>
             <li class="sidebar-item">
+              <a class="sidebar-link" href="./group-selection.php" aria-expanded="false">
+                <i class="ti ti-users"></i>
+                <span class="hide-menu">Join Group</span>
+              </a>
+            </li>
+            <li class="sidebar-item">
               <a class="sidebar-link has-arrow" href="javascript:void(0)" aria-expanded="false">
                 <i class="ti ti-table"></i>
                 <span class="hide-menu">Score Table</span>
@@ -124,7 +130,7 @@
                 </li>
                 <li class="sidebar-item">
                   <a href="./score-table-team.php" class="sidebar-link active">
-                    <i class="ti ti-users-group"></i>
+                    <i class="ti ti-users"></i>
                     <span class="hide-menu">Team (4-6 Players)</span>
                   </a>
                 </li>

@@ -334,7 +334,7 @@
                     <div class="row">
                       <div class="col-md-6 mb-3">
                         <label for="skill" class="form-label">Skill Level *</label>
-                        <select class="form-select" id="skill" required>
+                        <select class="form-select" id="skill" required onchange="updateGroupingOptions()">
                           <option value="">Select Skill Level</option>
                           <option value="beginner">Beginner (0-150 avg)</option>
                           <option value="intermediate">Intermediate (150-200 avg)</option>
@@ -345,6 +345,23 @@
                       <div class="col-md-6 mb-3">
                         <label for="age" class="form-label">Age</label>
                         <input type="number" class="form-control" id="age" min="5" max="100">
+                      </div>
+                    </div>
+                    
+                    <div class="row">
+                      <div class="col-md-6 mb-3">
+                        <label for="averageScore" class="form-label">Average Score</label>
+                        <input type="number" class="form-control" id="averageScore" min="0" max="300" placeholder="e.g., 180" onchange="updateGroupingOptions()">
+                        <small class="form-text text-muted">Enter player's average bowling score for better grouping</small>
+                      </div>
+                      <div class="col-md-6 mb-3">
+                        <label for="groupingPreference" class="form-label">Grouping Preference</label>
+                        <select class="form-select" id="groupingPreference" onchange="updateGroupingOptions()">
+                          <option value="auto">Auto-assign based on skill</option>
+                          <option value="balanced">Balanced groups (mixed skill levels)</option>
+                          <option value="competitive">Competitive groups (similar skill levels)</option>
+                          <option value="social">Social groups (mixed ages/skill)</option>
+                        </select>
                       </div>
                     </div>
                     
@@ -364,9 +381,65 @@
                       <textarea class="form-control" id="notes" rows="3" placeholder="Any additional notes about the player..."></textarea>
                     </div>
                     
+                    <!-- Grouping Preview Section -->
+                    <div class="card mt-4" id="groupingPreview" style="display: none;">
+                      <div class="card-header bg-info text-white">
+                        <h6 class="mb-0"><i class="ti ti-users-group me-2"></i>Suggested Group Assignment</h6>
+                      </div>
+                      <div class="card-body">
+                        <div class="row">
+                          <div class="col-md-6">
+                            <h6 class="text-primary">Recommended Group:</h6>
+                            <div class="d-flex align-items-center mb-2">
+                              <span class="badge bg-primary me-2" id="suggestedGroupBadge">Group A</span>
+                              <span class="text-muted" id="suggestedGroupInfo">Beginner Level</span>
+                            </div>
+                            <small class="text-muted" id="groupingReason">Based on skill level and average score</small>
+                          </div>
+                          <div class="col-md-6">
+                            <h6 class="text-success">Group Statistics:</h6>
+                            <div class="row text-center">
+                              <div class="col-4">
+                                <div class="border rounded p-2">
+                                  <div class="fw-bold text-primary" id="groupPlayerCount">0</div>
+                                  <small class="text-muted">Players</small>
+                                </div>
+                              </div>
+                              <div class="col-4">
+                                <div class="border rounded p-2">
+                                  <div class="fw-bold text-success" id="groupAvgScore">0</div>
+                                  <small class="text-muted">Avg Score</small>
+                                </div>
+                              </div>
+                              <div class="col-4">
+                                <div class="border rounded p-2">
+                                  <div class="fw-bold text-warning" id="groupSkillLevel">-</div>
+                                  <small class="text-muted">Skill Level</small>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <div class="mt-3">
+                          <button type="button" class="btn btn-outline-primary btn-sm" onclick="refreshGrouping()">
+                            <i class="ti ti-refresh me-1"></i>
+                            Refresh Grouping
+                          </button>
+                          <button type="button" class="btn btn-outline-secondary btn-sm" onclick="viewAllGroups()">
+                            <i class="ti ti-eye me-1"></i>
+                            View All Groups
+                          </button>
+                          <button type="button" class="btn btn-outline-success btn-sm" onclick="createNewGroup()">
+                            <i class="ti ti-plus me-1"></i>
+                            Create New Group
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                    
                     <div class="alert alert-info">
                       <i class="ti ti-info-circle me-2"></i>
-                      <strong>Note:</strong> The player will receive an email with their login credentials and can start playing immediately.
+                      <strong>Note:</strong> The player will receive an email with their login credentials and can start playing immediately. Group assignment will be finalized after account creation.
                     </div>
                   </form>
 
@@ -382,11 +455,86 @@
             </div>
           </div>
         </div>
+          </div>
+  </div>
+</div>
+
+<!-- All Groups Modal -->
+<div class="modal fade" id="allGroupsModal" tabindex="-1" aria-labelledby="allGroupsModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="allGroupsModalLabel">
+          <i class="ti ti-users-group me-2"></i>
+          All Player Groups
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row" id="allGroupsContainer">
+          <!-- Groups will be dynamically populated here -->
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary" onclick="createNewGroup()">
+          <i class="ti ti-plus me-1"></i>
+          Create New Group
+        </button>
       </div>
     </div>
   </div>
+</div>
 
-  <script src="./assets/libs/jquery/dist/jquery.min.js"></script>
+<!-- Create New Group Modal -->
+<div class="modal fade" id="createGroupModal" tabindex="-1" aria-labelledby="createGroupModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="createGroupModalLabel">
+          <i class="ti ti-plus me-2"></i>
+          Create New Group
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="createGroupForm">
+          <div class="mb-3">
+            <label for="newGroupName" class="form-label">Group Name *</label>
+            <input type="text" class="form-control" id="newGroupName" required>
+          </div>
+          <div class="mb-3">
+            <label for="newGroupSkillLevel" class="form-label">Target Skill Level *</label>
+            <select class="form-select" id="newGroupSkillLevel" required>
+              <option value="">Select Skill Level</option>
+              <option value="beginner">Beginner (0-150 avg)</option>
+              <option value="intermediate">Intermediate (150-200 avg)</option>
+              <option value="advanced">Advanced (200-250 avg)</option>
+              <option value="pro">Professional (250+ avg)</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label for="newGroupMaxPlayers" class="form-label">Maximum Players *</label>
+            <input type="number" class="form-control" id="newGroupMaxPlayers" min="4" max="12" value="8" required>
+          </div>
+          <div class="mb-3">
+            <label for="newGroupDescription" class="form-label">Group Description</label>
+            <textarea class="form-control" id="newGroupDescription" rows="3" placeholder="Describe the group's purpose or characteristics..."></textarea>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" onclick="saveNewGroup()">
+          <i class="ti ti-check me-1"></i>
+          Create Group
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="./assets/libs/jquery/dist/jquery.min.js"></script>
   <script src="./assets/libs/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
   <script src="./assets/js/sidebarmenu.js"></script>
   <script src="./assets/js/app.min.js"></script>
@@ -394,6 +542,16 @@
   <script src="https://cdn.jsdelivr.net/npm/iconify-icon@1.0.8/dist/iconify-icon.min.js"></script>
   
   <script>
+    // Sample groups data (in real app, this would come from database)
+    const sampleGroups = [
+      { id: 1, name: 'Group A', skillLevel: 'beginner', avgScore: 120, playerCount: 8, maxPlayers: 12, description: 'Beginner-friendly group for new players' },
+      { id: 2, name: 'Group B', skillLevel: 'beginner', avgScore: 135, playerCount: 6, maxPlayers: 12, description: 'Casual beginner group' },
+      { id: 3, name: 'Group C', skillLevel: 'intermediate', avgScore: 175, playerCount: 10, maxPlayers: 12, description: 'Intermediate competitive group' },
+      { id: 4, name: 'Group D', skillLevel: 'intermediate', avgScore: 185, playerCount: 7, maxPlayers: 12, description: 'Balanced intermediate group' },
+      { id: 5, name: 'Group E', skillLevel: 'advanced', avgScore: 220, playerCount: 9, maxPlayers: 12, description: 'Advanced players group' },
+      { id: 6, name: 'Group F', skillLevel: 'pro', avgScore: 265, playerCount: 5, maxPlayers: 12, description: 'Professional level group' }
+    ];
+
     // Player account creation
     function createPlayer() {
       const form = document.getElementById('playerForm');
@@ -428,16 +586,225 @@
         return;
       }
       
-      // Simulate API call
+      // Get grouping information
+      const averageScore = document.getElementById('averageScore').value;
+      const groupingPreference = document.getElementById('groupingPreference').value;
+      
+      // Simulate API call with grouping
       setTimeout(() => {
-        showNotification('Player account created successfully!', 'success');
+        const suggestedGroup = getSuggestedGroup(skill, averageScore, groupingPreference);
+        showNotification(`Player account created successfully! Assigned to ${suggestedGroup.name}`, 'success');
         clearForm();
       }, 1000);
+    }
+
+    // Grouping functions
+    function updateGroupingOptions() {
+      const skill = document.getElementById('skill').value;
+      const averageScore = document.getElementById('averageScore').value;
+      const groupingPreference = document.getElementById('groupingPreference').value;
+      
+      if (skill || averageScore) {
+        const suggestedGroup = getSuggestedGroup(skill, averageScore, groupingPreference);
+        updateGroupingPreview(suggestedGroup);
+        document.getElementById('groupingPreview').style.display = 'block';
+      } else {
+        document.getElementById('groupingPreview').style.display = 'none';
+      }
+    }
+
+    function getSuggestedGroup(skill, averageScore, preference) {
+      let targetGroups = sampleGroups;
+      
+      // Filter groups based on preference
+      switch(preference) {
+        case 'competitive':
+          // Find groups with similar skill level
+          targetGroups = sampleGroups.filter(group => group.skillLevel === skill);
+          break;
+        case 'balanced':
+          // Prefer groups with mixed skill levels (lower player count)
+          targetGroups = sampleGroups.filter(group => group.playerCount < 8);
+          break;
+        case 'social':
+          // Prefer groups with more players
+          targetGroups = sampleGroups.filter(group => group.playerCount > 6);
+          break;
+        default: // auto
+          targetGroups = sampleGroups.filter(group => group.skillLevel === skill);
+      }
+      
+      // If no groups match skill level, find closest
+      if (targetGroups.length === 0) {
+        targetGroups = sampleGroups.filter(group => {
+          const skillOrder = ['beginner', 'intermediate', 'advanced', 'pro'];
+          const currentSkillIndex = skillOrder.indexOf(skill);
+          const groupSkillIndex = skillOrder.indexOf(group.skillLevel);
+          return Math.abs(currentSkillIndex - groupSkillIndex) <= 1;
+        });
+      }
+      
+      // Find group with space and closest average score
+      let bestGroup = targetGroups[0];
+      let minScoreDiff = Math.abs((bestGroup.avgScore || 0) - (parseInt(averageScore) || 0));
+      
+      for (let group of targetGroups) {
+        if (group.playerCount < group.maxPlayers) {
+          const scoreDiff = Math.abs((group.avgScore || 0) - (parseInt(averageScore) || 0));
+          if (scoreDiff < minScoreDiff) {
+            bestGroup = group;
+            minScoreDiff = scoreDiff;
+          }
+        }
+      }
+      
+      return bestGroup || sampleGroups[0];
+    }
+
+    function updateGroupingPreview(group) {
+      document.getElementById('suggestedGroupBadge').textContent = group.name;
+      document.getElementById('suggestedGroupInfo').textContent = `${group.skillLevel.charAt(0).toUpperCase() + group.skillLevel.slice(1)} Level`;
+      document.getElementById('groupingReason').textContent = `Based on skill level and average score (${group.avgScore})`;
+      document.getElementById('groupPlayerCount').textContent = group.playerCount;
+      document.getElementById('groupAvgScore').textContent = group.avgScore;
+      document.getElementById('groupSkillLevel').textContent = group.skillLevel.charAt(0).toUpperCase() + group.skillLevel.slice(1);
+    }
+
+    function refreshGrouping() {
+      updateGroupingOptions();
+      showNotification('Grouping options refreshed', 'info');
+    }
+
+    function viewAllGroups() {
+      populateAllGroupsModal();
+      const modal = new bootstrap.Modal(document.getElementById('allGroupsModal'));
+      modal.show();
+    }
+
+    function populateAllGroupsModal() {
+      const container = document.getElementById('allGroupsContainer');
+      container.innerHTML = '';
+      
+      sampleGroups.forEach(group => {
+        const groupCard = document.createElement('div');
+        groupCard.className = 'col-md-6 mb-3';
+        groupCard.innerHTML = `
+          <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+              <h6 class="mb-0">${group.name}</h6>
+              <span class="badge ${getSkillBadgeClass(group.skillLevel)}">${group.skillLevel.charAt(0).toUpperCase() + group.skillLevel.slice(1)}</span>
+            </div>
+            <div class="card-body">
+              <p class="text-muted small mb-3">${group.description}</p>
+              <div class="row text-center mb-3">
+                <div class="col-4">
+                  <div class="border rounded p-2">
+                    <div class="fw-bold text-primary">${group.playerCount}</div>
+                    <small class="text-muted">Players</small>
+                  </div>
+                </div>
+                <div class="col-4">
+                  <div class="border rounded p-2">
+                    <div class="fw-bold text-success">${group.avgScore}</div>
+                    <small class="text-muted">Avg Score</small>
+                  </div>
+                </div>
+                <div class="col-4">
+                  <div class="border rounded p-2">
+                    <div class="fw-bold text-warning">${group.maxPlayers}</div>
+                    <small class="text-muted">Max</small>
+                  </div>
+                </div>
+              </div>
+              <div class="progress mb-2" style="height: 8px;">
+                <div class="progress-bar ${getProgressBarClass(group.playerCount, group.maxPlayers)}" 
+                     style="width: ${(group.playerCount / group.maxPlayers) * 100}%"></div>
+              </div>
+              <small class="text-muted">${group.playerCount}/${group.maxPlayers} players</small>
+            </div>
+            <div class="card-footer">
+              <button class="btn btn-sm btn-outline-primary" onclick="assignToGroup(${group.id})">
+                <i class="ti ti-user-plus me-1"></i>
+                Assign Player
+              </button>
+            </div>
+          </div>
+        `;
+        container.appendChild(groupCard);
+      });
+    }
+
+    function getSkillBadgeClass(skillLevel) {
+      const classes = {
+        'beginner': 'bg-primary',
+        'intermediate': 'bg-success',
+        'advanced': 'bg-warning',
+        'pro': 'bg-danger'
+      };
+      return classes[skillLevel] || 'bg-secondary';
+    }
+
+    function getProgressBarClass(playerCount, maxPlayers) {
+      const percentage = (playerCount / maxPlayers) * 100;
+      if (percentage >= 90) return 'bg-danger';
+      if (percentage >= 75) return 'bg-warning';
+      return 'bg-success';
+    }
+
+    function assignToGroup(groupId) {
+      const group = sampleGroups.find(g => g.id === groupId);
+      if (group) {
+        showNotification(`Player will be assigned to ${group.name}`, 'info');
+        // Close modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('allGroupsModal'));
+        modal.hide();
+      }
+    }
+
+    function createNewGroup() {
+      const modal = new bootstrap.Modal(document.getElementById('createGroupModal'));
+      modal.show();
+    }
+
+    function saveNewGroup() {
+      const name = document.getElementById('newGroupName').value;
+      const skillLevel = document.getElementById('newGroupSkillLevel').value;
+      const maxPlayers = document.getElementById('newGroupMaxPlayers').value;
+      const description = document.getElementById('newGroupDescription').value;
+      
+      if (!name || !skillLevel || !maxPlayers) {
+        showNotification('Please fill in all required fields', 'warning');
+        return;
+      }
+      
+      // Add new group to sampleGroups array
+      const newGroup = {
+        id: sampleGroups.length + 1,
+        name: name,
+        skillLevel: skillLevel,
+        avgScore: 0,
+        playerCount: 0,
+        maxPlayers: parseInt(maxPlayers),
+        description: description
+      };
+      
+      sampleGroups.push(newGroup);
+      
+      // Close modal and reset form
+      const modal = bootstrap.Modal.getInstance(document.getElementById('createGroupModal'));
+      modal.hide();
+      document.getElementById('createGroupForm').reset();
+      
+      showNotification(`New group "${name}" created successfully!`, 'success');
+      
+      // Refresh grouping if form has data
+      updateGroupingOptions();
     }
 
     // Utility functions
     function clearForm() {
       document.getElementById('playerForm').reset();
+      document.getElementById('groupingPreview').style.display = 'none';
       showNotification('Form cleared', 'info');
     }
 
