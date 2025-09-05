@@ -92,7 +92,7 @@
               </a>
             </li>
             <li class="sidebar-item">
-              <a class="sidebar-link" href="javascript:void(0)" aria-expanded="false">
+              <a class="sidebar-link" href="./admin-create-account.php">
                 <i class="ti ti-user-plus"></i>
                 <span class="hide-menu">Create Account</span>
               </a>
