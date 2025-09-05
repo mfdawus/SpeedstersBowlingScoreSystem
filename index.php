@@ -30,78 +30,7 @@
 <body>
   <!--  Body Wrapper -->
   <div class="page-wrapper" id="main-wrapper" data-layout="vertical" data-navbarbg="skin6" data-sidebartype="full"
-    data-sidebar-position="fixed" data-header-position="fixed" style="margin-top: 0; padding-top: 0;">
-
-    <!-- Sidebar Start -->
-    <aside class="left-sidebar">
-      <!-- Sidebar scroll-->
-      <div>
-        <div class="brand-logo d-flex align-items-center justify-content-between">
-          <a href="./index.php" class="text-nowrap logo-img d-flex flex-column align-items-start text-decoration-none">
-            <img src="assets/images/logos/speedster main logo.png" alt="SPEEDSTERS Logo" width="90" />
-            <span class="text-muted fw-semibold mt-1" style="font-size: 0.75rem; letter-spacing: 0.5px;">Bowling Score System</span>
-          </a>
-          <div class="close-btn d-xl-none d-block sidebartoggler cursor-pointer" id="sidebarCollapse">
-            <i class="ti ti-x fs-6"></i>
-          </div>
-        </div>
-        <!-- Sidebar navigation-->
-        <nav class="sidebar-nav scroll-sidebar" data-simplebar="">
-          <ul id="sidebarnav">
-            <li class="nav-small-cap">
-              <iconify-icon icon="solar:menu-dots-linear" class="nav-small-cap-icon fs-4"></iconify-icon>
-              <span class="hide-menu">Home</span>
-            </li>
-            <li class="sidebar-item">
-              <a class="sidebar-link" href="./dashboard.php" aria-expanded="false">
-                <i class="ti ti-atom"></i>
-                <span class="hide-menu">Dashboard</span>
-              </a>
-            </li>
-            <li class="sidebar-item">
-              <a class="sidebar-link" href="./lane-booking.php" aria-expanded="false">
-                <i class="ti ti-calendar-plus"></i>
-                <span class="hide-menu">Lane Booking</span>
-              </a>
-            </li>
-            <li class="sidebar-item">
-              <a class="sidebar-link has-arrow" href="javascript:void(0)" aria-expanded="false">
-                <i class="ti ti-table"></i>
-                <span class="hide-menu">Score Table</span>
-              </a>
-              <ul aria-expanded="false" class="collapse first-level">
-                <li class="sidebar-item">
-                  <a href="./score-table-solo.php" class="sidebar-link">
-                    <i class="ti ti-user"></i>
-                    <span class="hide-menu">Solo Games</span>
-                  </a>
-                </li>
-                <li class="sidebar-item">
-                  <a href="./score-table-doubles.php" class="sidebar-link">
-                    <i class="ti ti-users"></i>
-                    <span class="hide-menu">Doubles</span>
-                  </a>
-                </li>
-                <li class="sidebar-item">
-                  <a href="./score-table-team.php" class="sidebar-link">
-                    <i class="ti ti-users-group"></i>
-                    <span class="hide-menu">Team (4-6 Players)</span>
-                  </a>
-                </li>
-              </ul>
-            </li>
-          </ul>
-        </nav>
-        <!-- End Sidebar navigation -->
-      </div>
-      <!-- End Sidebar scroll-->
-    </aside>
-    <!--  Sidebar End -->
-    
-    <!--  Main wrapper -->
-    <div class="body-wrapper">
-      <!--  Header Start -->
-      <header class="app-header">
+    data-sidebar-position="fixed" data-header-position="fixed" style="margin-top: 100; padding-top: 0;">
     <div class="app-topstrip bg-gradient-primary py-0 px-3 w-100 d-flex align-items-center justify-content-between flex-wrap">
   <!-- Left side: Tournament Info -->
   <div class="d-flex align-items-center gap-2 mb-2 mb-lg-0">
@@ -143,7 +72,83 @@
     </a>
   </div>
 </div>
-        
+
+    <!-- Sidebar Start -->
+    <aside class="left-sidebar">
+      <!-- Sidebar scroll-->
+      <div>
+        <div class="brand-logo d-flex align-items-center justify-content-between">
+          <a href="./index.php" class="text-nowrap logo-img d-flex flex-column align-items-start text-decoration-none">
+            <img src="assets/images/logos/speedster main logo.png" alt="SPEEDSTERS Logo" width="90" />
+            <span class="text-muted fw-semibold mt-1" style="font-size: 0.75rem; letter-spacing: 0.5px;">Bowling Score System</span>
+          </a>
+          <div class="close-btn d-xl-none d-block sidebartoggler cursor-pointer" id="sidebarCollapse">
+            <i class="ti ti-x fs-6"></i>
+          </div>
+        </div>
+        <!-- Sidebar navigation-->
+        <nav class="sidebar-nav scroll-sidebar" data-simplebar="">
+          <ul id="sidebarnav">
+            <li class="nav-small-cap">
+              <iconify-icon icon="solar:menu-dots-linear" class="nav-small-cap-icon fs-4"></iconify-icon>
+              <span class="hide-menu">Home</span>
+            </li>
+            <li class="sidebar-item">
+              <a class="sidebar-link" href="./dashboard.php" aria-expanded="false">
+                <i class="ti ti-atom"></i>
+                <span class="hide-menu">Dashboard</span>
+              </a>
+            </li>
+            <li class="sidebar-item">
+              <a class="sidebar-link" href="./lane-booking.php" aria-expanded="false">
+                <i class="ti ti-calendar-plus"></i>
+                <span class="hide-menu">Lane Booking</span>
+              </a>
+            </li>
+            <li class="sidebar-item">
+              <a class="sidebar-link" href="./events.php" aria-expanded="false">
+                <i class="ti ti-calendar-event"></i>
+                <span class="hide-menu">Events</span>
+              </a>
+            </li>
+            <li class="sidebar-item">
+              <a class="sidebar-link has-arrow" href="javascript:void(0)" aria-expanded="false">
+                <i class="ti ti-table"></i>
+                <span class="hide-menu">Score Table</span>
+              </a>
+              <ul aria-expanded="false" class="collapse first-level">
+                <li class="sidebar-item">
+                  <a href="./score-table-solo.php" class="sidebar-link">
+                    <i class="ti ti-user"></i>
+                    <span class="hide-menu">Solo Games</span>
+                  </a>
+                </li>
+                <li class="sidebar-item">
+                  <a href="./score-table-doubles.php" class="sidebar-link">
+                    <i class="ti ti-users"></i>
+                    <span class="hide-menu">Doubles</span>
+                  </a>
+                </li>
+                <li class="sidebar-item">
+                  <a href="./score-table-team.php" class="sidebar-link">
+                    <i class="ti ti-users-group"></i>
+                    <span class="hide-menu">Team (4-6 Players)</span>
+                  </a>
+                </li>
+              </ul>
+            </li>
+          </ul>
+        </nav>
+        <!-- End Sidebar navigation -->
+      </div>
+      <!-- End Sidebar scroll-->
+    </aside>
+    <!--  Sidebar End -->
+    
+    <!--  Main wrapper -->
+    <div class="body-wrapper">
+      <!--  Header Start -->
+      <header class="app-header">   
         <nav class="navbar navbar-expand-lg navbar-light">
           <ul class="navbar-nav">
             <li class="nav-item d-block d-xl-none">
@@ -178,17 +183,9 @@
                 </a>
                 <div class="dropdown-menu dropdown-menu-end dropdown-menu-animate-up" aria-labelledby="drop2">
                   <div class="message-body">
-                    <a href="javascript:void(0)" class="d-flex align-items-center gap-2 dropdown-item">
+                    <a href="./my-profile.php" class="d-flex align-items-center gap-2 dropdown-item">
                       <i class="ti ti-user fs-6"></i>
                       <p class="mb-0 fs-3">My Profile</p>
-                    </a>
-                    <a href="javascript:void(0)" class="d-flex align-items-center gap-2 dropdown-item">
-                      <i class="ti ti-mail fs-6"></i>
-                      <p class="mb-0 fs-3">My Account</p>
-                    </a>
-                    <a href="javascript:void(0)" class="d-flex align-items-center gap-2 dropdown-item">
-                      <i class="ti ti-list-check fs-6"></i>
-                      <p class="mb-0 fs-3">My Task</p>
                     </a>
                     <a href="./authentication-login.php" class="btn btn-outline-primary mx-3 mt-2 d-block">Logout</a>
                   </div>
@@ -200,12 +197,12 @@
       </header>
       <!--  Header End -->
       
-      <div class="body-wrapper-inner">
+      <div class="body-wrapper-inner" style="margin-top: 80px;">
         <div class="welcome-section">
           <div class="container">
             <div class="row justify-content-center">
               <div class="col-lg-8 col-md-10">
-                <div class="welcome-card p-5 text-center">
+                <div class="welcome-card p-10 text-center">
                   <div class="mb-4">
                     <img src="assets/images/logos/speedster main logo.png" alt="SPEEDSTERS Logo" width="120" class="mb-3" />
                     <h1 class="display-4 fw-bold text-primary mb-3">Welcome to SPEEDSTERS</h1>
@@ -265,7 +262,7 @@
   <!-- Countdown Timer Script -->
   <script>
     // Set the target date for the tournament (you can change this)
-    const targetDate = new Date('2025-03-15T18:00:00').getTime();
+    const targetDate = new Date('2025-12-15T18:00:00').getTime();
     
     function updateCountdown() {
       const now = new Date().getTime();

@@ -26,6 +26,49 @@
   <!--  Body Wrapper -->
   <div class="page-wrapper" id="main-wrapper" data-layout="vertical" data-navbarbg="skin6" data-sidebartype="full"
     data-sidebar-position="fixed" data-header-position="fixed" style="margin-top: 0; padding-top: 0;">
+    
+    <!-- Tournament Countdown Banner -->
+    <div class="app-topstrip bg-gradient-primary py-0 px-3 w-100 d-flex align-items-center justify-content-between flex-wrap">
+      <!-- Left side: Tournament Info -->
+      <div class="d-flex align-items-center gap-2 mb-2 mb-lg-0">
+        <i class="ti ti-trophy text-warning fs-4"></i>
+        <div>
+          <h6 class="mb-0 fw-bold text-white">SPEEDSTERS Championship 2025</h6>
+          <small class="text-white-50 d-block">Next Bowling Tournament</small>
+        </div>
+      </div>
+
+      <!-- Right side: Countdown + Register Button -->
+      <div class="d-flex align-items-center gap-2 flex-wrap">
+        <div class="d-flex gap-2">
+         <div class="text-center"> <div class="bg-white bg-opacity-20 rounded p-n2 mt-1">
+              <span class="text-white fw-bold fs-6" id="days">00</span>
+            </div>
+            <small class="text-white-50" style="font-size: 10px;">Days</small>
+          </div>
+         <div class="text-center"> <div class="bg-white bg-opacity-20 rounded p-n2 mt-1">
+              <span class="text-white fw-bold fs-6" id="hours">00</span>
+            </div>
+            <small class="text-white-50" style="font-size: 10px;">Hours</small>
+          </div>
+         <div class="text-center"> <div class="bg-white bg-opacity-20 rounded p-n2 mt-1">
+              <span class="text-white fw-bold fs-6" id="minutes">00</span>
+            </div>
+            <small class="text-white-50" style="font-size: 10px;">Min</small>
+          </div>
+         <div class="text-center"> <div class="bg-white bg-opacity-20 rounded p-n2 mt-1">
+              <span class="text-white fw-bold fs-6" id="seconds">00</span>
+            </div>
+            <small class="text-white-50" style="font-size: 10px;">Sec</small>
+          </div>
+        </div>
+
+        <a class="btn btn-warning btn-sm d-flex align-items-center gap-1">
+          <i class="ti ti-calendar-event fs-6"></i>
+          Register
+        </a>
+      </div>
+    </div>
 
     <!-- Sidebar Start -->
     <aside class="left-sidebar">
@@ -57,6 +100,12 @@
               <a class="sidebar-link active" href="./admin-user-management.php">
                 <i class="ti ti-users"></i>
                 <span class="hide-menu">User Management</span>
+              </a>
+            </li>
+            <li class="sidebar-item">
+              <a class="sidebar-link" href="./admin-events.php">
+                <i class="ti ti-calendar-event"></i>
+                <span class="hide-menu">Events Management</span>
               </a>
             </li>
             <li class="sidebar-item">
@@ -940,6 +989,42 @@
         statusFilter.addEventListener('change', searchUsers);
       }
     });
+  </script>
+  
+  <!-- Countdown Timer Script -->
+  <script>
+    // Set the target date for the tournament (you can change this)
+    const targetDate = new Date('2025-03-15T18:00:00').getTime();
+    
+    function updateCountdown() {
+      const now = new Date().getTime();
+      const distance = targetDate - now;
+      
+      if (distance < 0) {
+        // Event has passed
+        document.getElementById('days').innerHTML = '00';
+        document.getElementById('hours').innerHTML = '00';
+        document.getElementById('minutes').innerHTML = '00';
+        document.getElementById('seconds').innerHTML = '00';
+        return;
+      }
+      
+      const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+      
+      document.getElementById('days').innerHTML = days.toString().padStart(2, '0');
+      document.getElementById('hours').innerHTML = hours.toString().padStart(2, '0');
+      document.getElementById('minutes').innerHTML = minutes.toString().padStart(2, '0');
+      document.getElementById('seconds').innerHTML = seconds.toString().padStart(2, '0');
+    }
+    
+    // Update countdown every second
+    setInterval(updateCountdown, 1000);
+    
+    // Initial call
+    updateCountdown();
   </script>
 </body>
 
