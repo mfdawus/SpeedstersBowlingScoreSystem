@@ -48,6 +48,22 @@
     .score-good { color: #17a2b8; }
     .score-average { color: #ffc107; }
     .score-below { color: #dc3545; }
+    .player-details-row {
+      background-color: #f8f9fa;
+    }
+    .player-details-row .card {
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      border-radius: 8px;
+    }
+    .player-details-row .table-sm th,
+    .player-details-row .table-sm td {
+      padding: 0.5rem;
+      font-size: 0.875rem;
+    }
+    .btn-outline-primary:hover {
+      transform: translateY(-1px);
+      transition: transform 0.2s ease;
+    }
   </style>
 </head>
 
@@ -212,6 +228,21 @@
                       </button>
                     </li>
                     <li class="nav-item" role="presentation">
+                      <button class="nav-link" id="teams4-tab" data-bs-toggle="tab" data-bs-target="#teams4" type="button" role="tab">
+                        4-Player Teams
+                      </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                      <button class="nav-link" id="teams5-tab" data-bs-toggle="tab" data-bs-target="#teams5" type="button" role="tab">
+                        5-Player Teams
+                      </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                      <button class="nav-link" id="teams6-tab" data-bs-toggle="tab" data-bs-target="#teams6" type="button" role="tab">
+                        6-Player Teams
+                      </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
                       <button class="nav-link" id="game1-tab" data-bs-toggle="tab" data-bs-target="#game1" type="button" role="tab">
                         Game 1
                       </button>
@@ -254,6 +285,7 @@
                               <th scope="col">Best Game</th>
                               <th scope="col">Team Size</th>
                               <th scope="col">Last Updated</th>
+                              <th scope="col">Details</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -280,6 +312,78 @@
                               <td><span class="text-warning">1,089</span></td>
                               <td><span class="badge bg-success">4</span></td>
                               <td><small class="text-muted">2 hours ago</small></td>
+                              <td>
+                                <button class="btn btn-sm btn-outline-primary" onclick="togglePlayerDetails('elite-strikers')">
+                                  <i class="ti ti-chevron-down" id="elite-strikers-icon"></i> View Details
+                                </button>
+                              </td>
+                            </tr>
+                            <tr class="player-details-row" id="elite-strikers-details" style="display: none;">
+                              <td colspan="10">
+                                <div class="card border-0 bg-light">
+                                  <div class="card-body">
+                                    <h6 class="mb-3">Individual Player Scores - Elite Strikers</h6>
+                                    <div class="table-responsive">
+                                      <table class="table table-sm table-bordered">
+                                        <thead class="table-dark">
+                                          <tr>
+                                            <th>Player</th>
+                                            <th>Game 1</th>
+                                            <th>Game 2</th>
+                                            <th>Game 3</th>
+                                            <th>Game 4</th>
+                                            <th>Game 5</th>
+                                            <th>Total</th>
+                                            <th>Average</th>
+                                          </tr>
+                                        </thead>
+                                        <tbody>
+                                          <tr>
+                                            <td><strong>John</strong></td>
+                                            <td>279</td>
+                                            <td>262</td>
+                                            <td>285</td>
+                                            <td>265</td>
+                                            <td>269</td>
+                                            <td><span class="fw-bold text-success">1,360</span></td>
+                                            <td>272.0</td>
+                                          </tr>
+                                          <tr>
+                                            <td><strong>Sarah</strong></td>
+                                            <td>268</td>
+                                            <td>260</td>
+                                            <td>270</td>
+                                            <td>270</td>
+                                            <td>280</td>
+                                            <td><span class="fw-bold text-success">1,328</span></td>
+                                            <td>265.6</td>
+                                          </tr>
+                                          <tr>
+                                            <td><strong>Mike</strong></td>
+                                            <td>275</td>
+                                            <td>268</td>
+                                            <td>265</td>
+                                            <td>268</td>
+                                            <td>265</td>
+                                            <td><span class="fw-bold text-success">1,341</span></td>
+                                            <td>268.2</td>
+                                          </tr>
+                                          <tr>
+                                            <td><strong>Lisa</strong></td>
+                                            <td>267</td>
+                                            <td>244</td>
+                                            <td>325</td>
+                                            <td>264</td>
+                                            <td>307</td>
+                                            <td><span class="fw-bold text-success">1,407</span></td>
+                                            <td>281.4</td>
+                                          </tr>
+                                        </tbody>
+                                      </table>
+                                    </div>
+                                  </div>
+                                </div>
+                              </td>
                             </tr>
                             <tr>
                               <td><span class="badge bg-secondary">2</span></td>
@@ -305,6 +409,88 @@
                               <td><span class="text-warning">1,245</span></td>
                               <td><span class="badge bg-info">5</span></td>
                               <td><small class="text-muted">1 hour ago</small></td>
+                              <td>
+                                <button class="btn btn-sm btn-outline-primary" onclick="togglePlayerDetails('pin-masters')">
+                                  <i class="ti ti-chevron-down" id="pin-masters-icon"></i> View Details
+                                </button>
+                              </td>
+                            </tr>
+                            <tr class="player-details-row" id="pin-masters-details" style="display: none;">
+                              <td colspan="10">
+                                <div class="card border-0 bg-light">
+                                  <div class="card-body">
+                                    <h6 class="mb-3">Individual Player Scores - Pin Masters</h6>
+                                    <div class="table-responsive">
+                                      <table class="table table-sm table-bordered">
+                                        <thead class="table-dark">
+                                          <tr>
+                                            <th>Player</th>
+                                            <th>Game 1</th>
+                                            <th>Game 2</th>
+                                            <th>Game 3</th>
+                                            <th>Game 4</th>
+                                            <th>Game 5</th>
+                                            <th>Total</th>
+                                            <th>Average</th>
+                                          </tr>
+                                        </thead>
+                                        <tbody>
+                                          <tr>
+                                            <td><strong>Tom</strong></td>
+                                            <td>248</td>
+                                            <td>255</td>
+                                            <td>248</td>
+                                            <td>258</td>
+                                            <td>248</td>
+                                            <td><span class="fw-bold text-success">1,257</span></td>
+                                            <td>251.4</td>
+                                          </tr>
+                                          <tr>
+                                            <td><strong>Emma</strong></td>
+                                            <td>256</td>
+                                            <td>262</td>
+                                            <td>256</td>
+                                            <td>262</td>
+                                            <td>256</td>
+                                            <td><span class="fw-bold text-success">1,292</span></td>
+                                            <td>258.4</td>
+                                          </tr>
+                                          <tr>
+                                            <td><strong>Alex</strong></td>
+                                            <td>242</td>
+                                            <td>248</td>
+                                            <td>242</td>
+                                            <td>248</td>
+                                            <td>242</td>
+                                            <td><span class="fw-bold text-success">1,222</span></td>
+                                            <td>244.4</td>
+                                          </tr>
+                                          <tr>
+                                            <td><strong>Maria</strong></td>
+                                            <td>251</td>
+                                            <td>256</td>
+                                            <td>251</td>
+                                            <td>256</td>
+                                            <td>251</td>
+                                            <td><span class="fw-bold text-success">1,265</span></td>
+                                            <td>253.0</td>
+                                          </tr>
+                                          <tr>
+                                            <td><strong>David</strong></td>
+                                            <td>248</td>
+                                            <td>246</td>
+                                            <td>237</td>
+                                            <td>265</td>
+                                            <td>248</td>
+                                            <td><span class="fw-bold text-success">1,244</span></td>
+                                            <td>248.8</td>
+                                          </tr>
+                                        </tbody>
+                                      </table>
+                                    </div>
+                                  </div>
+                                </div>
+                              </td>
                             </tr>
                             <tr>
                               <td><span class="badge bg-warning">3</span></td>
@@ -331,6 +517,98 @@
                               <td><span class="text-warning">1,456</span></td>
                               <td><span class="badge bg-warning">6</span></td>
                               <td><small class="text-muted">30 min ago</small></td>
+                              <td>
+                                <button class="btn btn-sm btn-outline-primary" onclick="togglePlayerDetails('lane-legends')">
+                                  <i class="ti ti-chevron-down" id="lane-legends-icon"></i> View Details
+                                </button>
+                              </td>
+                            </tr>
+                            <tr class="player-details-row" id="lane-legends-details" style="display: none;">
+                              <td colspan="10">
+                                <div class="card border-0 bg-light">
+                                  <div class="card-body">
+                                    <h6 class="mb-3">Individual Player Scores - Lane Legends</h6>
+                                    <div class="table-responsive">
+                                      <table class="table table-sm table-bordered">
+                                        <thead class="table-dark">
+                                          <tr>
+                                            <th>Player</th>
+                                            <th>Game 1</th>
+                                            <th>Game 2</th>
+                                            <th>Game 3</th>
+                                            <th>Game 4</th>
+                                            <th>Game 5</th>
+                                            <th>Total</th>
+                                            <th>Average</th>
+                                          </tr>
+                                        </thead>
+                                        <tbody>
+                                          <tr>
+                                            <td><strong>Sarah</strong></td>
+                                            <td>242</td>
+                                            <td>238</td>
+                                            <td>245</td>
+                                            <td>245</td>
+                                            <td>248</td>
+                                            <td><span class="fw-bold text-success">1,218</span></td>
+                                            <td>243.6</td>
+                                          </tr>
+                                          <tr>
+                                            <td><strong>Mike</strong></td>
+                                            <td>238</td>
+                                            <td>240</td>
+                                            <td>238</td>
+                                            <td>238</td>
+                                            <td>245</td>
+                                            <td><span class="fw-bold text-success">1,199</span></td>
+                                            <td>239.8</td>
+                                          </tr>
+                                          <tr>
+                                            <td><strong>Lisa</strong></td>
+                                            <td>245</td>
+                                            <td>243</td>
+                                            <td>252</td>
+                                            <td>252</td>
+                                            <td>252</td>
+                                            <td><span class="fw-bold text-success">1,244</span></td>
+                                            <td>248.8</td>
+                                          </tr>
+                                          <tr>
+                                            <td><strong>Tom</strong></td>
+                                            <td>240</td>
+                                            <td>240</td>
+                                            <td>240</td>
+                                            <td>240</td>
+                                            <td>248</td>
+                                            <td><span class="fw-bold text-success">1,208</span></td>
+                                            <td>241.6</td>
+                                          </tr>
+                                          <tr>
+                                            <td><strong>Emma</strong></td>
+                                            <td>243</td>
+                                            <td>243</td>
+                                            <td>248</td>
+                                            <td>248</td>
+                                            <td>250</td>
+                                            <td><span class="fw-bold text-success">1,232</span></td>
+                                            <td>246.4</td>
+                                          </tr>
+                                          <tr>
+                                            <td><strong>Alex</strong></td>
+                                            <td>248</td>
+                                            <td>248</td>
+                                            <td>255</td>
+                                            <td>255</td>
+                                            <td>235</td>
+                                            <td><span class="fw-bold text-success">1,241</span></td>
+                                            <td>248.2</td>
+                                          </tr>
+                                        </tbody>
+                                      </table>
+                                    </div>
+                                  </div>
+                                </div>
+                              </td>
                             </tr>
                             <tr>
                               <td><span class="badge bg-info">4</span></td>
@@ -355,6 +633,78 @@
                               <td><span class="text-warning">1,023</span></td>
                               <td><span class="badge bg-success">4</span></td>
                               <td><small class="text-muted">15 min ago</small></td>
+                              <td>
+                                <button class="btn btn-sm btn-outline-primary" onclick="togglePlayerDetails('spare-squad')">
+                                  <i class="ti ti-chevron-down" id="spare-squad-icon"></i> View Details
+                                </button>
+                              </td>
+                            </tr>
+                            <tr class="player-details-row" id="spare-squad-details" style="display: none;">
+                              <td colspan="10">
+                                <div class="card border-0 bg-light">
+                                  <div class="card-body">
+                                    <h6 class="mb-3">Individual Player Scores - Spare Squad</h6>
+                                    <div class="table-responsive">
+                                      <table class="table table-sm table-bordered">
+                                        <thead class="table-dark">
+                                          <tr>
+                                            <th>Player</th>
+                                            <th>Game 1</th>
+                                            <th>Game 2</th>
+                                            <th>Game 3</th>
+                                            <th>Game 4</th>
+                                            <th>Game 5</th>
+                                            <th>Total</th>
+                                            <th>Average</th>
+                                          </tr>
+                                        </thead>
+                                        <tbody>
+                                          <tr>
+                                            <td><strong>Maria</strong></td>
+                                            <td>248</td>
+                                            <td>248</td>
+                                            <td>248</td>
+                                            <td>248</td>
+                                            <td>256</td>
+                                            <td><span class="fw-bold text-success">1,248</span></td>
+                                            <td>249.6</td>
+                                          </tr>
+                                          <tr>
+                                            <td><strong>David</strong></td>
+                                            <td>260</td>
+                                            <td>260</td>
+                                            <td>260</td>
+                                            <td>260</td>
+                                            <td>278</td>
+                                            <td><span class="fw-bold text-success">1,318</span></td>
+                                            <td>263.6</td>
+                                          </tr>
+                                          <tr>
+                                            <td><strong>Anna</strong></td>
+                                            <td>242</td>
+                                            <td>242</td>
+                                            <td>242</td>
+                                            <td>242</td>
+                                            <td>242</td>
+                                            <td><span class="fw-bold text-success">1,210</span></td>
+                                            <td>242.0</td>
+                                          </tr>
+                                          <tr>
+                                            <td><strong>Chris</strong></td>
+                                            <td>206</td>
+                                            <td>206</td>
+                                            <td>206</td>
+                                            <td>206</td>
+                                            <td>313</td>
+                                            <td><span class="fw-bold text-success">1,137</span></td>
+                                            <td>227.4</td>
+                                          </tr>
+                                        </tbody>
+                                      </table>
+                                    </div>
+                                  </div>
+                                </div>
+                              </td>
                             </tr>
                             <tr>
                               <td><span class="badge bg-dark">5</span></td>
@@ -380,6 +730,599 @@
                               <td><span class="text-warning">1,156</span></td>
                               <td><span class="badge bg-info">5</span></td>
                               <td><small class="text-muted">5 min ago</small></td>
+                              <td>
+                                <button class="btn btn-sm btn-outline-primary" onclick="togglePlayerDetails('gutter-gang')">
+                                  <i class="ti ti-chevron-down" id="gutter-gang-icon"></i> View Details
+                                </button>
+                              </td>
+                            </tr>
+                            <tr class="player-details-row" id="gutter-gang-details" style="display: none;">
+                              <td colspan="10">
+                                <div class="card border-0 bg-light">
+                                  <div class="card-body">
+                                    <h6 class="mb-3">Individual Player Scores - Gutter Gang</h6>
+                                    <div class="table-responsive">
+                                      <table class="table table-sm table-bordered">
+                                        <thead class="table-dark">
+                                          <tr>
+                                            <th>Player</th>
+                                            <th>Game 1</th>
+                                            <th>Game 2</th>
+                                            <th>Game 3</th>
+                                            <th>Game 4</th>
+                                            <th>Game 5</th>
+                                            <th>Total</th>
+                                            <th>Average</th>
+                                          </tr>
+                                        </thead>
+                                        <tbody>
+                                          <tr>
+                                            <td><strong>Lisa</strong></td>
+                                            <td>232</td>
+                                            <td>232</td>
+                                            <td>232</td>
+                                            <td>232</td>
+                                            <td>232</td>
+                                            <td><span class="fw-bold text-success">1,160</span></td>
+                                            <td>232.0</td>
+                                          </tr>
+                                          <tr>
+                                            <td><strong>Tom</strong></td>
+                                            <td>248</td>
+                                            <td>248</td>
+                                            <td>248</td>
+                                            <td>248</td>
+                                            <td>248</td>
+                                            <td><span class="fw-bold text-success">1,240</span></td>
+                                            <td>248.0</td>
+                                          </tr>
+                                          <tr>
+                                            <td><strong>Emma</strong></td>
+                                            <td>240</td>
+                                            <td>240</td>
+                                            <td>240</td>
+                                            <td>240</td>
+                                            <td>240</td>
+                                            <td><span class="fw-bold text-success">1,200</span></td>
+                                            <td>240.0</td>
+                                          </tr>
+                                          <tr>
+                                            <td><strong>Alex</strong></td>
+                                            <td>236</td>
+                                            <td>236</td>
+                                            <td>236</td>
+                                            <td>236</td>
+                                            <td>236</td>
+                                            <td><span class="fw-bold text-success">1,180</span></td>
+                                            <td>236.0</td>
+                                          </tr>
+                                          <tr>
+                                            <td><strong>Maria</strong></td>
+                                            <td>200</td>
+                                            <td>200</td>
+                                            <td>200</td>
+                                            <td>200</td>
+                                            <td>200</td>
+                                            <td><span class="fw-bold text-success">1,000</td>
+                                            <td>200.0</td>
+                                          </tr>
+                                        </tbody>
+                                      </table>
+                                    </div>
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    <!-- 4-Player Teams Tab -->
+                    <div class="tab-pane fade" id="teams4" role="tabpanel">
+                      <div class="alert alert-info mb-3">
+                        <i class="ti ti-info-circle me-2"></i>
+                        <strong>4-Player Teams Division:</strong> Teams compete fairly against other 4-player teams only.
+                      </div>
+                      <div class="table-responsive">
+                        <table class="table table-hover">
+                          <thead>
+                            <tr>
+                              <th scope="col">Rank</th>
+                              <th scope="col">Team</th>
+                              <th scope="col">Players</th>
+                              <th scope="col">Total Score</th>
+                              <th scope="col">Avg/Game</th>
+                              <th scope="col">Games Played</th>
+                              <th scope="col">Best Game</th>
+                              <th scope="col">Last Updated</th>
+                              <th scope="col">Details</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr>
+                              <td><span class="badge bg-primary">1</span></td>
+                              <td>
+                                <div class="d-flex align-items-center">
+                                  <div class="d-flex me-2">
+                                    <img src="assets/images/profile/user-1.jpg" alt="Player 1" class="rounded-circle border border-2 border-white" width="28" style="margin-right: -6px;">
+                                    <img src="assets/images/profile/user-2.jpg" alt="Player 2" class="rounded-circle border border-2 border-white" width="28" style="margin-right: -6px;">
+                                    <img src="assets/images/profile/user-3.jpg" alt="Player 3" class="rounded-circle border border-2 border-white" width="28" style="margin-right: -6px;">
+                                    <img src="assets/images/profile/user-4.jpg" alt="Player 4" class="rounded-circle border border-2 border-white" width="28">
+                                  </div>
+                                  <div>
+                                    <h6 class="mb-0">Elite Strikers</h6>
+                                    <small class="text-muted">Pro Team</small>
+                                  </div>
+                                </div>
+                              </td>
+                              <td>John, Sarah, Mike, Lisa</td>
+                              <td><span class="fw-bold text-success">4,856</span></td>
+                              <td>242.8</td>
+                              <td>5</td>
+                              <td><span class="text-warning">1,089</span></td>
+                              <td><small class="text-muted">2 hours ago</small></td>
+                              <td>
+                                <button class="btn btn-sm btn-outline-primary" onclick="togglePlayerDetails('elite-strikers-4')">
+                                  <i class="ti ti-chevron-down" id="elite-strikers-4-icon"></i> View Details
+                                </button>
+                              </td>
+                            </tr>
+                            <tr class="player-details-row" id="elite-strikers-4-details" style="display: none;">
+                              <td colspan="9">
+                                <div class="card border-0 bg-light">
+                                  <div class="card-body">
+                                    <h6 class="mb-3">Individual Player Scores - Elite Strikers (4-Player Division)</h6>
+                                    <div class="table-responsive">
+                                      <table class="table table-sm table-bordered">
+                                        <thead class="table-dark">
+                                          <tr>
+                                            <th>Player</th>
+                                            <th>Game 1</th>
+                                            <th>Game 2</th>
+                                            <th>Game 3</th>
+                                            <th>Game 4</th>
+                                            <th>Game 5</th>
+                                            <th>Total</th>
+                                            <th>Average</th>
+                                          </tr>
+                                        </thead>
+                                        <tbody>
+                                          <tr>
+                                            <td><strong>John</strong></td>
+                                            <td>279</td>
+                                            <td>262</td>
+                                            <td>285</td>
+                                            <td>265</td>
+                                            <td>269</td>
+                                            <td><span class="fw-bold text-success">1,360</span></td>
+                                            <td>272.0</td>
+                                          </tr>
+                                          <tr>
+                                            <td><strong>Sarah</strong></td>
+                                            <td>268</td>
+                                            <td>260</td>
+                                            <td>270</td>
+                                            <td>270</td>
+                                            <td>280</td>
+                                            <td><span class="fw-bold text-success">1,328</span></td>
+                                            <td>265.6</td>
+                                          </tr>
+                                          <tr>
+                                            <td><strong>Mike</strong></td>
+                                            <td>275</td>
+                                            <td>268</td>
+                                            <td>265</td>
+                                            <td>268</td>
+                                            <td>265</td>
+                                            <td><span class="fw-bold text-success">1,341</span></td>
+                                            <td>268.2</td>
+                                          </tr>
+                                          <tr>
+                                            <td><strong>Lisa</strong></td>
+                                            <td>267</td>
+                                            <td>244</td>
+                                            <td>325</td>
+                                            <td>264</td>
+                                            <td>307</td>
+                                            <td><span class="fw-bold text-success">1,407</span></td>
+                                            <td>281.4</td>
+                                          </tr>
+                                        </tbody>
+                                      </table>
+                                    </div>
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td><span class="badge bg-secondary">2</span></td>
+                              <td>
+                                <div class="d-flex align-items-center">
+                                  <div class="d-flex me-2">
+                                    <img src="assets/images/profile/user-8.jpg" alt="Player 1" class="rounded-circle border border-2 border-white" width="28" style="margin-right: -6px;">
+                                    <img src="assets/images/profile/user-1.jpg" alt="Player 2" class="rounded-circle border border-2 border-white" width="28" style="margin-right: -6px;">
+                                    <img src="assets/images/profile/user-2.jpg" alt="Player 3" class="rounded-circle border border-2 border-white" width="28" style="margin-right: -6px;">
+                                    <img src="assets/images/profile/user-3.jpg" alt="Player 4" class="rounded-circle border border-2 border-white" width="28">
+                                  </div>
+                                  <div>
+                                    <h6 class="mb-0">Spare Squad</h6>
+                                    <small class="text-muted">Intermediate Team</small>
+                                  </div>
+                                </div>
+                              </td>
+                              <td>Maria, David, Anna, Chris</td>
+                              <td><span class="fw-bold text-success">4,567</span></td>
+                              <td>228.4</td>
+                              <td>5</td>
+                              <td><span class="text-warning">1,023</span></td>
+                              <td><small class="text-muted">15 min ago</small></td>
+                              <td>
+                                <button class="btn btn-sm btn-outline-primary" onclick="togglePlayerDetails('spare-squad-4')">
+                                  <i class="ti ti-chevron-down" id="spare-squad-4-icon"></i> View Details
+                                </button>
+                              </td>
+                            </tr>
+                            <tr class="player-details-row" id="spare-squad-4-details" style="display: none;">
+                              <td colspan="9">
+                                <div class="card border-0 bg-light">
+                                  <div class="card-body">
+                                    <h6 class="mb-3">Individual Player Scores - Spare Squad (4-Player Division)</h6>
+                                    <div class="table-responsive">
+                                      <table class="table table-sm table-bordered">
+                                        <thead class="table-dark">
+                                          <tr>
+                                            <th>Player</th>
+                                            <th>Game 1</th>
+                                            <th>Game 2</th>
+                                            <th>Game 3</th>
+                                            <th>Game 4</th>
+                                            <th>Game 5</th>
+                                            <th>Total</th>
+                                            <th>Average</th>
+                                          </tr>
+                                        </thead>
+                                        <tbody>
+                                          <tr>
+                                            <td><strong>Maria</strong></td>
+                                            <td>248</td>
+                                            <td>248</td>
+                                            <td>248</td>
+                                            <td>248</td>
+                                            <td>256</td>
+                                            <td><span class="fw-bold text-success">1,248</span></td>
+                                            <td>249.6</td>
+                                          </tr>
+                                          <tr>
+                                            <td><strong>David</strong></td>
+                                            <td>260</td>
+                                            <td>260</td>
+                                            <td>260</td>
+                                            <td>260</td>
+                                            <td>278</td>
+                                            <td><span class="fw-bold text-success">1,318</span></td>
+                                            <td>263.6</td>
+                                          </tr>
+                                          <tr>
+                                            <td><strong>Anna</strong></td>
+                                            <td>242</td>
+                                            <td>242</td>
+                                            <td>242</td>
+                                            <td>242</td>
+                                            <td>242</td>
+                                            <td><span class="fw-bold text-success">1,210</span></td>
+                                            <td>242.0</td>
+                                          </tr>
+                                          <tr>
+                                            <td><strong>Chris</strong></td>
+                                            <td>206</td>
+                                            <td>206</td>
+                                            <td>206</td>
+                                            <td>206</td>
+                                            <td>313</td>
+                                            <td><span class="fw-bold text-success">1,137</span></td>
+                                            <td>227.4</td>
+                                          </tr>
+                                        </tbody>
+                                      </table>
+                                    </div>
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td><span class="badge bg-warning">3</span></td>
+                              <td>
+                                <div class="d-flex align-items-center">
+                                  <div class="d-flex me-2">
+                                    <img src="assets/images/profile/user-4.jpg" alt="Player 1" class="rounded-circle border border-2 border-white" width="28" style="margin-right: -6px;">
+                                    <img src="assets/images/profile/user-5.jpg" alt="Player 2" class="rounded-circle border border-2 border-white" width="28" style="margin-right: -6px;">
+                                    <img src="assets/images/profile/user-6.jpg" alt="Player 3" class="rounded-circle border border-2 border-white" width="28" style="margin-right: -6px;">
+                                    <img src="assets/images/profile/user-7.jpg" alt="Player 4" class="rounded-circle border border-2 border-white" width="28">
+                                  </div>
+                                  <div>
+                                    <h6 class="mb-0">Pin Crushers</h6>
+                                    <small class="text-muted">Amateur Team</small>
+                                  </div>
+                                </div>
+                              </td>
+                              <td>Lisa, Tom, Emma, Alex</td>
+                              <td><span class="fw-bold text-success">4,234</span></td>
+                              <td>211.7</td>
+                              <td>5</td>
+                              <td><span class="text-warning">987</span></td>
+                              <td><small class="text-muted">45 min ago</small></td>
+                              <td>
+                                <button class="btn btn-sm btn-outline-primary" onclick="togglePlayerDetails('pin-crushers-4')">
+                                  <i class="ti ti-chevron-down" id="pin-crushers-4-icon"></i> View Details
+                                </button>
+                              </td>
+                            </tr>
+                            <tr class="player-details-row" id="pin-crushers-4-details" style="display: none;">
+                              <td colspan="9">
+                                <div class="card border-0 bg-light">
+                                  <div class="card-body">
+                                    <h6 class="mb-3">Individual Player Scores - Pin Crushers (4-Player Division)</h6>
+                                    <div class="table-responsive">
+                                      <table class="table table-sm table-bordered">
+                                        <thead class="table-dark">
+                                          <tr>
+                                            <th>Player</th>
+                                            <th>Game 1</th>
+                                            <th>Game 2</th>
+                                            <th>Game 3</th>
+                                            <th>Game 4</th>
+                                            <th>Game 5</th>
+                                            <th>Total</th>
+                                            <th>Average</th>
+                                          </tr>
+                                        </thead>
+                                        <tbody>
+                                          <tr>
+                                            <td><strong>Lisa</strong></td>
+                                            <td>232</td>
+                                            <td>232</td>
+                                            <td>232</td>
+                                            <td>232</td>
+                                            <td>232</td>
+                                            <td><span class="fw-bold text-success">1,160</span></td>
+                                            <td>232.0</td>
+                                          </tr>
+                                          <tr>
+                                            <td><strong>Tom</strong></td>
+                                            <td>248</td>
+                                            <td>248</td>
+                                            <td>248</td>
+                                            <td>248</td>
+                                            <td>248</td>
+                                            <td><span class="fw-bold text-success">1,240</span></td>
+                                            <td>248.0</td>
+                                          </tr>
+                                          <tr>
+                                            <td><strong>Emma</strong></td>
+                                            <td>240</td>
+                                            <td>240</td>
+                                            <td>240</td>
+                                            <td>240</td>
+                                            <td>240</td>
+                                            <td><span class="fw-bold text-success">1,200</span></td>
+                                            <td>240.0</td>
+                                          </tr>
+                                          <tr>
+                                            <td><strong>Alex</strong></td>
+                                            <td>236</td>
+                                            <td>236</td>
+                                            <td>236</td>
+                                            <td>236</td>
+                                            <td>236</td>
+                                            <td><span class="fw-bold text-success">1,180</span></td>
+                                            <td>236.0</td>
+                                          </tr>
+                                        </tbody>
+                                      </table>
+                                    </div>
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    <!-- 5-Player Teams Tab -->
+                    <div class="tab-pane fade" id="teams5" role="tabpanel">
+                      <div class="alert alert-info mb-3">
+                        <i class="ti ti-info-circle me-2"></i>
+                        <strong>5-Player Teams Division:</strong> Teams compete fairly against other 5-player teams only.
+                      </div>
+                      <div class="table-responsive">
+                        <table class="table table-hover">
+                          <thead>
+                            <tr>
+                              <th scope="col">Rank</th>
+                              <th scope="col">Team</th>
+                              <th scope="col">Players</th>
+                              <th scope="col">Total Score</th>
+                              <th scope="col">Avg/Game</th>
+                              <th scope="col">Games Played</th>
+                              <th scope="col">Best Game</th>
+                              <th scope="col">Last Updated</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr>
+                              <td><span class="badge bg-primary">1</span></td>
+                              <td>
+                                <div class="d-flex align-items-center">
+                                  <div class="d-flex me-2">
+                                    <img src="assets/images/profile/user-5.jpg" alt="Player 1" class="rounded-circle border border-2 border-white" width="28" style="margin-right: -6px;">
+                                    <img src="assets/images/profile/user-6.jpg" alt="Player 2" class="rounded-circle border border-2 border-white" width="28" style="margin-right: -6px;">
+                                    <img src="assets/images/profile/user-7.jpg" alt="Player 3" class="rounded-circle border border-2 border-white" width="28" style="margin-right: -6px;">
+                                    <img src="assets/images/profile/user-8.jpg" alt="Player 4" class="rounded-circle border border-2 border-white" width="28" style="margin-right: -6px;">
+                                    <img src="assets/images/profile/user-1.jpg" alt="Player 5" class="rounded-circle border border-2 border-white" width="28">
+                                  </div>
+                                  <div>
+                                    <h6 class="mb-0">Pin Masters</h6>
+                                    <small class="text-muted">Elite Team</small>
+                                  </div>
+                                </div>
+                              </td>
+                              <td>Tom, Emma, Alex, Maria, David</td>
+                              <td><span class="fw-bold text-success">5,923</span></td>
+                              <td>236.9</td>
+                              <td>5</td>
+                              <td><span class="text-warning">1,245</span></td>
+                              <td><small class="text-muted">1 hour ago</small></td>
+                            </tr>
+                            <tr>
+                              <td><span class="badge bg-secondary">2</span></td>
+                              <td>
+                                <div class="d-flex align-items-center">
+                                  <div class="d-flex me-2">
+                                    <img src="assets/images/profile/user-4.jpg" alt="Player 1" class="rounded-circle border border-2 border-white" width="28" style="margin-right: -6px;">
+                                    <img src="assets/images/profile/user-5.jpg" alt="Player 2" class="rounded-circle border border-2 border-white" width="28" style="margin-right: -6px;">
+                                    <img src="assets/images/profile/user-6.jpg" alt="Player 3" class="rounded-circle border border-2 border-white" width="28" style="margin-right: -6px;">
+                                    <img src="assets/images/profile/user-7.jpg" alt="Player 4" class="rounded-circle border border-2 border-white" width="28" style="margin-right: -6px;">
+                                    <img src="assets/images/profile/user-8.jpg" alt="Player 5" class="rounded-circle border border-2 border-white" width="28">
+                                  </div>
+                                  <div>
+                                    <h6 class="mb-0">Gutter Gang</h6>
+                                    <small class="text-muted">Beginner Team</small>
+                                  </div>
+                                </div>
+                              </td>
+                              <td>Lisa, Tom, Emma, Alex, Maria</td>
+                              <td><span class="fw-bold text-success">5,234</span></td>
+                              <td>209.4</td>
+                              <td>5</td>
+                              <td><span class="text-warning">1,156</span></td>
+                              <td><small class="text-muted">5 min ago</small></td>
+                            </tr>
+                            <tr>
+                              <td><span class="badge bg-warning">3</span></td>
+                              <td>
+                                <div class="d-flex align-items-center">
+                                  <div class="d-flex me-2">
+                                    <img src="assets/images/profile/user-1.jpg" alt="Player 1" class="rounded-circle border border-2 border-white" width="28" style="margin-right: -6px;">
+                                    <img src="assets/images/profile/user-2.jpg" alt="Player 2" class="rounded-circle border border-2 border-white" width="28" style="margin-right: -6px;">
+                                    <img src="assets/images/profile/user-3.jpg" alt="Player 3" class="rounded-circle border border-2 border-white" width="28" style="margin-right: -6px;">
+                                    <img src="assets/images/profile/user-4.jpg" alt="Player 4" class="rounded-circle border border-2 border-white" width="28" style="margin-right: -6px;">
+                                    <img src="assets/images/profile/user-5.jpg" alt="Player 5" class="rounded-circle border border-2 border-white" width="28">
+                                  </div>
+                                  <div>
+                                    <h6 class="mb-0">Strike Force</h6>
+                                    <small class="text-muted">Intermediate Team</small>
+                                  </div>
+                                </div>
+                              </td>
+                              <td>John, Sarah, Mike, Lisa, Tom</td>
+                              <td><span class="fw-bold text-success">5,123</span></td>
+                              <td>204.8</td>
+                              <td>5</td>
+                              <td><span class="text-warning">1,089</span></td>
+                              <td><small class="text-muted">20 min ago</small></td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    <!-- 6-Player Teams Tab -->
+                    <div class="tab-pane fade" id="teams6" role="tabpanel">
+                      <div class="alert alert-info mb-3">
+                        <i class="ti ti-info-circle me-2"></i>
+                        <strong>6-Player Teams Division:</strong> Teams compete fairly against other 6-player teams only.
+                      </div>
+                      <div class="table-responsive">
+                        <table class="table table-hover">
+                          <thead>
+                            <tr>
+                              <th scope="col">Rank</th>
+                              <th scope="col">Team</th>
+                              <th scope="col">Players</th>
+                              <th scope="col">Total Score</th>
+                              <th scope="col">Avg/Game</th>
+                              <th scope="col">Games Played</th>
+                              <th scope="col">Best Game</th>
+                              <th scope="col">Last Updated</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr>
+                              <td><span class="badge bg-primary">1</span></td>
+                              <td>
+                                <div class="d-flex align-items-center">
+                                  <div class="d-flex me-2">
+                                    <img src="assets/images/profile/user-2.jpg" alt="Player 1" class="rounded-circle border border-2 border-white" width="28" style="margin-right: -6px;">
+                                    <img src="assets/images/profile/user-3.jpg" alt="Player 2" class="rounded-circle border border-2 border-white" width="28" style="margin-right: -6px;">
+                                    <img src="assets/images/profile/user-4.jpg" alt="Player 3" class="rounded-circle border border-2 border-white" width="28" style="margin-right: -6px;">
+                                    <img src="assets/images/profile/user-5.jpg" alt="Player 4" class="rounded-circle border border-2 border-white" width="28" style="margin-right: -6px;">
+                                    <img src="assets/images/profile/user-6.jpg" alt="Player 5" class="rounded-circle border border-2 border-white" width="28" style="margin-right: -6px;">
+                                    <img src="assets/images/profile/user-7.jpg" alt="Player 6" class="rounded-circle border border-2 border-white" width="28">
+                                  </div>
+                                  <div>
+                                    <h6 class="mb-0">Lane Legends</h6>
+                                    <small class="text-muted">Advanced Team</small>
+                                  </div>
+                                </div>
+                              </td>
+                              <td>Sarah, Mike, Lisa, Tom, Emma, Alex</td>
+                              <td><span class="fw-bold text-success">7,134</span></td>
+                              <td>237.8</td>
+                              <td>5</td>
+                              <td><span class="text-warning">1,456</span></td>
+                              <td><small class="text-muted">30 min ago</small></td>
+                            </tr>
+                            <tr>
+                              <td><span class="badge bg-secondary">2</span></td>
+                              <td>
+                                <div class="d-flex align-items-center">
+                                  <div class="d-flex me-2">
+                                    <img src="assets/images/profile/user-8.jpg" alt="Player 1" class="rounded-circle border border-2 border-white" width="28" style="margin-right: -6px;">
+                                    <img src="assets/images/profile/user-1.jpg" alt="Player 2" class="rounded-circle border border-2 border-white" width="28" style="margin-right: -6px;">
+                                    <img src="assets/images/profile/user-2.jpg" alt="Player 3" class="rounded-circle border border-2 border-white" width="28" style="margin-right: -6px;">
+                                    <img src="assets/images/profile/user-3.jpg" alt="Player 4" class="rounded-circle border border-2 border-white" width="28" style="margin-right: -6px;">
+                                    <img src="assets/images/profile/user-4.jpg" alt="Player 5" class="rounded-circle border border-2 border-white" width="28" style="margin-right: -6px;">
+                                    <img src="assets/images/profile/user-5.jpg" alt="Player 6" class="rounded-circle border border-2 border-white" width="28">
+                                  </div>
+                                  <div>
+                                    <h6 class="mb-0">Pin Dynasty</h6>
+                                    <small class="text-muted">Pro Team</small>
+                                  </div>
+                                </div>
+                              </td>
+                              <td>Maria, David, Anna, Chris, Lisa, Tom</td>
+                              <td><span class="fw-bold text-success">6,789</span></td>
+                              <td>226.3</td>
+                              <td>5</td>
+                              <td><span class="text-warning">1,345</span></td>
+                              <td><small class="text-muted">10 min ago</small></td>
+                            </tr>
+                            <tr>
+                              <td><span class="badge bg-warning">3</span></td>
+                              <td>
+                                <div class="d-flex align-items-center">
+                                  <div class="d-flex me-2">
+                                    <img src="assets/images/profile/user-6.jpg" alt="Player 1" class="rounded-circle border border-2 border-white" width="28" style="margin-right: -6px;">
+                                    <img src="assets/images/profile/user-7.jpg" alt="Player 2" class="rounded-circle border border-2 border-white" width="28" style="margin-right: -6px;">
+                                    <img src="assets/images/profile/user-8.jpg" alt="Player 3" class="rounded-circle border border-2 border-white" width="28" style="margin-right: -6px;">
+                                    <img src="assets/images/profile/user-1.jpg" alt="Player 4" class="rounded-circle border border-2 border-white" width="28" style="margin-right: -6px;">
+                                    <img src="assets/images/profile/user-2.jpg" alt="Player 5" class="rounded-circle border border-2 border-white" width="28" style="margin-right: -6px;">
+                                    <img src="assets/images/profile/user-3.jpg" alt="Player 6" class="rounded-circle border border-2 border-white" width="28">
+                                  </div>
+                                  <div>
+                                    <h6 class="mb-0">Spare Kings</h6>
+                                    <small class="text-muted">Intermediate Team</small>
+                                  </div>
+                                </div>
+                              </td>
+                              <td>Emma, Alex, Maria, David, Anna, Chris</td>
+                              <td><span class="fw-bold text-success">6,456</span></td>
+                              <td>215.2</td>
+                              <td>5</td>
+                              <td><span class="text-warning">1,234</span></td>
+                              <td><small class="text-muted">25 min ago</small></td>
                             </tr>
                           </tbody>
                         </table>
@@ -872,6 +1815,22 @@
 
   <!-- Score Table Functionality -->
   <script>
+    // Toggle player details function
+    function togglePlayerDetails(teamId) {
+      const detailsRow = document.getElementById(teamId + '-details');
+      const icon = document.getElementById(teamId + '-icon');
+      
+      if (detailsRow.style.display === 'none') {
+        detailsRow.style.display = 'table-row';
+        icon.classList.remove('ti-chevron-down');
+        icon.classList.add('ti-chevron-up');
+      } else {
+        detailsRow.style.display = 'none';
+        icon.classList.remove('ti-chevron-up');
+        icon.classList.add('ti-chevron-down');
+      }
+    }
+
     // Date filter functionality
     document.getElementById('dateFilter').addEventListener('change', function() {
       const selectedDate = this.value;
@@ -925,7 +1884,7 @@
         console.log('Switched to tab:', targetId);
         
         // Simulate loading data for specific game
-        if (targetId !== '#overall') {
+        if (targetId !== '#overall' && targetId !== '#teams4' && targetId !== '#teams5' && targetId !== '#teams6') {
           const gameNumber = targetId.replace('#game', '');
           showNotification('Loading Game ' + gameNumber + ' data...', 'info');
         }
