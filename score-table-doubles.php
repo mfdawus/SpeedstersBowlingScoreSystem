@@ -54,9 +54,49 @@
   <!--  Body Wrapper -->
   <div class="page-wrapper" id="main-wrapper" data-layout="vertical" data-navbarbg="skin6" data-sidebartype="full"
     data-sidebar-position="fixed" data-header-position="fixed" style="margin-top: 0; padding-top: 0;">
+    <div class="app-topstrip bg-gradient-primary py-0 px-3 w-100 d-flex align-items-center justify-content-between flex-wrap">
+  <!-- Left side: Tournament Info -->
+  <div class="d-flex align-items-center gap-2 mb-2 mb-lg-0">
+    <i class="ti ti-trophy text-warning fs-4"></i>
+    <div>
+      <h6 class="mb-0 fw-bold text-white">SPEEDSTERS Championship 2025</h6>
+      <small class="text-white-50 d-block">Next Bowling Tournament</small>
+    </div>
+  </div>
 
+  <!-- Right side: Countdown + Register Button -->
+  <div class="d-flex align-items-center gap-2 flex-wrap">
+    <div class="d-flex gap-2">
+     <div class="text-center"> <div class="bg-white bg-opacity-20 rounded p-n2 mt-1">
+          <span class="text-white fw-bold fs-6" id="days">00</span>
+        </div>
+        <small class="text-white-50" style="font-size: 10px;">Days</small>
+      </div>
+     <div class="text-center"> <div class="bg-white bg-opacity-20 rounded p-n2 mt-1">
+          <span class="text-white fw-bold fs-6" id="hours">00</span>
+        </div>
+        <small class="text-white-50" style="font-size: 10px;">Hours</small>
+      </div>
+     <div class="text-center"> <div class="bg-white bg-opacity-20 rounded p-n2 mt-1">
+          <span class="text-white fw-bold fs-6" id="minutes">00</span>
+        </div>
+        <small class="text-white-50" style="font-size: 10px;">Min</small>
+      </div>
+     <div class="text-center"> <div class="bg-white bg-opacity-20 rounded p-n2 mt-1">
+          <span class="text-white fw-bold fs-6" id="seconds">00</span>
+        </div>
+        <small class="text-white-50" style="font-size: 10px;">Sec</small>
+      </div>
+    </div>
+
+    <a class="btn btn-warning btn-sm d-flex align-items-center gap-1">
+      <i class="ti ti-calendar-event fs-6"></i>
+      Register
+    </a>
+  </div>
+</div>
     <!-- Sidebar Start -->
-    <aside class="left-sidebar" style="margin-top:-65px">
+    <aside class="left-sidebar">
       <!-- Sidebar scroll-->
       <div>
         <div class="brand-logo d-flex align-items-center justify-content-between">
@@ -130,7 +170,7 @@
     <!--  Main wrapper -->
     <div class="body-wrapper">
       <!--  Header Start -->
-      <header class="app-header" style="margin-top:-65px">
+      <header class="app-header">
         <nav class="navbar navbar-expand-lg navbar-light">
           <ul class="navbar-nav">
             <li class="nav-item d-block d-xl-none">

@@ -102,50 +102,47 @@
     <div class="body-wrapper">
       <!--  Header Start -->
       <header class="app-header">
-        <!-- Tournament Countdown Banner -->
-        <div class="bg-gradient-primary py-2 px-3 text-white">
-          <div class="d-flex align-items-center justify-content-between">
-            <div class="d-flex align-items-center gap-3">
-              <i class="ti ti-trophy text-warning fs-4"></i>
-              <div>
-                <h6 class="mb-0 fw-bold">SPEEDSTERS Championship 2025</h6>
-                <small class="text-white-50">Next Bowling Tournament</small>
-              </div>
-            </div>
-            <div class="d-flex align-items-center gap-3">
-              <div class="d-flex gap-2">
-                <div class="text-center">
-                  <div class="bg-white bg-opacity-20 rounded px-2 py-1">
-                    <span class="text-white fw-bold fs-6" id="days">00</span>
-                  </div>
-                  <small class="text-white-50" style="font-size: 10px;">Days</small>
-                </div>
-                <div class="text-center">
-                  <div class="bg-white bg-opacity-20 rounded px-2 py-1">
-                    <span class="text-white fw-bold fs-6" id="hours">00</span>
-                  </div>
-                  <small class="text-white-50" style="font-size: 10px;">Hours</small>
-                </div>
-                <div class="text-center">
-                  <div class="bg-white bg-opacity-20 rounded px-2 py-1">
-                    <span class="text-white fw-bold fs-6" id="minutes">00</span>
-                  </div>
-                  <small class="text-white-50" style="font-size: 10px;">Min</small>
-                </div>
-                <div class="text-center">
-                  <div class="bg-white bg-opacity-20 rounded px-2 py-1">
-                    <span class="text-white fw-bold fs-6" id="seconds">00</span>
-                  </div>
-                  <small class="text-white-50" style="font-size: 10px;">Sec</small>
-                </div>
-              </div>
-              <a class="btn btn-warning btn-sm d-flex align-items-center gap-1" href="javascript:void(0)">
-                <i class="ti ti-calendar-event fs-6"></i>
-                Register
-              </a>
-            </div>
-          </div>
+    <div class="app-topstrip bg-gradient-primary py-0 px-3 w-100 d-flex align-items-center justify-content-between flex-wrap">
+  <!-- Left side: Tournament Info -->
+  <div class="d-flex align-items-center gap-2 mb-2 mb-lg-0">
+    <i class="ti ti-trophy text-warning fs-4"></i>
+    <div>
+      <h6 class="mb-0 fw-bold text-white">SPEEDSTERS Championship 2025</h6>
+      <small class="text-white-50 d-block">Next Bowling Tournament</small>
+    </div>
+  </div>
+
+  <!-- Right side: Countdown + Register Button -->
+  <div class="d-flex align-items-center gap-2 flex-wrap">
+    <div class="d-flex gap-2">
+     <div class="text-center"> <div class="bg-white bg-opacity-20 rounded p-n2 mt-1">
+          <span class="text-white fw-bold fs-6" id="days">00</span>
         </div>
+        <small class="text-white-50" style="font-size: 10px;">Days</small>
+      </div>
+     <div class="text-center"> <div class="bg-white bg-opacity-20 rounded p-n2 mt-1">
+          <span class="text-white fw-bold fs-6" id="hours">00</span>
+        </div>
+        <small class="text-white-50" style="font-size: 10px;">Hours</small>
+      </div>
+     <div class="text-center"> <div class="bg-white bg-opacity-20 rounded p-n2 mt-1">
+          <span class="text-white fw-bold fs-6" id="minutes">00</span>
+        </div>
+        <small class="text-white-50" style="font-size: 10px;">Min</small>
+      </div>
+     <div class="text-center"> <div class="bg-white bg-opacity-20 rounded p-n2 mt-1">
+          <span class="text-white fw-bold fs-6" id="seconds">00</span>
+        </div>
+        <small class="text-white-50" style="font-size: 10px;">Sec</small>
+      </div>
+    </div>
+
+    <a class="btn btn-warning btn-sm d-flex align-items-center gap-1">
+      <i class="ti ti-calendar-event fs-6"></i>
+      Register
+    </a>
+  </div>
+</div>
         
         <nav class="navbar navbar-expand-lg navbar-light">
           <ul class="navbar-nav">
