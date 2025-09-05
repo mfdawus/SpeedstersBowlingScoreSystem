@@ -56,7 +56,7 @@
     data-sidebar-position="fixed" data-header-position="fixed" style="margin-top: 0; padding-top: 0;">
 
     <!-- Sidebar Start -->
-    <aside class="left-sidebar">
+    <aside class="left-sidebar" style="margin-top:-65px">
       <!-- Sidebar scroll-->
       <div>
         <div class="brand-logo d-flex align-items-center justify-content-between">
@@ -130,7 +130,7 @@
     <!--  Main wrapper -->
     <div class="body-wrapper">
       <!--  Header Start -->
-      <header class="app-header">
+      <header class="app-header" style="margin-top:-65px">
         <nav class="navbar navbar-expand-lg navbar-light">
           <ul class="navbar-nav">
             <li class="nav-item d-block d-xl-none">
@@ -167,7 +167,7 @@
       <!--  Header End -->
       
       <div class="body-wrapper-inner">
-        <div class="container-fluid">
+        <div class="container-fluid" style="margin-top: 30px;">
           <!-- Page Header -->
           <div class="row">
             <div class="col-12">

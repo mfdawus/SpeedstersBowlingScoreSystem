@@ -106,13 +106,28 @@
       box-shadow: 0 6px 20px rgba(0, 123, 255, 0.4);
       transition: all 0.3s ease;
     }
+    
+    /* Team Type Card Styles */
+    .team-type-card {
+      transition: all 0.3s ease;
+      cursor: pointer;
+      border: 2px solid transparent;
+    }
+    .team-type-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    }
+    .team-type-card.selected {
+      border-color: #007bff;
+      background: linear-gradient(135deg, #f8f9ff 0%, #e3f2fd 100%);
+    }
   </style>
 </head>
 
 <body>
-  <div class="page-wrapper" id="main-wrapper" data-layout="vertical" data-navbarbg="skin6" data-sidebartype="full" data-sidebar-position="fixed" data-header-position="fixed" style="margin-top: 0; padding-top: 0;">
+  <div class="page-wrapper" id="main-wrapper" data-layout="vertical" data-navbarbg="skin6" data-sidebartype="full" data-sidebar-position="fixed" data-header-position="fixed" style="margin-top: 0; padding-top: 15;">
     <!-- Sidebar Start -->
-    <aside class="left-sidebar">
+    <aside class="left-sidebar" style="margin-top:-65px">
       <div>
         <div class="brand-logo d-flex align-items-center justify-content-between">
           <a href="./index.php" class="text-nowrap logo-img d-flex flex-column align-items-start text-decoration-none">
@@ -182,7 +197,7 @@
     <!-- Main wrapper -->
     <div class="body-wrapper">
       <!-- Header Start -->
-      <header class="app-header">
+      <header class="app-header" style="margin-top:-65px">
         <nav class="navbar navbar-expand-lg navbar-light">
           <ul class="navbar-nav">
             <li class="nav-item d-block d-xl-none">
@@ -227,37 +242,150 @@
       </header>
       <!-- Header End -->
 
-      <div class="container-fluid">
-        <!-- Page Header -->
-        <div class="row">
+      <div class="container-fluid" style="margin-top: 30px;">
+        <!-- Team Type Selection -->
+        <div class="row mb-4">
           <div class="col-12">
-            <div class="d-flex align-items-center justify-content-between mb-4">
-              <div>
-                <div class="d-flex align-items-center mb-2">
+            <div class="card">
+              <div class="card-body">
+                <div class="d-flex align-items-center mb-3">
                   <div class="group-logo me-3">
                     <div class="logo-circle">
                       <i class="ti ti-users-group"></i>
                     </div>
                   </div>
                   <div>
-                    <h4 class="fw-semibold mb-1">Join a Bowling Group</h4>
-                    <span class="fw-normal text-muted">Choose a group that matches your skill level and preferences</span>
+                    <h4 class="fw-semibold mb-1">Join a Bowling Team</h4>
+                    <span class="fw-normal text-muted">First, select your preferred team size</span>
                   </div>
                 </div>
-              </div>
-              <div class="d-flex gap-2">
-                <button class="btn btn-outline-primary" onclick="refreshGroups()">
-                  <i class="ti ti-refresh me-1"></i>
-                  Refresh
-                </button>
-                <button class="btn btn-primary" onclick="requestRandomGroup()">
-                  <i class="ti ti-dice me-1"></i>
-                  Random Group
-                </button>
+                
+                <div class="row">
+                  <div class="col-md-4 mb-3">
+                    <div class="card team-type-card" onclick="selectTeamType('duo')" id="duoCard">
+                      <div class="card-body text-center">
+                        <i class="ti ti-users fs-1 text-primary mb-3"></i>
+                        <h6 class="card-title">Duo Team</h6>
+                        <p class="text-muted small">2 players per team</p>
+                        <span class="badge bg-primary">2 Players</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-md-4 mb-3">
+                    <div class="card team-type-card" onclick="selectTeamType('trio')" id="trioCard">
+                      <div class="card-body text-center">
+                        <i class="ti ti-users-group fs-1 text-success mb-3"></i>
+                        <h6 class="card-title">Trio Team</h6>
+                        <p class="text-muted small">3 players per team</p>
+                        <span class="badge bg-success">3 Players</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-md-4 mb-3">
+                    <div class="card team-type-card" onclick="selectTeamType('team')" id="teamCard">
+                      <div class="card-body text-center">
+                        <i class="ti ti-users-group fs-1 text-warning mb-3"></i>
+                        <h6 class="card-title">Team (4-6 Players)</h6>
+                        <p class="text-muted small">4-6 players per team</p>
+                        <span class="badge bg-warning">4-6 Players</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         </div>
+
+        <!-- Skill Level Display -->
+        <div class="row mb-4" id="skillDisplaySection" style="display: none;">
+          <div class="col-12">
+            <div class="card">
+              <div class="card-body">
+                <h5 class="card-title mb-3">Your Bowling Profile</h5>
+                <p class="text-muted mb-3">Based on your bowling history, you've been placed in the following skill group:</p>
+                
+                <div class="row">
+                  <div class="col-md-4 mb-3">
+                    <div class="text-center p-3 bg-light rounded">
+                      <h4 class="text-primary mb-1" id="userAverageScore">-</h4>
+                      <small class="text-muted">Average Score</small>
+                    </div>
+                  </div>
+                  <div class="col-md-4 mb-3">
+                    <div class="text-center p-3 bg-light rounded">
+                      <h4 class="text-success mb-1" id="userSkillGroup">-</h4>
+                      <small class="text-muted">Skill Group</small>
+                    </div>
+                  </div>
+                  <div class="col-md-4 mb-3">
+                    <div class="text-center p-3 bg-light rounded">
+                      <h4 class="text-warning mb-1" id="userGamesPlayed">-</h4>
+                      <small class="text-muted">Games Played</small>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="alert alert-info">
+                  <h6 class="alert-heading">Skill Group Classification:</h6>
+                  <div class="row">
+                    <div class="col-md-6">
+                      <small>
+                        <strong>A:</strong> 200-300 (Professional)<br>
+                        <strong>B:</strong> 180-199 (Advanced)<br>
+                        <strong>C:</strong> 160-179 (Above Average)<br>
+                        <strong>D:</strong> 140-159 (Intermediate)
+                      </small>
+                    </div>
+                    <div class="col-md-6">
+                      <small>
+                        <strong>E:</strong> 120-139 (Casual)<br>
+                        <strong>F:</strong> 100-119 (Beginner)<br>
+                        <strong>G:</strong> 80-99 (New/Inexperienced)<br>
+                        <strong>H:</strong> Below 80 (Absolute Beginner)
+                      </small>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="d-flex gap-2">
+                  <button class="btn btn-primary" onclick="findMatchingGroups()">
+                    <i class="ti ti-search me-1"></i>
+                    Find Matching Groups
+                  </button>
+                  <button class="btn btn-outline-secondary" onclick="resetTeamSelection()">
+                    <i class="ti ti-arrow-left me-1"></i>
+                    Back to Team Selection
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Groups Display Section -->
+        <div id="groupsDisplaySection" style="display: none;">
+          <!-- Page Header -->
+          <div class="row mb-4">
+            <div class="col-12">
+              <div class="d-flex align-items-center justify-content-between">
+                <div>
+                  <h5 class="fw-semibold mb-1">Available Groups for <span id="selectedTeamType"></span></h5>
+                  <span class="fw-normal text-muted">Groups matching your skill level: <span id="userSkillGroup" class="badge bg-primary"></span></span>
+                </div>
+                <div class="d-flex gap-2">
+                  <button class="btn btn-outline-primary" onclick="refreshGroups()">
+                    <i class="ti ti-refresh me-1"></i>
+                    Refresh
+                  </button>
+                  <button class="btn btn-primary" onclick="requestRandomGroup()">
+                    <i class="ti ti-dice me-1"></i>
+                    Random Group
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
 
         <!-- Filter Section -->
         <div class="filter-section">
@@ -296,12 +424,6 @@
         <!-- Groups Grid -->
         <div class="row" id="groupsContainer">
           <!-- Groups will be dynamically populated here -->
-          <div class="col-12 text-center" id="loadingMessage">
-            <div class="spinner-border text-primary" role="status">
-              <span class="visually-hidden">Loading...</span>
-            </div>
-            <p class="mt-2 text-muted">Loading groups...</p>
-          </div>
         </div>
 
         <!-- Selected Group Summary -->
@@ -393,40 +515,253 @@
   <script src="https://cdn.jsdelivr.net/npm/iconify-icon@1.0.8/dist/iconify-icon.min.js"></script>
   
   <script>
-    // Sample groups data (in real app, this would come from database)
-    const availableGroups = [
-      { id: 1, name: 'Beginner Buddies', skillLevel: 'beginner', avgScore: 120, playerCount: 8, maxPlayers: 12, description: 'Perfect for new players learning the basics', available: true },
-      { id: 2, name: 'Casual Rollers', skillLevel: 'beginner', avgScore: 135, playerCount: 6, maxPlayers: 12, description: 'Relaxed group for casual bowling fun', available: true },
-      { id: 3, name: 'Mid-Level Masters', skillLevel: 'intermediate', avgScore: 175, playerCount: 10, maxPlayers: 12, description: 'Intermediate players looking to improve', available: true },
-      { id: 4, name: 'Balanced Bowlers', skillLevel: 'intermediate', avgScore: 185, playerCount: 7, maxPlayers: 12, description: 'Mixed skill levels for balanced competition', available: true },
-      { id: 5, name: 'Advanced Alliance', skillLevel: 'advanced', avgScore: 220, playerCount: 9, maxPlayers: 12, description: 'Advanced players seeking challenging games', available: true },
-      { id: 6, name: 'Pro League', skillLevel: 'pro', avgScore: 265, playerCount: 5, maxPlayers: 12, description: 'Professional level competitive bowling', available: true },
-      { id: 7, name: 'Weekend Warriors', skillLevel: 'intermediate', avgScore: 160, playerCount: 12, maxPlayers: 12, description: 'Full group - weekend bowling enthusiasts', available: false },
-      { id: 8, name: 'Night Owls', skillLevel: 'advanced', avgScore: 210, playerCount: 11, maxPlayers: 12, description: 'Late night bowling sessions', available: true }
-    ];
+    // Sample groups data organized by skill groups and team types
+    const availableGroups = {
+      duo: {
+        A: [
+          { id: 1, name: 'Pro Duos', skillGroup: 'A', avgScore: 250, playerCount: 1, maxPlayers: 2, description: 'Professional level duo teams', available: true },
+          { id: 2, name: 'Elite Pairs', skillGroup: 'A', avgScore: 240, playerCount: 1, maxPlayers: 2, description: 'Advanced professional duos', available: true }
+        ],
+        B: [
+          { id: 3, name: 'Advanced Duos', skillGroup: 'B', avgScore: 190, playerCount: 1, maxPlayers: 2, description: 'Advanced level duo teams', available: true },
+          { id: 4, name: 'Skilled Pairs', skillGroup: 'B', avgScore: 185, playerCount: 1, maxPlayers: 2, description: 'Skilled duo partnerships', available: true }
+        ],
+        C: [
+          { id: 5, name: 'Above Average Duos', skillGroup: 'C', avgScore: 170, playerCount: 1, maxPlayers: 2, description: 'Above average duo teams', available: true },
+          { id: 6, name: 'Improving Pairs', skillGroup: 'C', avgScore: 165, playerCount: 1, maxPlayers: 2, description: 'Duos working on consistency', available: true }
+        ],
+        D: [
+          { id: 7, name: 'Intermediate Duos', skillGroup: 'D', avgScore: 150, playerCount: 1, maxPlayers: 2, description: 'Intermediate level duos', available: true },
+          { id: 8, name: 'Developing Pairs', skillGroup: 'D', avgScore: 145, playerCount: 1, maxPlayers: 2, description: 'Developing duo teams', available: true }
+        ],
+        E: [
+          { id: 9, name: 'Casual Duos', skillGroup: 'E', avgScore: 130, playerCount: 1, maxPlayers: 2, description: 'Casual bowling duos', available: true },
+          { id: 10, name: 'Fun Pairs', skillGroup: 'E', avgScore: 125, playerCount: 1, maxPlayers: 2, description: 'Fun-loving duo teams', available: true }
+        ],
+        F: [
+          { id: 11, name: 'Beginner Duos', skillGroup: 'F', avgScore: 110, playerCount: 1, maxPlayers: 2, description: 'Beginner level duos', available: true },
+          { id: 12, name: 'Learning Pairs', skillGroup: 'F', avgScore: 105, playerCount: 1, maxPlayers: 2, description: 'Learning duo teams', available: true }
+        ],
+        G: [
+          { id: 13, name: 'New Duos', skillGroup: 'G', avgScore: 90, playerCount: 1, maxPlayers: 2, description: 'New to bowling duos', available: true },
+          { id: 14, name: 'Fresh Pairs', skillGroup: 'G', avgScore: 85, playerCount: 1, maxPlayers: 2, description: 'Fresh duo teams', available: true }
+        ],
+        H: [
+          { id: 15, name: 'Starting Duos', skillGroup: 'H', avgScore: 70, playerCount: 1, maxPlayers: 2, description: 'Just starting out duos', available: true },
+          { id: 16, name: 'First Pairs', skillGroup: 'H', avgScore: 65, playerCount: 1, maxPlayers: 2, description: 'First-time duo teams', available: true }
+        ]
+      },
+      trio: {
+        A: [
+          { id: 17, name: 'Pro Trios', skillGroup: 'A', avgScore: 250, playerCount: 2, maxPlayers: 3, description: 'Professional level trio teams', available: true },
+          { id: 18, name: 'Elite Threes', skillGroup: 'A', avgScore: 240, playerCount: 2, maxPlayers: 3, description: 'Advanced professional trios', available: true }
+        ],
+        B: [
+          { id: 19, name: 'Advanced Trios', skillGroup: 'B', avgScore: 190, playerCount: 2, maxPlayers: 3, description: 'Advanced level trio teams', available: true },
+          { id: 20, name: 'Skilled Threes', skillGroup: 'B', avgScore: 185, playerCount: 2, maxPlayers: 3, description: 'Skilled trio partnerships', available: true }
+        ],
+        C: [
+          { id: 21, name: 'Above Average Trios', skillGroup: 'C', avgScore: 170, playerCount: 2, maxPlayers: 3, description: 'Above average trio teams', available: true },
+          { id: 22, name: 'Improving Threes', skillGroup: 'C', avgScore: 165, playerCount: 2, maxPlayers: 3, description: 'Trios working on consistency', available: true }
+        ],
+        D: [
+          { id: 23, name: 'Intermediate Trios', skillGroup: 'D', avgScore: 150, playerCount: 2, maxPlayers: 3, description: 'Intermediate level trios', available: true },
+          { id: 24, name: 'Developing Threes', skillGroup: 'D', avgScore: 145, playerCount: 2, maxPlayers: 3, description: 'Developing trio teams', available: true }
+        ],
+        E: [
+          { id: 25, name: 'Casual Trios', skillGroup: 'E', avgScore: 130, playerCount: 2, maxPlayers: 3, description: 'Casual bowling trios', available: true },
+          { id: 26, name: 'Fun Threes', skillGroup: 'E', avgScore: 125, playerCount: 2, maxPlayers: 3, description: 'Fun-loving trio teams', available: true }
+        ],
+        F: [
+          { id: 27, name: 'Beginner Trios', skillGroup: 'F', avgScore: 110, playerCount: 2, maxPlayers: 3, description: 'Beginner level trios', available: true },
+          { id: 28, name: 'Learning Threes', skillGroup: 'F', avgScore: 105, playerCount: 2, maxPlayers: 3, description: 'Learning trio teams', available: true }
+        ],
+        G: [
+          { id: 29, name: 'New Trios', skillGroup: 'G', avgScore: 90, playerCount: 2, maxPlayers: 3, description: 'New to bowling trios', available: true },
+          { id: 30, name: 'Fresh Threes', skillGroup: 'G', avgScore: 85, playerCount: 2, maxPlayers: 3, description: 'Fresh trio teams', available: true }
+        ],
+        H: [
+          { id: 31, name: 'Starting Trios', skillGroup: 'H', avgScore: 70, playerCount: 2, maxPlayers: 3, description: 'Just starting out trios', available: true },
+          { id: 32, name: 'First Threes', skillGroup: 'H', avgScore: 65, playerCount: 2, maxPlayers: 3, description: 'First-time trio teams', available: true }
+        ]
+      },
+      team: {
+        A: [
+          { id: 33, name: 'Pro Teams', skillGroup: 'A', avgScore: 250, playerCount: 4, maxPlayers: 6, description: 'Professional level teams', available: true },
+          { id: 34, name: 'Elite Squads', skillGroup: 'A', avgScore: 240, playerCount: 5, maxPlayers: 6, description: 'Advanced professional teams', available: true }
+        ],
+        B: [
+          { id: 35, name: 'Advanced Teams', skillGroup: 'B', avgScore: 190, playerCount: 4, maxPlayers: 6, description: 'Advanced level teams', available: true },
+          { id: 36, name: 'Skilled Squads', skillGroup: 'B', avgScore: 185, playerCount: 5, maxPlayers: 6, description: 'Skilled team partnerships', available: true }
+        ],
+        C: [
+          { id: 37, name: 'Above Average Teams', skillGroup: 'C', avgScore: 170, playerCount: 4, maxPlayers: 6, description: 'Above average teams', available: true },
+          { id: 38, name: 'Improving Squads', skillGroup: 'C', avgScore: 165, playerCount: 5, maxPlayers: 6, description: 'Teams working on consistency', available: true }
+        ],
+        D: [
+          { id: 39, name: 'Intermediate Teams', skillGroup: 'D', avgScore: 150, playerCount: 4, maxPlayers: 6, description: 'Intermediate level teams', available: true },
+          { id: 40, name: 'Developing Squads', skillGroup: 'D', avgScore: 145, playerCount: 5, maxPlayers: 6, description: 'Developing teams', available: true }
+        ],
+        E: [
+          { id: 41, name: 'Casual Teams', skillGroup: 'E', avgScore: 130, playerCount: 4, maxPlayers: 6, description: 'Casual bowling teams', available: true },
+          { id: 42, name: 'Fun Squads', skillGroup: 'E', avgScore: 125, playerCount: 5, maxPlayers: 6, description: 'Fun-loving teams', available: true }
+        ],
+        F: [
+          { id: 43, name: 'Beginner Teams', skillGroup: 'F', avgScore: 110, playerCount: 4, maxPlayers: 6, description: 'Beginner level teams', available: true },
+          { id: 44, name: 'Learning Squads', skillGroup: 'F', avgScore: 105, playerCount: 5, maxPlayers: 6, description: 'Learning teams', available: true }
+        ],
+        G: [
+          { id: 45, name: 'New Teams', skillGroup: 'G', avgScore: 90, playerCount: 4, maxPlayers: 6, description: 'New to bowling teams', available: true },
+          { id: 46, name: 'Fresh Squads', skillGroup: 'G', avgScore: 85, playerCount: 5, maxPlayers: 6, description: 'Fresh teams', available: true }
+        ],
+        H: [
+          { id: 47, name: 'Starting Teams', skillGroup: 'H', avgScore: 70, playerCount: 4, maxPlayers: 6, description: 'Just starting out teams', available: true },
+          { id: 48, name: 'First Squads', skillGroup: 'H', avgScore: 65, playerCount: 5, maxPlayers: 6, description: 'First-time teams', available: true }
+        ]
+      }
+    };
 
+    let selectedTeamType = null;
+    let userSkillGroup = null;
+    let userScore = null;
     let selectedGroupId = null;
-    let filteredGroups = [...availableGroups];
+    let filteredGroups = [];
 
     // Initialize page
     document.addEventListener('DOMContentLoaded', function() {
-      console.log('Page loaded, populating groups...');
-      populateGroups();
-      console.log('Groups populated:', availableGroups.length);
+      // Page starts with team type selection
+      // Load user's bowling history automatically
+      loadUserBowlingHistory();
     });
+
+    // Team type selection functions
+    function selectTeamType(type) {
+      selectedTeamType = type;
+      
+      // Update visual selection
+      document.querySelectorAll('.team-type-card').forEach(card => {
+        card.classList.remove('selected');
+      });
+      document.getElementById(type + 'Card').classList.add('selected');
+      
+      // Show skill display section
+      document.getElementById('skillDisplaySection').style.display = 'block';
+      
+      // Scroll to skill display
+      document.getElementById('skillDisplaySection').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    // Sample user bowling history (in real app, this would come from database)
+    const userBowlingHistory = {
+      averageScore: 165,
+      gamesPlayed: 24,
+      recentScores: [180, 155, 170, 160, 175, 150, 185, 165, 170, 160],
+      skillGroup: 'C' // Will be calculated automatically
+    };
+
+    function loadUserBowlingHistory() {
+      // Calculate skill group based on average score
+      const avgScore = userBowlingHistory.averageScore;
+      
+      if (avgScore >= 200) {
+        userSkillGroup = 'A';
+      } else if (avgScore >= 180) {
+        userSkillGroup = 'B';
+      } else if (avgScore >= 160) {
+        userSkillGroup = 'C';
+      } else if (avgScore >= 140) {
+        userSkillGroup = 'D';
+      } else if (avgScore >= 120) {
+        userSkillGroup = 'E';
+      } else if (avgScore >= 100) {
+        userSkillGroup = 'F';
+      } else if (avgScore >= 80) {
+        userSkillGroup = 'G';
+      } else {
+        userSkillGroup = 'H';
+      }
+      
+      userScore = avgScore;
+      
+      // Update the display elements
+      document.getElementById('userAverageScore').textContent = avgScore;
+      document.getElementById('userSkillGroup').textContent = userSkillGroup;
+      document.getElementById('userGamesPlayed').textContent = userBowlingHistory.gamesPlayed;
+      
+      // Update userBowlingHistory object
+      userBowlingHistory.skillGroup = userSkillGroup;
+    }
+
+    function findMatchingGroups() {
+      if (!selectedTeamType || !userSkillGroup) {
+        alert('Please select a team type first.');
+        return;
+      }
+      
+      // Get groups for the selected team type and skill group
+      filteredGroups = availableGroups[selectedTeamType][userSkillGroup] || [];
+      
+      // Update display
+      document.getElementById('selectedTeamType').textContent = getTeamTypeName(selectedTeamType);
+      document.getElementById('userSkillGroup').textContent = userSkillGroup;
+      
+      // Show groups section
+      document.getElementById('groupsDisplaySection').style.display = 'block';
+      
+      // Populate groups
+      populateGroups();
+      
+      // Scroll to groups
+      document.getElementById('groupsDisplaySection').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function getTeamTypeName(type) {
+      switch(type) {
+        case 'duo': return 'Duo Teams';
+        case 'trio': return 'Trio Teams';
+        case 'team': return 'Teams (4-6 Players)';
+        default: return 'Teams';
+      }
+    }
+
+    function resetTeamSelection() {
+      selectedTeamType = null;
+      selectedGroupId = null;
+      filteredGroups = [];
+      
+      // Reset UI
+      document.querySelectorAll('.team-type-card').forEach(card => {
+        card.classList.remove('selected');
+      });
+      document.getElementById('skillDisplaySection').style.display = 'none';
+      document.getElementById('groupsDisplaySection').style.display = 'none';
+      
+      // Scroll to top
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
 
     function populateGroups() {
       const container = document.getElementById('groupsContainer');
-      const loadingMessage = document.getElementById('loadingMessage');
-      console.log('Container found:', container);
-      
-      // Hide loading message
-      if (loadingMessage) {
-        loadingMessage.style.display = 'none';
-      }
-      
       container.innerHTML = '';
-      console.log('Filtered groups:', filteredGroups.length);
+
+      if (filteredGroups.length === 0) {
+        container.innerHTML = `
+          <div class="col-12">
+            <div class="card">
+              <div class="card-body text-center py-5">
+                <i class="ti ti-users-group fs-1 text-muted mb-3"></i>
+                <h5 class="text-muted">No Groups Available</h5>
+                <p class="text-muted">There are currently no groups available for your skill level and team type.</p>
+                <button class="btn btn-primary" onclick="requestRandomGroup()">
+                  <i class="ti ti-dice me-1"></i>
+                  Request Random Assignment
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+        return;
+      }
 
       filteredGroups.forEach(group => {
         const groupCard = document.createElement('div');
@@ -435,8 +770,8 @@
           <div class="card group-card h-100" onclick="selectGroup(${group.id})" data-group-id="${group.id}">
             <div class="card-header d-flex justify-content-between align-items-center">
               <h6 class="mb-0">${group.name}</h6>
-              <span class="badge ${getSkillBadgeClass(group.skillLevel)} skill-badge">
-                ${group.skillLevel.charAt(0).toUpperCase() + group.skillLevel.slice(1)}
+              <span class="badge ${getSkillBadgeClass(group.skillGroup)} skill-badge">
+                ${group.skillGroup}
               </span>
             </div>
             <div class="card-body">
@@ -533,9 +868,14 @@
     }
 
     function requestRandomGroup() {
-      const availableGroupsOnly = availableGroups.filter(g => g.available);
+      if (!selectedTeamType || !userSkillGroup) {
+        alert('Please select a team type first.');
+        return;
+      }
+      
+      const availableGroupsOnly = availableGroups[selectedTeamType][userSkillGroup].filter(g => g.available);
       if (availableGroupsOnly.length === 0) {
-        showNotification('No available groups at the moment', 'warning');
+        showNotification('No available groups for your skill level at the moment', 'warning');
         return;
       }
       
@@ -544,7 +884,7 @@
       // Populate modal
       document.getElementById('randomGroupName').textContent = randomGroup.name;
       document.getElementById('randomGroupDesc').textContent = randomGroup.description;
-      document.getElementById('randomGroupSkill').textContent = randomGroup.skillLevel.charAt(0).toUpperCase() + randomGroup.skillLevel.slice(1);
+      document.getElementById('randomGroupSkill').textContent = randomGroup.skillGroup;
       document.getElementById('randomGroupCount').textContent = randomGroup.playerCount;
       document.getElementById('randomGroupMax').textContent = randomGroup.maxPlayers;
       
@@ -593,14 +933,18 @@
       clearFilters();
     }
 
-    function getSkillBadgeClass(skillLevel) {
+    function getSkillBadgeClass(skillGroup) {
       const classes = {
-        'beginner': 'bg-primary',
-        'intermediate': 'bg-success',
-        'advanced': 'bg-warning',
-        'pro': 'bg-danger'
+        'A': 'bg-danger',      // Professional (200-300)
+        'B': 'bg-warning',    // Advanced (180-199)
+        'C': 'bg-info',       // Above Average (160-179)
+        'D': 'bg-success',    // Intermediate (140-159)
+        'E': 'bg-primary',    // Casual (120-139)
+        'F': 'bg-secondary',  // Beginner (100-119)
+        'G': 'bg-dark',       // New/Inexperienced (80-99)
+        'H': 'bg-light text-dark' // Absolute Beginner (Below 80)
       };
-      return classes[skillLevel] || 'bg-secondary';
+      return classes[skillGroup] || 'bg-secondary';
     }
 
     function getProgressBarClass(playerCount, maxPlayers) {
