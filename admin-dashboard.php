@@ -1,6 +1,7 @@
 <?php
 require_once 'includes/auth.php';
 require_once 'includes/dashboard.php';
+require_once 'includes/session-management.php';
 requireAdmin(); // Ensure user is admin
 
 // Get current user info
@@ -13,6 +14,10 @@ $teamStats = getTeamStats();
 $soloPlayersStats = getSoloPlayersStats();
 $allPlayersStats = getAllPlayersStats();
 $recentActivities = getRecentActivities();
+
+// Get session data
+$allSessions = getAllGameSessions();
+$activeSession = getActiveSession();
 
 // Debug: Let's see what data we're getting
 // echo "<pre>All Players Stats Debug: "; print_r($allPlayersStats); echo "</pre>";
@@ -261,7 +266,7 @@ $recentActivities = getRecentActivities();
                   <div class="d-flex align-items-center">
                     <div class="flex-grow-1">
                       <h6 class="card-title text-white-50 mb-1">Total Players</h6>
-                      <h3 class="mb-0 text-white"><?php echo isset($adminStats['total_users']) ? $adminStats['total_users'] : '0'; ?></h3>
+                      <h3 class="mb-0 text-white" id="totalPlayersCount"><?php echo isset($adminStats['total_users']) ? $adminStats['total_users'] : '0'; ?></h3>
                       <small class="text-white-50">Active players</small>
                     </div>
                     <div class="ms-3">
@@ -308,13 +313,136 @@ $recentActivities = getRecentActivities();
                 <div class="card-body">
                   <div class="d-flex align-items-center">
                     <div class="flex-grow-1">
-                      <h6 class="card-title text-white-50 mb-1">Games Today</h6>
-                      <h3 class="mb-0 text-white"><?php echo isset($adminStats['games_today']) ? $adminStats['games_today'] : '0'; ?></h3>
-                      <small class="text-white-50">Today's games</small>
+                      <h6 class="card-title text-white-50 mb-1">Players Played Today</h6>
+                      <h3 class="mb-0 text-white" id="playersPlayedTodayCount"><?php echo isset($adminStats['players_played_today']) ? $adminStats['players_played_today'] : '0'; ?></h3>
+                      <small class="text-white-50">Players with scores today</small>
                     </div>
                     <div class="ms-3">
-                      <i class="ti ti-bowling fs-1 text-white-50"></i>
+                      <i class="ti ti-trophy fs-1 text-white-50"></i>
                     </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Game Session Management -->
+          <div class="row mb-4">
+            <div class="col-12">
+              <div class="card admin-card">
+                <div class="card-header">
+                  <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                      <h5 class="card-title fw-semibold mb-1">Weekly Game Session Management</h5>
+                      <span class="fw-normal text-muted">Manage solo game sessions and score entry</span>
+                    </div>
+                    <div class="d-flex gap-2">
+                      <button class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#createSessionModal">
+                        <i class="ti ti-plus me-1"></i>Create New Session
+                      </button>
+                      <button class="btn btn-primary btn-sm" onclick="refreshSessions()">
+                        <i class="ti ti-refresh"></i>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <div class="card-body">
+                  <?php if ($activeSession): ?>
+                    <!-- Active Session -->
+                    <div class="alert alert-success d-flex align-items-center mb-4">
+                      <i class="ti ti-play-circle me-2 fs-4"></i>
+                      <div class="flex-grow-1">
+                        <strong>Active Session:</strong> <?php echo htmlspecialchars($activeSession['session_name']); ?>
+                        <br>
+                        <small>
+                          📅 <?php echo date('l, M j, Y', strtotime($activeSession['session_date'])); ?> 
+                          ⏰ <?php echo date('g:i A', strtotime($activeSession['session_time'])); ?> 
+                          🎳 <?php echo $activeSession['game_mode']; ?> 
+                          👥 <?php echo $activeSession['participant_count']; ?>/<?php echo $activeSession['max_players']; ?> registered
+                          🏆 <?php echo $activeSession['players_played']; ?> played today
+                        </small>
+                      </div>
+                      <div class="ms-3">
+                        <a href="admin-score-monitoring-solo.php?session=<?php echo $activeSession['session_id']; ?>" class="btn btn-warning btn-sm me-2">
+                          <i class="ti ti-edit me-1"></i>Enter Scores
+                        </a>
+                        <button class="btn btn-danger btn-sm" onclick="endSession(<?php echo $activeSession['session_id']; ?>)">
+                          <i class="ti ti-stop me-1"></i>End Session
+                        </button>
+                      </div>
+                    </div>
+                  <?php else: ?>
+                    <!-- No Active Session -->
+                    <div class="alert alert-info d-flex align-items-center mb-4">
+                      <i class="ti ti-info-circle me-2 fs-4"></i>
+                      <div class="flex-grow-1">
+                        <strong>No Active Session</strong>
+                        <br>
+                        <small>Create a new session to start managing solo games</small>
+                      </div>
+                    </div>
+                  <?php endif; ?>
+
+                  <!-- Recent Sessions -->
+                  <div class="table-responsive">
+                    <table class="table table-hover">
+                      <thead>
+                        <tr>
+                          <th>Session Name</th>
+                          <th>Date & Time</th>
+                          <th>Mode</th>
+                          <th>Players</th>
+                          <th>Status</th>
+                          <th>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <?php foreach (array_slice($allSessions, 0, 5) as $session): ?>
+                          <tr>
+                            <td>
+                              <strong><?php echo htmlspecialchars($session['session_name']); ?></strong>
+                              <?php if ($session['notes']): ?>
+                                <br><small class="text-muted"><?php echo htmlspecialchars($session['notes']); ?></small>
+                              <?php endif; ?>
+                            </td>
+                            <td>
+                              <?php echo date('M j, Y', strtotime($session['session_date'])); ?><br>
+                              <small class="text-muted"><?php echo date('g:i A', strtotime($session['session_time'])); ?></small>
+                            </td>
+                            <td><span class="badge bg-primary"><?php echo $session['game_mode']; ?></span></td>
+                            <td>
+                              <?php echo $session['participant_count']; ?>/<?php echo $session['max_players']; ?> registered
+                              <br><small class="text-success"><?php echo $session['players_played'] ?? 0; ?> played</small>
+                            </td>
+                            <td>
+                              <?php
+                              $statusClass = match($session['status']) {
+                                'Scheduled' => 'bg-secondary',
+                                'Active' => 'bg-success',
+                                'Completed' => 'bg-info',
+                                'Cancelled' => 'bg-danger',
+                                default => 'bg-secondary'
+                              };
+                              ?>
+                              <span class="badge <?php echo $statusClass; ?>"><?php echo $session['status']; ?></span>
+                            </td>
+                            <td>
+                              <?php if ($session['status'] === 'Scheduled'): ?>
+                                <button class="btn btn-success btn-sm" onclick="startSession(<?php echo $session['session_id']; ?>)">
+                                  <i class="ti ti-play me-1"></i>Start
+                                </button>
+                              <?php elseif ($session['status'] === 'Active'): ?>
+                                <a href="admin-score-monitoring-solo.php?session=<?php echo $session['session_id']; ?>" class="btn btn-warning btn-sm">
+                                  <i class="ti ti-edit me-1"></i>Enter Scores
+                                </a>
+                              <?php else: ?>
+                                <span class="text-muted">-</span>
+                              <?php endif; ?>
+                            </td>
+                          </tr>
+                        <?php endforeach; ?>
+                      </tbody>
+                    </table>
                   </div>
                 </div>
               </div>
@@ -334,10 +462,41 @@ $recentActivities = getRecentActivities();
                     </div>
                     <div class="d-flex gap-2">
                       <select class="form-select form-select-sm" id="timeFilter">
-                        <option value="today">Today</option>
-                        <option value="week">This Week</option>
-                        <option value="month">This Month</option>
-                        <option value="all">All Time</option>
+                        <?php 
+                        // Get actual game dates from database - NO SESSION PARTICIPANTS NEEDED
+                        try {
+                          $pdo = getDBConnection();
+                          $stmt = $pdo->prepare("
+                            SELECT DISTINCT DATE(game_date) as match_date
+                            FROM game_scores 
+                            WHERE status = 'Completed'
+                            ORDER BY match_date DESC
+                            LIMIT 20
+                          ");
+                          $stmt->execute();
+                          $gameDates = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                          
+                          // Add most recent date as first option (default)
+                          if (!empty($gameDates)) {
+                            $mostRecentDate = $gameDates[0]['match_date'];
+                            echo '<option value="' . $mostRecentDate . '" selected>' . date('M j, Y', strtotime($mostRecentDate)) . '</option>';
+                            
+                            // Add other game dates
+                            foreach (array_slice($gameDates, 1) as $date) {
+                              $formattedDate = date('M j, Y', strtotime($date['match_date']));
+                              echo '<option value="' . $date['match_date'] . '">' . $formattedDate . '</option>';
+                            }
+                          } else {
+                            echo '<option value="today" selected>' . date('M j, Y') . '</option>';
+                          }
+                          
+                          // Add "All Time" option
+                          echo '<option value="all">All Time</option>';
+                        } catch (Exception $e) {
+                          echo '<option value="today" selected>' . date('M j, Y') . '</option>';
+                          echo '<option value="all">All Time</option>';
+                        }
+                        ?>
                       </select>
                       <button class="btn btn-primary btn-sm" onclick="refreshData()">
                         <i class="ti ti-refresh"></i>
@@ -378,16 +537,17 @@ $recentActivities = getRecentActivities();
                     <!-- Overall Rankings Tab -->
                     <div class="tab-pane fade show active" id="overall" role="tabpanel">
                       <div class="table-responsive">
-                        <table class="table table-hover">
+                        <table class="table table-hover" id="leaderboardTable">
                           <thead>
                             <tr>
                               <th scope="col">Rank</th>
                               <th scope="col">Team/Player</th>
-                              <th scope="col">Type</th>
+                              <th scope="col">Team Name</th>
                               <th scope="col">Total Score</th>
                               <th scope="col">Avg/Game</th>
                               <th scope="col">Games</th>
                               <th scope="col">Best Score</th>
+                              <th scope="col">Strike Rate</th>
                               <th scope="col">Status</th>
                               <th scope="col">Actions</th>
                             </tr>
@@ -400,22 +560,9 @@ $recentActivities = getRecentActivities();
                                 $totalScore = $player['avg_score'] * $player['total_games'];
                                 $strikeRate = $player['total_games'] > 0 ? round(($player['strikes_count'] / $player['total_games']) * 100) : 0;
                                 
-                                // Determine badge color based on game modes played
-                                $badgeClass = 'bg-primary';
-                                $gameModeText = 'Mixed';
-                                if (strpos($player['game_modes_played'], 'Solo') !== false && strpos($player['game_modes_played'], ',') === false) {
-                                    $badgeClass = 'bg-primary';
-                                    $gameModeText = 'Solo';
-                                } elseif (strpos($player['game_modes_played'], 'Doubles') !== false && strpos($player['game_modes_played'], ',') === false) {
-                                    $badgeClass = 'bg-success';
-                                    $gameModeText = 'Doubles';
-                                } elseif (strpos($player['game_modes_played'], 'Trio') !== false && strpos($player['game_modes_played'], ',') === false) {
-                                    $badgeClass = 'bg-info';
-                                    $gameModeText = 'Trio';
-                                } elseif (strpos($player['game_modes_played'], 'Team') !== false && strpos($player['game_modes_played'], ',') === false) {
-                                    $badgeClass = 'bg-warning';
-                                    $gameModeText = 'Team';
-                                }
+                                // Show team name with green badge
+                                $teamName = $player['team_name'] ?? 'No Team';
+                                $badgeClass = 'bg-success';
                               ?>
                                 <tr>
                                   <td><span class="badge bg-primary"><?php echo $rank; ?></span></td>
@@ -428,16 +575,22 @@ $recentActivities = getRecentActivities();
                                       </div>
                                     </div>
                                   </td>
-                                  <td><span class="badge <?php echo $badgeClass; ?>"><?php echo $gameModeText; ?></span></td>
+                                  <td><span class="badge <?php echo $badgeClass; ?>"><?php echo htmlspecialchars($teamName); ?></span></td>
                                   <td><span class="fw-bold text-success"><?php echo number_format($totalScore); ?></span></td>
                                   <td><?php echo number_format($player['avg_score'], 1); ?></td>
                                   <td><?php echo $player['total_games']; ?></td>
-                                  <td><span class="text-warning"><?php echo $player['best_score']; ?></span></td>
+                                  <td><span class="badge bg-info"><?php echo $player['best_score']; ?></span></td>
+                                  <td><span class="badge bg-warning text-dark"><?php echo $strikeRate; ?>%</span></td>
                                   <td><span class="badge bg-success">Active</span></td>
                                   <td>
-                                    <button class="btn btn-sm btn-outline-primary" onclick="viewDetails('<?php echo $player['user_id']; ?>')">
-                                      <i class="ti ti-eye"></i>
-                                    </button>
+                                    <div class="d-flex gap-1">
+                                      <button class="btn btn-sm btn-outline-primary" onclick="viewDetails('<?php echo $player['user_id']; ?>')" title="View Details">
+                                        <i class="ti ti-eye"></i>
+                                      </button>
+                                      <button class="btn btn-sm btn-outline-success" onclick="editPlayer('<?php echo $player['user_id']; ?>')" title="Edit Player">
+                                        <i class="ti ti-edit"></i>
+                                      </button>
+                                    </div>
                                   </td>
                                 </tr>
                               <?php 
@@ -445,7 +598,7 @@ $recentActivities = getRecentActivities();
                               endforeach; ?>
                             <?php else: ?>
                               <tr>
-                                <td colspan="9" class="text-center text-muted py-4">
+                                <td colspan="10" class="text-center text-muted py-4">
                                   <i class="ti ti-user fs-1 mb-2"></i>
                                   <p class="mb-0">No player data available</p>
                                   <small>Players will appear here once they start playing</small>
@@ -460,7 +613,7 @@ $recentActivities = getRecentActivities();
                     <!-- Solo Players Tab -->
                     <div class="tab-pane fade" id="solo" role="tabpanel">
                       <div class="table-responsive">
-                        <table class="table table-hover">
+                        <table class="table table-hover" id="soloStatsTable">
                           <thead>
                             <tr>
                               <th scope="col">Rank</th>
@@ -495,12 +648,20 @@ $recentActivities = getRecentActivities();
                                   <td><span class="fw-bold text-success"><?php echo number_format($totalScore); ?></span></td>
                                   <td><?php echo number_format($player['avg_score'], 1); ?></td>
                                   <td><?php echo $player['total_games']; ?></td>
-                                  <td><span class="text-warning"><?php echo $player['best_score']; ?></span></td>
-                                  <td><?php echo $strikeRate; ?>%</td>
+                                  <td><span class="badge bg-info"><?php echo $player['best_score']; ?></span></td>
+                                  <td><span class="badge bg-warning text-dark"><?php echo $strikeRate; ?>%</span></td>
                                   <td>
-                                    <button class="btn btn-sm btn-outline-primary" onclick="viewDetails('<?php echo $player['user_id']; ?>')">
-                                      <i class="ti ti-eye"></i>
-                                    </button>
+                                    <div class="d-flex gap-1">
+                                      <button class="btn btn-sm btn-outline-primary" onclick="viewDetails('<?php echo $player['user_id']; ?>')" title="View Details">
+                                        <i class="ti ti-eye"></i>
+                                      </button>
+                                      <button class="btn btn-sm btn-outline-success" onclick="editPlayer('<?php echo $player['user_id']; ?>')" title="Edit Player">
+                                        <i class="ti ti-edit"></i>
+                                      </button>
+                                      <button class="btn btn-sm btn-outline-info" onclick="viewScores('<?php echo $player['user_id']; ?>')" title="View Scores">
+                                        <i class="ti ti-chart-line"></i>
+                                      </button>
+                                    </div>
                                   </td>
                                 </tr>
                               <?php 
@@ -566,7 +727,7 @@ $recentActivities = getRecentActivities();
                                   <td><span class="fw-bold text-success"><?php echo number_format($totalScore); ?></span></td>
                                   <td><?php echo number_format($team['team_average'], 1); ?></td>
                                   <td><?php echo $team['total_games']; ?></td>
-                                  <td><span class="text-warning"><?php echo $team['team_best']; ?></span></td>
+                                  <td><span class="badge bg-info"><?php echo $team['team_best']; ?></span></td>
                                   <td>
                                     <button class="btn btn-sm btn-outline-primary" onclick="viewDetails('<?php echo $team['team_name']; ?>')">
                                       <i class="ti ti-eye"></i>
@@ -637,7 +798,7 @@ $recentActivities = getRecentActivities();
                                   <td><span class="fw-bold text-success"><?php echo number_format($totalScore); ?></span></td>
                                   <td><?php echo number_format($team['team_average'], 1); ?></td>
                                   <td><?php echo $team['total_games']; ?></td>
-                                  <td><span class="text-warning"><?php echo $team['team_best']; ?></span></td>
+                                  <td><span class="badge bg-info"><?php echo $team['team_best']; ?></span></td>
                                   <td>
                                     <button class="btn btn-sm btn-outline-primary" onclick="viewDetails('<?php echo $team['team_name']; ?>')">
                                       <i class="ti ti-eye"></i>
@@ -664,7 +825,7 @@ $recentActivities = getRecentActivities();
                     <!-- Team (4-6 Players) Tab -->
                     <div class="tab-pane fade" id="teams" role="tabpanel">
                       <div class="table-responsive">
-                        <table class="table table-hover">
+                        <table class="table table-hover" id="teamStatsTable">
                           <thead>
                             <tr>
                               <th scope="col">Rank</th>
@@ -709,7 +870,7 @@ $recentActivities = getRecentActivities();
                                   <td><span class="fw-bold text-success"><?php echo number_format($totalScore); ?></span></td>
                                   <td><?php echo number_format($team['team_average'], 1); ?></td>
                                   <td><?php echo $team['total_games']; ?></td>
-                                  <td><span class="text-warning"><?php echo $team['team_best']; ?></span></td>
+                                  <td><span class="badge bg-info"><?php echo $team['team_best']; ?></span></td>
                                   <td>
                                     <button class="btn btn-sm btn-outline-primary" onclick="viewDetails('<?php echo $team['team_name']; ?>')">
                                       <i class="ti ti-eye"></i>
@@ -766,7 +927,7 @@ $recentActivities = getRecentActivities();
                     <h5 class="card-title mb-0">Recent Activity</h5>
                   </div>
                   
-                  <div class="activity-list">
+                  <div class="activity-list" id="recentActivities">
                     <?php if (!empty($recentActivities) && !isset($recentActivities['error'])): ?>
                       <?php foreach ($recentActivities as $activity): ?>
                         <div class="d-flex align-items-center mb-3">
@@ -864,6 +1025,315 @@ $recentActivities = getRecentActivities();
         icon.classList.remove('ti-spin');
         showNotification('Data refreshed successfully!', 'success');
       }, 1000);
+    }
+
+    // Handle time filter change and initial load
+    document.addEventListener('DOMContentLoaded', function() {
+      const timeFilter = document.getElementById('timeFilter');
+      if (timeFilter) {
+        // Load initial data for the selected date (should be active session date)
+        const selectedDate = timeFilter.value;
+        console.log('Loading initial data for date:', selectedDate);
+        loadFilteredData(selectedDate);
+        
+        // Add change event listener
+        timeFilter.addEventListener('change', function() {
+          const selectedDate = this.value;
+          const selectedText = this.options[this.selectedIndex].text;
+          console.log('Date filter changed to:', selectedDate, selectedText);
+          showNotification(`Loading data for ${selectedText}...`, 'info');
+          loadFilteredData(selectedDate);
+        });
+      }
+    });
+
+    // Load filtered data based on selected date
+    function loadFilteredData(selectedDate) {
+      console.log('Loading data for date:', selectedDate);
+      const formData = new FormData();
+      formData.append('selected_date', selectedDate);
+      
+      fetch('ajax/admin-dashboard-data.php', {
+        method: 'POST',
+        body: formData
+      })
+      .then(response => {
+        console.log('Response status:', response.status);
+        return response.json();
+      })
+      .then(data => {
+        console.log('Response data:', data);
+        if (data.success) {
+          updateDashboardData(data.data);
+          if (data.data.has_active_session) {
+            if (data.data.leaderboard.length > 0) {
+              showNotification('Data loaded successfully!', 'success');
+            } else {
+              showNotification('Active session found but no participants', 'info');
+            }
+          } else {
+            showNotification('No active session found', 'info');
+          }
+        } else {
+          showNotification('Error: ' + data.message, 'error');
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        showNotification('Error loading data', 'error');
+      });
+    }
+
+    // Update dashboard data with filtered results
+    function updateDashboardData(data) {
+      // Check if there's an active session
+      if (!data.has_active_session) {
+        showNoActiveSessionMessage();
+        return;
+      }
+      
+      // Check if there are any participants in the active session
+      if (data.leaderboard.length === 0 && data.team_stats.length === 0 && data.solo_stats.length === 0) {
+        showNoParticipantsMessage();
+        return;
+      }
+      
+      // Update leaderboard
+      updateLeaderboard(data.leaderboard);
+      
+      // Update team stats
+      updateTeamStats(data.team_stats);
+      
+      // Update solo stats
+      updateSoloStats(data.solo_stats);
+      
+      // Update recent activities
+      updateRecentActivities(data.recent_activities);
+      
+      // Update statistics cards
+      updateStatisticsCards(data.filtered_stats);
+    }
+
+    // Show message when no active session
+    function showNoActiveSessionMessage() {
+      // Update leaderboard
+      const tbody = document.querySelector('#leaderboardTable tbody');
+      if (tbody) {
+        tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted py-4"><i class="ti ti-calendar-off fs-1 mb-2"></i><br>No Active Session<br><small>Create a session to start tracking scores</small></td></tr>';
+      }
+      
+      // Update team stats
+      const teamTbody = document.querySelector('#teamStatsTable tbody');
+      if (teamTbody) {
+        teamTbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4"><i class="ti ti-calendar-off fs-1 mb-2"></i><br>No Active Session<br><small>Create a session to start tracking team scores</small></td></tr>';
+      }
+      
+      // Update solo stats
+      const soloTbody = document.querySelector('#soloStatsTable tbody');
+      if (soloTbody) {
+        soloTbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4"><i class="ti ti-calendar-off fs-1 mb-2"></i><br>No Active Session<br><small>Create a session to start tracking solo scores</small></td></tr>';
+      }
+      
+      // Update recent activities
+      const activitiesContainer = document.querySelector('#recentActivities');
+      if (activitiesContainer) {
+        activitiesContainer.innerHTML = '<div class="text-center text-muted py-4"><i class="ti ti-calendar-off fs-1 mb-2"></i><br>No Active Session<br><small>Create a session to start tracking activities</small></div>';
+      }
+      
+      // Update statistics cards
+      updateStatisticsCards({
+        total_players: 0,
+        total_games: 0,
+        players_played_today: 0,
+        avg_score_today: 0
+      });
+    }
+
+    // Show message when no participants in active session
+    function showNoParticipantsMessage() {
+      // Update leaderboard
+      const tbody = document.querySelector('#leaderboardTable tbody');
+      if (tbody) {
+        tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted py-4"><i class="ti ti-users-off fs-1 mb-2"></i><br>No Participants in Active Session<br><small>Add players to the session to start tracking scores</small></td></tr>';
+      }
+      
+      // Update team stats
+      const teamTbody = document.querySelector('#teamStatsTable tbody');
+      if (teamTbody) {
+        teamTbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4"><i class="ti ti-users-off fs-1 mb-2"></i><br>No Participants in Active Session<br><small>Add players to the session to start tracking team scores</small></td></tr>';
+      }
+      
+      // Update solo stats
+      const soloTbody = document.querySelector('#soloStatsTable tbody');
+      if (soloTbody) {
+        soloTbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4"><i class="ti ti-users-off fs-1 mb-2"></i><br>No Participants in Active Session<br><small>Add players to the session to start tracking solo scores</small></td></tr>';
+      }
+      
+      // Update recent activities
+      const activitiesContainer = document.querySelector('#recentActivities');
+      if (activitiesContainer) {
+        activitiesContainer.innerHTML = '<div class="text-center text-muted py-4"><i class="ti ti-users-off fs-1 mb-2"></i><br>No Participants in Active Session<br><small>Add players to the session to start tracking activities</small></div>';
+      }
+      
+      // Update statistics cards
+      updateStatisticsCards({
+        total_players: 0,
+        total_games: 0,
+        players_played_today: 0,
+        avg_score_today: 0
+      });
+    }
+
+    // Update leaderboard table
+    function updateLeaderboard(leaderboard) {
+      const tbody = document.querySelector('#leaderboardTable tbody');
+      if (!tbody) return;
+      
+      tbody.innerHTML = '';
+      
+      leaderboard.forEach((player, index) => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td><span class="badge bg-primary">${index + 1}</span></td>
+          <td>
+            <div class="d-flex align-items-center">
+              <img src="./assets/images/profile/user-${(index % 8) + 1}.jpg" alt="user" class="rounded-circle" width="40" height="40">
+              <div class="ms-2">
+                <h6 class="mb-0">${player.first_name} ${player.last_name}</h6>
+                <small class="text-muted">${player.team_name || 'Solo'}</small>
+              </div>
+            </div>
+          </td>
+          <td><span class="badge bg-success">${player.team_name || 'No Team'}</span></td>
+          <td><span class="text-success fw-bold">${player.total_score}</span></td>
+          <td>${player.avg_score}</td>
+          <td>${player.games_played}</td>
+          <td><span class="badge bg-info">${player.best_score}</span></td>
+          <td><span class="badge bg-warning text-dark">${player.strike_rate || 0}%</span></td>
+          <td><span class="badge bg-success">${player.status}</span></td>
+          <td>
+            <div class="d-flex gap-1">
+              <button class="btn btn-sm btn-outline-primary" onclick="viewDetails(${player.user_id})" title="View Details">
+                <i class="ti ti-eye"></i>
+              </button>
+              <button class="btn btn-sm btn-outline-success" onclick="editPlayer(${player.user_id})" title="Edit Player">
+                <i class="ti ti-edit"></i>
+              </button>
+            </div>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    // Update team stats table
+    function updateTeamStats(teamStats) {
+      const tbody = document.querySelector('#teamStatsTable tbody');
+      if (!tbody) return;
+      
+      tbody.innerHTML = '';
+      
+      teamStats.forEach((team, index) => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td><span class="badge bg-primary">${index + 1}</span></td>
+          <td><strong>${team.team_name}</strong></td>
+          <td>${team.player_count}</td>
+          <td><span class="text-success fw-bold">${team.total_score}</span></td>
+          <td>${team.avg_score}</td>
+          <td>${team.total_games}</td>
+          <td><span class="badge bg-info">${team.best_score}</span></td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    // Update solo stats table
+    function updateSoloStats(soloStats) {
+      const tbody = document.querySelector('#soloStatsTable tbody');
+      if (!tbody) return;
+      
+      tbody.innerHTML = '';
+      
+      soloStats.forEach((player, index) => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td><span class="badge bg-primary">${index + 1}</span></td>
+          <td><strong>${player.first_name} ${player.last_name}</strong></td>
+          <td><span class="text-success fw-bold">${player.total_score}</span></td>
+          <td>${player.avg_score}</td>
+          <td>${player.games_played}</td>
+          <td><span class="badge bg-info">${player.best_score}</span></td>
+          <td><span class="badge bg-warning text-dark">${player.strike_rate || 0}%</span></td>
+          <td>
+            <div class="d-flex gap-1">
+              <button class="btn btn-sm btn-outline-primary" onclick="viewDetails(${player.user_id})" title="View Details">
+                <i class="ti ti-eye"></i>
+              </button>
+              <button class="btn btn-sm btn-outline-success" onclick="editPlayer(${player.user_id})" title="Edit Player">
+                <i class="ti ti-edit"></i>
+              </button>
+              <button class="btn btn-sm btn-outline-info" onclick="viewScores(${player.user_id})" title="View Scores">
+                <i class="ti ti-chart-line"></i>
+              </button>
+            </div>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    // Update recent activities
+    function updateRecentActivities(activities) {
+      const container = document.querySelector('#recentActivities');
+      if (!container) return;
+      
+      container.innerHTML = '';
+      
+      activities.forEach(activity => {
+        const activityDiv = document.createElement('div');
+        activityDiv.className = 'd-flex align-items-center mb-3';
+        activityDiv.innerHTML = `
+          <div class="me-3">
+            <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+              <i class="ti ti-bowling text-white"></i>
+            </div>
+          </div>
+          <div class="flex-grow-1">
+            <h6 class="mb-1">${activity.first_name} ${activity.last_name} scored ${activity.player_score}</h6>
+            <p class="text-muted mb-0">Game ${activity.game_number} • ${activity.strikes} strikes • ${activity.spares} spares</p>
+            <small class="text-muted">${getTimeAgo(activity.created_at)}</small>
+          </div>
+        `;
+        container.appendChild(activityDiv);
+      });
+    }
+
+    // Update statistics cards
+    function updateStatisticsCards(stats) {
+      // Update total players
+      const totalPlayersEl = document.getElementById('totalPlayersCount');
+      if (totalPlayersEl) {
+        totalPlayersEl.textContent = stats.total_players || 0;
+      }
+      
+      // Update players played today
+      const playersPlayedEl = document.getElementById('playersPlayedTodayCount');
+      if (playersPlayedEl) {
+        playersPlayedEl.textContent = stats.players_played_today || 0;
+      }
+    }
+
+    // Helper function for time ago
+    function getTimeAgo(datetime) {
+      const now = new Date();
+      const time = new Date(datetime);
+      const diffInSeconds = Math.floor((now - time) / 1000);
+      
+      if (diffInSeconds < 60) return 'just now';
+      if (diffInSeconds < 3600) return Math.floor(diffInSeconds / 60) + ' minutes ago';
+      if (diffInSeconds < 86400) return Math.floor(diffInSeconds / 3600) + ' hours ago';
+      return Math.floor(diffInSeconds / 86400) + ' days ago';
     }
 
     function viewDetails(id) {
@@ -1362,6 +1832,168 @@ $recentActivities = getRecentActivities();
     
     // Initial call
     updateCountdown();
+
+    // Session Management Functions
+    function startSession(sessionId) {
+      if (confirm('Are you sure you want to start this session?')) {
+        fetch('ajax/session-management.php', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: 'action=start&session_id=' + sessionId
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            location.reload();
+          } else {
+            alert('Error: ' + data.message);
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          alert('An error occurred while starting the session');
+        });
+      }
+    }
+
+    function endSession(sessionId) {
+      if (confirm('Are you sure you want to end this session? This will mark it as completed.')) {
+        fetch('ajax/session-management.php', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: 'action=end&session_id=' + sessionId
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            location.reload();
+          } else {
+            alert('Error: ' + data.message);
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          alert('An error occurred while ending the session');
+        });
+      }
+    }
+
+    function refreshSessions() {
+      location.reload();
+    }
+  </script>
+
+  <!-- Create Session Modal -->
+  <div class="modal fade" id="createSessionModal" tabindex="-1" aria-labelledby="createSessionModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="createSessionModalLabel">Create New Game Session</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <form id="createSessionForm">
+          <div class="modal-body">
+            <div class="mb-3">
+              <label for="sessionName" class="form-label">Session Name</label>
+              <input type="text" class="form-control" id="sessionName" name="session_name" required>
+            </div>
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label for="sessionDate" class="form-label">Date</label>
+                <input type="date" class="form-control" id="sessionDate" name="session_date" required>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label for="sessionTime" class="form-label">Time</label>
+                <input type="time" class="form-control" id="sessionTime" name="session_time" required>
+              </div>
+            </div>
+            <div class="mb-3">
+              <label for="gameMode" class="form-label">Game Mode</label>
+              <select class="form-select" id="gameMode" name="game_mode" required>
+                <option value="Solo">Solo</option>
+                <option value="Doubles" disabled>Doubles (Coming Soon)</option>
+                <option value="Team" disabled>Team (Coming Soon)</option>
+              </select>
+            </div>
+            <div class="mb-3">
+              <label for="maxPlayers" class="form-label">Max Players</label>
+              <input type="number" class="form-control" id="maxPlayers" name="max_players" value="20" min="1" max="20" required>
+            </div>
+            <div class="mb-3">
+              <label for="sessionNotes" class="form-label">Notes (Optional)</label>
+              <textarea class="form-control" id="sessionNotes" name="notes" rows="3"></textarea>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-success">Create Session</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Handle create session form submission
+    document.getElementById('createSessionForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      const formData = new FormData(this);
+      formData.append('action', 'create');
+      formData.append('created_by', <?php echo $currentUser['user_id']; ?>);
+      
+      fetch('ajax/session-management.php', {
+        method: 'POST',
+        body: formData
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          location.reload();
+        } else {
+          alert('Error: ' + data.message);
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred while creating the session');
+      });
+    });
+
+    // Set default date to next Saturday
+    const today = new Date();
+    const nextSaturday = new Date(today);
+    nextSaturday.setDate(today.getDate() + (6 - today.getDay()) % 7);
+    if (nextSaturday <= today) {
+      nextSaturday.setDate(nextSaturday.getDate() + 7);
+    }
+    document.getElementById('sessionDate').value = nextSaturday.toISOString().split('T')[0];
+    document.getElementById('sessionTime').value = '14:00';
+    
+    // View player details
+    function viewDetails(userId) {
+      showNotification('Viewing details for player ID: ' + userId, 'info');
+      // This would typically open a modal or redirect to player details page
+      // For now, just show a notification
+    }
+    
+    // Edit player
+    function editPlayer(userId) {
+      showNotification('Editing player ID: ' + userId, 'info');
+      // This would typically open an edit modal or redirect to edit page
+      // For now, just show a notification
+    }
+    
+    // View player scores
+    function viewScores(userId) {
+      showNotification('Viewing scores for player ID: ' + userId, 'info');
+      // This would typically open a modal or redirect to player scores page
+      // For now, just show a notification
+    }
   </script>
 </body>
 

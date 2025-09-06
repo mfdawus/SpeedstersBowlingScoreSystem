@@ -79,7 +79,7 @@ function getLeaderboard($limit = 10) {
                 COUNT(gs.score_id) as total_games
             FROM users u
             LEFT JOIN game_scores gs ON u.user_id = gs.user_id AND gs.status = 'Completed'
-            WHERE u.user_role = 'Player'
+            WHERE (u.user_role = 'Player' OR u.user_role = 'Admin')
             GROUP BY u.user_id
             HAVING total_games > 0
             ORDER BY best_score DESC, average_score DESC
@@ -147,6 +147,11 @@ function getAdminStats() {
         $stmt->execute();
         $gamesToday = $stmt->fetch(PDO::FETCH_ASSOC)['games_today'];
         
+        // Players played today (distinct players with scores today)
+        $stmt = $pdo->prepare("SELECT COUNT(DISTINCT user_id) as players_played_today FROM game_scores WHERE DATE(game_date) = CURDATE() AND status = 'Completed'");
+        $stmt->execute();
+        $playersPlayedToday = $stmt->fetch(PDO::FETCH_ASSOC)['players_played_today'];
+        
         // Total matches (grouped by date, game_mode, team_name, lane_number)
         $stmt = $pdo->prepare("
             SELECT COUNT(DISTINCT CONCAT(game_date, '-', game_mode, '-', COALESCE(team_name, 'Solo'), '-', lane_number)) as total_matches 
@@ -173,6 +178,7 @@ function getAdminStats() {
             'total_users' => $totalUsers,
             'total_games' => $totalGames,
             'games_today' => $gamesToday,
+            'players_played_today' => $playersPlayedToday,
             'total_matches' => $totalMatches,
             'top_player' => $topPlayer
         ];
@@ -229,7 +235,7 @@ function getAllPlayersStats() {
                 GROUP_CONCAT(DISTINCT gs.game_mode ORDER BY gs.game_mode SEPARATOR ', ') as game_modes_played
             FROM users u
             LEFT JOIN game_scores gs ON u.user_id = gs.user_id AND gs.status = 'Completed'
-            WHERE u.user_role = 'Player'
+            WHERE (u.user_role = 'Player' OR u.user_role = 'Admin')
             GROUP BY u.user_id, u.username, u.first_name, u.last_name, u.skill_level, u.team_name
             HAVING total_games > 0
             ORDER BY avg_score DESC
@@ -261,7 +267,7 @@ function getSoloPlayersStats() {
                 SUM(CASE WHEN gs.player_score >= 200 THEN 1 ELSE 0 END) as strikes_count
             FROM users u
             LEFT JOIN game_scores gs ON u.user_id = gs.user_id AND gs.status = 'Completed' AND gs.game_mode = 'Solo'
-            WHERE u.user_role = 'Player'
+            WHERE (u.user_role = 'Player' OR u.user_role = 'Admin')
             GROUP BY u.user_id, u.username, u.first_name, u.last_name, u.skill_level
             HAVING total_games > 0
             ORDER BY avg_score DESC

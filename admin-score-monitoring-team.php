@@ -1,3 +1,7 @@
+<?php
+require_once 'includes/auth.php';
+requireAdmin(); // Ensure only admins can access this page
+?>
 <!doctype html>
 <html lang="en">
 
