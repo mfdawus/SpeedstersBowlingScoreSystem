@@ -11,11 +11,6 @@
     .bg-gradient-primary {
       background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%);
     }
-    .app-topstrip {
-      position: relative;
-      z-index: 1000;
-      margin-top: 0;
-    }
     .admin-card {
       transition: all 0.3s ease;
       border-left: 4px solid #0d6efd;

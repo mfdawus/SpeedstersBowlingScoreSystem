@@ -11,11 +11,6 @@
     .bg-gradient-primary {
       background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%);
     }
-    .app-topstrip {
-      position: relative;
-      z-index: 1000;
-      margin-top: 0;
-    }
     .admin-card {
       transition: all 0.3s ease;
       border-left: 4px solid #0d6efd;
@@ -342,7 +337,7 @@
                   <div class="d-flex align-items-center justify-content-between mb-4">
                     <div>
                       <h5 class="card-title fw-semibold mb-1">
-                        <i class="ti ti-users-group me-2 text-primary"></i>
+                        <i class="ti ti-users me-2 text-primary"></i>
                         Team Score Monitoring (4-6 Players)
                       </h5>
                       <span class="fw-normal text-muted">Admin view with enhanced team management features</span>
