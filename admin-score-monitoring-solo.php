@@ -380,46 +380,57 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
           try {
             $pdo = getDBConnection();
             
+            // Initialize variables to prevent undefined variable errors
+            $playersWithScores = 0;
+            $activeChange = 0;
+            $avgChange = 0;
+            $gamesChange = 0;
+            
             // Get total solo players
             $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM users WHERE user_role = 'Player' AND status = 'Active'");
             $stmt->execute();
             $totalPlayers = $stmt->fetch(PDO::FETCH_ASSOC)['count'];
             
-            // Get players who played today
+            // Get players who played today (using session dates)
             $stmt = $pdo->prepare("
-              SELECT COUNT(DISTINCT user_id) as count 
-              FROM game_scores 
-              WHERE DATE(created_at) = CURDATE() AND status = 'Completed'
+              SELECT COUNT(DISTINCT gs.user_id) as count 
+              FROM game_scores gs
+              INNER JOIN game_sessions sess ON gs.session_id = sess.session_id
+              WHERE DATE(sess.session_date) = CURDATE() AND gs.status = 'Completed'
             ");
             $stmt->execute();
             $activeToday = $stmt->fetch(PDO::FETCH_ASSOC)['count'];
+            $playersWithScores = $activeToday; // Set this variable for the card display
             
-            // Get average score today
+            // Get average score today (using session dates)
             $stmt = $pdo->prepare("
-              SELECT AVG(player_score) as avg_score 
-              FROM game_scores 
-              WHERE DATE(created_at) = CURDATE() AND status = 'Completed'
+              SELECT AVG(gs.player_score) as avg_score 
+              FROM game_scores gs
+              INNER JOIN game_sessions sess ON gs.session_id = sess.session_id
+              WHERE DATE(sess.session_date) = CURDATE() AND gs.status = 'Completed'
             ");
             $stmt->execute();
             $avgScoreToday = $stmt->fetch(PDO::FETCH_ASSOC)['avg_score'];
             $avgScoreToday = $avgScoreToday ? round($avgScoreToday, 1) : 0;
             
-            // Get total games played today
+            // Get total games played today (using session dates)
             $stmt = $pdo->prepare("
               SELECT COUNT(*) as count 
-              FROM game_scores 
-              WHERE DATE(created_at) = CURDATE() AND status = 'Completed'
+              FROM game_scores gs
+              INNER JOIN game_sessions sess ON gs.session_id = sess.session_id
+              WHERE DATE(sess.session_date) = CURDATE() AND gs.status = 'Completed'
             ");
             $stmt->execute();
             $gamesToday = $stmt->fetch(PDO::FETCH_ASSOC)['count'];
             
-            // Get yesterday's stats for comparison
+            // Get yesterday's stats for comparison (using session dates)
             $stmt = $pdo->prepare("
-              SELECT COUNT(DISTINCT user_id) as active_yesterday,
+              SELECT COUNT(DISTINCT gs.user_id) as active_yesterday,
                      COUNT(*) as games_yesterday,
-                     AVG(player_score) as avg_yesterday
-              FROM game_scores 
-              WHERE DATE(created_at) = DATE_SUB(CURDATE(), INTERVAL 1 DAY) AND status = 'Completed'
+                     AVG(gs.player_score) as avg_yesterday
+              FROM game_scores gs
+              INNER JOIN game_sessions sess ON gs.session_id = sess.session_id
+              WHERE DATE(sess.session_date) = DATE_SUB(CURDATE(), INTERVAL 1 DAY) AND gs.status = 'Completed'
             ");
             $stmt->execute();
             $yesterdayStats = $stmt->fetch(PDO::FETCH_ASSOC);

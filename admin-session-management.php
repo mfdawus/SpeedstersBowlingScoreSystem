@@ -53,6 +53,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 echo json_encode(['success' => false, 'message' => 'Failed to end session']);
             }
             exit;
+            
+        case 'delete_session':
+            $sessionId = $_POST['session_id'] ?? null;
+            $deleteType = $_POST['delete_type'] ?? 'soft'; // 'soft' or 'hard'
+            
+            if (!$sessionId) {
+                echo json_encode(['success' => false, 'message' => 'Session ID is required']);
+                exit;
+            }
+            
+            if ($deleteType === 'hard') {
+                // Hard delete - removes all data permanently
+                if (deleteGameSession($sessionId)) {
+                    echo json_encode(['success' => true, 'message' => 'Session and all data deleted permanently!']);
+                } else {
+                    echo json_encode(['success' => false, 'message' => 'Failed to delete session']);
+                }
+            } else {
+                // Soft delete - marks as deleted but keeps data
+                if (softDeleteGameSession($sessionId)) {
+                    echo json_encode(['success' => true, 'message' => 'Session marked as deleted!']);
+                } else {
+                    echo json_encode(['success' => false, 'message' => 'Failed to delete session']);
+                }
+            }
+            exit;
     }
 }
 ?>
@@ -598,8 +624,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                             </button>
                             <?php endif; ?>
                             
+                            <?php if ($session['status'] === 'Completed'): ?>
+                            <a href="admin-score-monitoring-solo.php" class="btn btn-primary btn-sm action-btn" title="View Scores">
+                              <i class="ti ti-chart-bar"></i>
+                            </a>
+                            <?php endif; ?>
+                            
                             <button class="btn btn-info btn-sm action-btn" onclick="viewSessionDetails(<?php echo $session['session_id']; ?>)">
                               <i class="ti ti-eye"></i>
+                            </button>
+                            
+                            <button class="btn btn-outline-danger btn-sm action-btn" onclick="deleteSession(<?php echo $session['session_id']; ?>, '<?php echo $session['session_name']; ?>')">
+                              <i class="ti ti-trash"></i>
                             </button>
                           </div>
                         </td>
@@ -794,6 +830,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     function viewSessionDetails(sessionId) {
       // This would open a modal or redirect to a details page
       showNotification('Session details feature coming soon!', 'info');
+    }
+
+    // Delete Session
+    function deleteSession(sessionId, sessionName) {
+      // Show confirmation dialog
+      const confirmed = confirm(`Are you sure you want to delete the session "${sessionName}"?\n\nThis action cannot be undone and will remove all associated scores.`);
+      
+      if (!confirmed) {
+        return;
+      }
+      
+      // Show second confirmation for hard delete
+      const hardDelete = confirm(`Choose deletion type:\n\nOK = Hard Delete (permanently removes all data)\nCancel = Soft Delete (marks as deleted but keeps data)`);
+      
+      const deleteType = hardDelete ? 'hard' : 'soft';
+      const actionText = hardDelete ? 'permanently deleting' : 'marking as deleted';
+      
+      showNotification(`${actionText} session...`, 'info');
+      
+      // Send delete request
+      const formData = new FormData();
+      formData.append('action', 'delete_session');
+      formData.append('session_id', sessionId);
+      formData.append('delete_type', deleteType);
+      
+      fetch(window.location.href, {
+        method: 'POST',
+        body: formData
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          showNotification(data.message, 'success');
+          // Remove the row from the table
+          const row = document.querySelector(`tr[data-session-id="${sessionId}"]`);
+          if (row) {
+            row.remove();
+          }
+        } else {
+          showNotification('Error: ' + data.message, 'error');
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        showNotification('An error occurred while deleting session', 'error');
+      });
     }
 
     // Apply Filters

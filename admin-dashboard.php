@@ -467,24 +467,24 @@ $activeSession = getActiveSession();
                         try {
                           $pdo = getDBConnection();
                           $stmt = $pdo->prepare("
-                            SELECT DISTINCT DATE(game_date) as match_date
-                            FROM game_scores 
-                            WHERE status = 'Completed'
-                            ORDER BY match_date DESC
+                            SELECT DISTINCT DATE(session_date) as session_date
+                            FROM game_sessions 
+                            WHERE status != 'Deleted'
+                            ORDER BY session_date DESC
                             LIMIT 20
                           ");
                           $stmt->execute();
-                          $gameDates = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                          $sessionDates = $stmt->fetchAll(PDO::FETCH_ASSOC);
                           
                           // Add most recent date as first option (default)
-                          if (!empty($gameDates)) {
-                            $mostRecentDate = $gameDates[0]['match_date'];
+                          if (!empty($sessionDates)) {
+                            $mostRecentDate = $sessionDates[0]['session_date'];
                             echo '<option value="' . $mostRecentDate . '" selected>' . date('M j, Y', strtotime($mostRecentDate)) . '</option>';
                             
-                            // Add other game dates
-                            foreach (array_slice($gameDates, 1) as $date) {
-                              $formattedDate = date('M j, Y', strtotime($date['match_date']));
-                              echo '<option value="' . $date['match_date'] . '">' . $formattedDate . '</option>';
+                            // Add other session dates
+                            foreach (array_slice($sessionDates, 1) as $date) {
+                              $formattedDate = date('M j, Y', strtotime($date['session_date']));
+                              echo '<option value="' . $date['session_date'] . '">' . $formattedDate . '</option>';
                             }
                           } else {
                             echo '<option value="today" selected>' . date('M j, Y') . '</option>';

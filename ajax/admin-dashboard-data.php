@@ -11,14 +11,14 @@ try {
     // Get the selected date from POST data
     $selectedDate = $_POST['selected_date'] ?? date('Y-m-d');
     
-    // Build date condition - use game_date instead of created_at
+    // Build date condition - use session_date instead of game_date
     $dateCondition = '';
     if ($selectedDate === 'today') {
-        $dateCondition = "DATE(gs.game_date) = CURDATE()";
+        $dateCondition = "DATE(sess.session_date) = CURDATE()";
     } elseif ($selectedDate === 'all') {
         $dateCondition = "1=1"; // All time
     } else {
-        $dateCondition = "DATE(gs.game_date) = '" . $selectedDate . "'";
+        $dateCondition = "DATE(sess.session_date) = '" . $selectedDate . "'";
     }
     
     // No need for session participants - all players can join any game
@@ -50,7 +50,8 @@ try {
                 ELSE 0 
             END as strike_rate
         FROM users u
-        LEFT JOIN game_scores gs ON u.user_id = gs.user_id AND gs.status = 'Completed' AND ($dateCondition)
+        LEFT JOIN game_scores gs ON u.user_id = gs.user_id AND gs.status = 'Completed'
+        LEFT JOIN game_sessions sess ON gs.session_id = sess.session_id AND ($dateCondition)
         WHERE (u.user_role = 'Player' OR u.user_role = 'Admin') AND u.status = 'Active'
         GROUP BY u.user_id
         ORDER BY total_score DESC, u.first_name, u.last_name
@@ -69,7 +70,8 @@ try {
             COALESCE(ROUND(AVG(gs.player_score), 1), 0) as avg_score,
             COALESCE(MAX(gs.player_score), 0) as best_score
         FROM users u
-        LEFT JOIN game_scores gs ON u.user_id = gs.user_id AND gs.status = 'Completed' AND ($dateCondition)
+        LEFT JOIN game_scores gs ON u.user_id = gs.user_id AND gs.status = 'Completed'
+        LEFT JOIN game_sessions sess ON gs.session_id = sess.session_id AND ($dateCondition)
         WHERE (u.user_role = 'Player' OR u.user_role = 'Admin') AND u.status = 'Active' AND u.team_name IS NOT NULL
         GROUP BY u.team_name
         ORDER BY total_score DESC
@@ -95,7 +97,8 @@ try {
                 ELSE 0 
             END as strike_rate
         FROM users u
-        LEFT JOIN game_scores gs ON u.user_id = gs.user_id AND gs.status = 'Completed' AND ($dateCondition)
+        LEFT JOIN game_scores gs ON u.user_id = gs.user_id AND gs.status = 'Completed'
+        LEFT JOIN game_sessions sess ON gs.session_id = sess.session_id AND ($dateCondition)
         WHERE (u.user_role = 'Player' OR u.user_role = 'Admin') AND u.status = 'Active'
         GROUP BY u.user_id
         ORDER BY total_score DESC, u.first_name, u.last_name
@@ -117,6 +120,7 @@ try {
             gs.spares
         FROM game_scores gs
         JOIN users u ON gs.user_id = u.user_id
+        JOIN game_sessions sess ON gs.session_id = sess.session_id
         WHERE gs.status = 'Completed' AND ($dateCondition)
         ORDER BY gs.created_at DESC
         LIMIT 10

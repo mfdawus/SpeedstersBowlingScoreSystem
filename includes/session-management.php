@@ -44,6 +44,7 @@ function getAllGameSessions() {
             FROM game_sessions gs
             LEFT JOIN users u ON gs.created_by = u.user_id
             LEFT JOIN game_scores gsc ON gs.session_id = gsc.session_id AND gsc.status = 'Completed'
+            WHERE gs.status != 'Deleted'
             GROUP BY gs.session_id
             ORDER BY gs.session_date DESC, gs.session_time DESC
         ");
@@ -199,6 +200,53 @@ function getSessionById($sessionId) {
         
     } catch(PDOException $e) {
         return null;
+    }
+}
+
+// Delete a game session and all related data
+function deleteGameSession($sessionId) {
+    try {
+        $pdo = getDBConnection();
+        
+        // Start transaction
+        $pdo->beginTransaction();
+        
+        // Delete all scores for this session
+        $stmt = $pdo->prepare("DELETE FROM game_scores WHERE session_id = ?");
+        $stmt->execute([$sessionId]);
+        
+        // Delete the session itself
+        $stmt = $pdo->prepare("DELETE FROM game_sessions WHERE session_id = ?");
+        $result = $stmt->execute([$sessionId]);
+        
+        if ($result) {
+            $pdo->commit();
+            return true;
+        } else {
+            $pdo->rollback();
+            return false;
+        }
+        
+    } catch(PDOException $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollback();
+        }
+        error_log("Error deleting session: " . $e->getMessage());
+        return false;
+    }
+}
+
+// Soft delete a game session (mark as deleted but keep data)
+function softDeleteGameSession($sessionId) {
+    try {
+        $pdo = getDBConnection();
+        
+        $stmt = $pdo->prepare("UPDATE game_sessions SET status = 'Deleted' WHERE session_id = ?");
+        return $stmt->execute([$sessionId]);
+        
+    } catch(PDOException $e) {
+        error_log("Error soft deleting session: " . $e->getMessage());
+        return false;
     }
 }
 ?>
