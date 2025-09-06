@@ -24,14 +24,49 @@
                   <img src="./assets/images/logos/speedster main logo.png" alt="SPEEDSTERS Logo" width="200">
                 </a>
                 <p class="text-center">Bowling System Login</p>
-                <form>
+                <?php
+                // Handle login form submission
+                if ($_POST) {
+                    require_once 'includes/auth.php';
+                    
+                    $username = $_POST['username'] ?? '';
+                    $password = $_POST['password'] ?? '';
+                    
+                    if ($username && $password) {
+                        $result = login($username, $password);
+                        
+                        if ($result['success']) {
+                            // Redirect based on user role
+                            if ($result['user']['user_role'] === 'Admin') {
+                                header('Location: admin-dashboard.php');
+                            } else {
+                                header('Location: dashboard.php');
+                            }
+                            exit();
+                        } else {
+                            $error_message = $result['message'];
+                        }
+                    } else {
+                        $error_message = 'Please enter both username and password!';
+                    }
+                }
+                ?>
+                
+                <?php if (isset($error_message)): ?>
+                <div class="alert alert-danger" role="alert">
+                    <i class="ti ti-alert-circle me-2"></i>
+                    <?php echo htmlspecialchars($error_message); ?>
+                </div>
+                <?php endif; ?>
+                
+                <form method="POST" action="">
                   <div class="mb-3">
-                    <label for="exampleInputEmail1" class="form-label">Username</label>
-                    <input type="email" class="form-control" id="exampleInputEmail1" aria-describedby="emailHelp">
+                    <label for="username" class="form-label">Username</label>
+                    <input type="text" class="form-control" id="username" name="username" required>
                   </div>
                   <div class="mb-4">
-                    <label for="exampleInputPassword1" class="form-label">Password</label>
-                    <input type="password" class="form-control" id="exampleInputPassword1">
+                    <label for="password" class="form-label">Password</label>
+                    <input type="password" class="form-control" id="password" name="password" required>
                   </div>
                   <div class="d-flex align-items-center justify-content-between mb-4">
                     <div class="form-check">
@@ -42,7 +77,7 @@
                     </div>
                     <a class="text-primary fw-bold" href="./forgot-password.php">Forgot Password?</a>
                   </div>
-                  <a href="./index.php" class="btn btn-primary w-100 py-8 fs-4 mb-4 rounded-2">Sign In</a>
+                  <button type="submit" class="btn btn-primary w-100 py-8 fs-4 mb-4 rounded-2">Sign In</button>
                 </form>
               </div>
             </div>
