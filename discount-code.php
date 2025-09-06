@@ -1,3 +1,8 @@
+<?php
+// Check maintenance bypass for admin users
+require_once 'includes/maintenance-bypass.php';
+requireMaintenanceBypass('discount', 'Discount Code System');
+?>
 <!DOCTYPE html>
 <html lang="en">
 
@@ -100,6 +105,8 @@
         <a href="#" class="btn"  >Get Now</a>
     </div>
   </div>
+  
+  <?php include 'includes/admin-popup.php'; ?>
 </body>
 
 </html>

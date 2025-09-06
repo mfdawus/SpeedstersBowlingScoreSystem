@@ -8,10 +8,13 @@ requireAdmin();
 // Get selected date from POST or use today
 $selectedDate = $_POST['selected_date'] ?? date('Y-m-d');
 
-// Set headers for Excel file download
-header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-header('Content-Disposition: attachment; filename="bowling_scores_' . $selectedDate . '_' . date('H-i-s') . '.xlsx"');
+// Set headers for CSV file download (Excel compatible)
+header('Content-Type: text/csv; charset=utf-8');
+header('Content-Disposition: attachment; filename="bowling_scores_' . $selectedDate . '_' . date('H-i-s') . '.csv"');
 header('Cache-Control: max-age=0');
+
+// Add BOM for UTF-8 to ensure proper Excel compatibility
+echo "\xEF\xBB\xBF";
 
 try {
     $pdo = getDBConnection();
@@ -60,43 +63,27 @@ try {
         $scoresByUser[$userId][$gameNumber] = $score;
     }
     
-    // Create Excel content
-    $excelContent = "<?xml version=\"1.0\"?>\n";
-    $excelContent .= "<Workbook xmlns=\"urn:schemas-microsoft-com:office:spreadsheet\"\n";
-    $excelContent .= " xmlns:o=\"urn:schemas-microsoft-com:office:office\"\n";
-    $excelContent .= " xmlns:x=\"urn:schemas-microsoft-com:office:excel\"\n";
-    $excelContent .= " xmlns:ss=\"urn:schemas-microsoft-com:office:spreadsheet\"\n";
-    $excelContent .= " xmlns:html=\"http://www.w3.org/TR/REC-html40\">\n";
+    // Function to escape CSV values
+    function escapeCSV($value) {
+        if (is_numeric($value)) {
+            return $value;
+        }
+        // Escape quotes and wrap in quotes if contains comma, quote, or newline
+        if (strpos($value, '"') !== false || strpos($value, ',') !== false || strpos($value, "\n") !== false) {
+            return '"' . str_replace('"', '""', $value) . '"';
+        }
+        return $value;
+    }
     
-    // Define styles
-    $excelContent .= "<Styles>\n";
-    $excelContent .= "<Style ss:ID=\"Header\">\n";
-    $excelContent .= "<Font ss:Bold=\"1\" ss:Color=\"#FFFFFF\"/>\n";
-    $excelContent .= "<Interior ss:Color=\"#4CAF50\" ss:Pattern=\"Solid\"/>\n";
-    $excelContent .= "<Alignment ss:Horizontal=\"Center\" ss:Vertical=\"Center\"/>\n";
-    $excelContent .= "</Style>\n";
-    $excelContent .= "<Style ss:ID=\"Center\">\n";
-    $excelContent .= "<Alignment ss:Horizontal=\"Center\" ss:Vertical=\"Center\"/>\n";
-    $excelContent .= "</Style>\n";
-    $excelContent .= "</Styles>\n";
-    
-    // Create worksheet
-    $excelContent .= "<Worksheet ss:Name=\"Bowling Scores\">\n";
-    $excelContent .= "<Table>\n";
+    // Create CSV content
+    $csvContent = '';
     
     // Header row
-    $excelContent .= "<Row>\n";
     $headers = ['No', 'Name', 'Team', 'Game1', 'Game2', 'Game3', 'Game4', 'Game5', 'Average', 'Clean Game', 'Penalty Per Game', 'Total', 'Rank'];
-    foreach ($headers as $header) {
-        $excelContent .= "<Cell ss:StyleID=\"Header\"><Data ss:Type=\"String\">$header</Data></Cell>\n";
-    }
-    $excelContent .= "</Row>\n";
-    
-    // Data rows
-    $rank = 1;
-    $playerStats = [];
+    $csvContent .= implode(',', array_map('escapeCSV', $headers)) . "\n";
     
     // Calculate stats for each player
+    $playerStats = [];
     foreach ($allPlayers as $player) {
         $playerGames = $scoresByUser[$player['user_id']] ?? [];
         
@@ -140,69 +127,57 @@ try {
         $totalScore = $stats['total_score'];
         $average = $stats['average'];
         
-        $excelContent .= "<Row>\n";
+        $row = [];
         
         // No
-        $excelContent .= "<Cell ss:StyleID=\"Center\"><Data ss:Type=\"Number\">$rank</Data></Cell>\n";
+        $row[] = $rank;
         
         // Name
         $fullName = $player['first_name'] . ' ' . $player['last_name'];
-        $excelContent .= "<Cell><Data ss:Type=\"String\">$fullName</Data></Cell>\n";
+        $row[] = $fullName;
         
         // Team
         $teamName = $player['team_name'] ?: 'No Team';
-        $excelContent .= "<Cell><Data ss:Type=\"String\">$teamName</Data></Cell>\n";
+        $row[] = $teamName;
         
         // Game1-5
         for ($gameNum = 1; $gameNum <= 5; $gameNum++) {
             $score = $gameScores[$gameNum];
-            if ($score !== '') {
-                $excelContent .= "<Cell ss:StyleID=\"Center\"><Data ss:Type=\"Number\">$score</Data></Cell>\n";
-            } else {
-                $excelContent .= "<Cell ss:StyleID=\"Center\"><Data ss:Type=\"String\"></Data></Cell>\n";
-            }
+            $row[] = $score !== '' ? $score : '';
         }
         
         // Average
-        if ($average > 0) {
-            $excelContent .= "<Cell ss:StyleID=\"Center\"><Data ss:Type=\"Number\">$average</Data></Cell>\n";
-        } else {
-            $excelContent .= "<Cell ss:StyleID=\"Center\"><Data ss:Type=\"String\"></Data></Cell>\n";
-        }
+        $row[] = $average > 0 ? $average : '';
         
         // Clean Game (blank - we don't have this data)
-        $excelContent .= "<Cell ss:StyleID=\"Center\"><Data ss:Type=\"String\"></Data></Cell>\n";
+        $row[] = '';
         
         // Penalty Per Game (blank - we don't have this data)
-        $excelContent .= "<Cell ss:StyleID=\"Center\"><Data ss:Type=\"String\"></Data></Cell>\n";
+        $row[] = '';
         
         // Total
-        if ($totalScore > 0) {
-            $excelContent .= "<Cell ss:StyleID=\"Center\"><Data ss:Type=\"Number\">$totalScore</Data></Cell>\n";
-        } else {
-            $excelContent .= "<Cell ss:StyleID=\"Center\"><Data ss:Type=\"String\"></Data></Cell>\n";
-        }
+        $row[] = $totalScore > 0 ? $totalScore : '';
         
         // Rank
-        $excelContent .= "<Cell ss:StyleID=\"Center\"><Data ss:Type=\"Number\">$rank</Data></Cell>\n";
+        $row[] = $rank;
         
-        $excelContent .= "</Row>\n";
+        $csvContent .= implode(',', array_map('escapeCSV', $row)) . "\n";
         $rank++;
     }
     
-    $excelContent .= "</Table>\n";
-    $excelContent .= "</Worksheet>\n";
-    $excelContent .= "</Workbook>\n";
-    
-    // Output the Excel file
-    echo $excelContent;
+    // Output the CSV file
+    echo $csvContent;
     
 } catch (Exception $e) {
-    // If there's an error, output a simple CSV instead
-    header('Content-Type: text/csv');
-    header('Content-Disposition: attachment; filename="bowling_scores_' . date('Y-m-d_H-i-s') . '.csv"');
+    // If there's an error, output a simple CSV with error message
+    header('Content-Type: text/csv; charset=utf-8');
+    header('Content-Disposition: attachment; filename="bowling_scores_error_' . date('Y-m-d_H-i-s') . '.csv"');
+    
+    // Add BOM for UTF-8
+    echo "\xEF\xBB\xBF";
     
     echo "No,Name,Team,Game1,Game2,Game3,Game4,Game5,Average,Clean Game,Penalty Per Game,Total,Rank\n";
-    echo "Error: " . $e->getMessage() . "\n";
+    echo "1,Error,Error,Error,Error,Error,Error,Error,Error,Error,Error,Error,Error\n";
+    echo "Error Details: " . $e->getMessage() . "\n";
 }
 ?>

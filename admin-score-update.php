@@ -1,3 +1,8 @@
+<?php
+// Check maintenance bypass for admin users
+require_once 'includes/maintenance-bypass.php';
+requireMaintenanceBypass('score-update', 'Update Scores');
+?>
 <!doctype html>
 <html lang="en">
 
@@ -526,6 +531,8 @@
     // Initial call
     updateCountdown();
   </script>
+  
+  <?php include 'includes/admin-popup.php'; ?>
 </body>
 
 </html>

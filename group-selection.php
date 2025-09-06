@@ -1,3 +1,8 @@
+<?php
+// Check maintenance bypass for admin users
+require_once 'includes/maintenance-bypass.php';
+requireMaintenanceBypass('group', 'Group Selection');
+?>
 <!DOCTYPE html>
 <html lang="en">
 
@@ -1051,6 +1056,8 @@
       }, 3000);
     }
   </script>
+  
+  <?php include 'includes/admin-popup.php'; ?>
 </body>
 
 </html>

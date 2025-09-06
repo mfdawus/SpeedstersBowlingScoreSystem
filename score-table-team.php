@@ -1,3 +1,8 @@
+<?php
+// Check maintenance bypass for admin users
+require_once 'includes/maintenance-bypass.php';
+requireMaintenanceBypass('team', 'Team Score Table');
+?>
 <!doctype html>
 <html lang="en">
 
@@ -1970,6 +1975,8 @@
       }
     }, 30000);
   </script>
+  
+  <?php include 'includes/admin-popup.php'; ?>
 </body>
 
 </html>

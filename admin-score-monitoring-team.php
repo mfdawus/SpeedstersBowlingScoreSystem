@@ -1,6 +1,10 @@
 <?php
 require_once 'includes/auth.php';
 requireAdmin(); // Ensure only admins can access this page
+
+// Check maintenance bypass for admin users
+require_once 'includes/maintenance-bypass.php';
+requireMaintenanceBypass('team-admin', 'Team Score Monitoring (Admin)');
 ?>
 <!doctype html>
 <html lang="en">
@@ -985,6 +989,8 @@ requireAdmin(); // Ensure only admins can access this page
     // Initial call
     updateCountdown();
   </script>
+  
+  <?php include 'includes/admin-popup.php'; ?>
 </body>
 
 </html>

@@ -523,7 +523,7 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     <div class="d-flex gap-2">
                       <button class="btn btn-success btn-sm" onclick="exportToExcel()">
                         <i class="ti ti-file-excel me-1"></i>
-                        Export to Excel
+                        Export to CSV
                       </button>
                       <button class="btn btn-warning btn-sm" onclick="bulkEdit()">
                         <i class="ti ti-edit me-1"></i>
@@ -2296,11 +2296,11 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
       loadDataForDateFilter(dateFilter.value);
     }
     
-    // Export to Excel function
+    // Export to CSV function
     function exportToExcel() {
       try {
         // Show loading notification
-        showNotification('Preparing Excel file...', 'info');
+        showNotification('Preparing CSV file...', 'info');
         
         // Create a temporary form to submit the export request
         const form = document.createElement('form');
@@ -2325,12 +2325,12 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
         // Show success notification
         setTimeout(() => {
-          showNotification('Excel file downloaded successfully!', 'success');
+          showNotification('CSV file downloaded successfully!', 'success');
         }, 1000);
         
       } catch (error) {
         console.error('Export error:', error);
-        showNotification('Error exporting to Excel: ' + error.message, 'error');
+        showNotification('Error exporting to CSV: ' + error.message, 'error');
       }
     }
   </script>

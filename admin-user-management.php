@@ -4,6 +4,10 @@ require_once 'includes/dashboard.php';
 require_once 'includes/user-management.php';
 requireAdmin(); // Ensure user is admin
 
+// Check maintenance bypass for admin users
+require_once 'includes/maintenance-bypass.php';
+requireMaintenanceBypass('system-settings', 'System Settings');
+
 // Get current user info
 $currentUser = getCurrentUser();
 
@@ -931,6 +935,8 @@ $allUsers = getAllUsersData();
   </script>
 
   <?php include 'modals/user-management-modals.php'; ?>
+  
+  <?php include 'includes/admin-popup.php'; ?>
 
 </body>
 
