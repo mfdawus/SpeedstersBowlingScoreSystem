@@ -4,9 +4,7 @@ require_once 'includes/dashboard.php';
 require_once 'includes/user-management.php';
 requireAdmin(); // Ensure user is admin
 
-// Check maintenance bypass for admin users
-require_once 'includes/maintenance-bypass.php';
-requireMaintenanceBypass('system-settings', 'System Settings');
+// User Management is fully functional - no maintenance mode needed
 
 // Get current user info
 $currentUser = getCurrentUser();
@@ -34,9 +32,9 @@ function getAllUsersData() {
                 MAX(gs.player_score) as best_score
             FROM users u
             LEFT JOIN game_scores gs ON u.user_id = gs.user_id AND gs.status = 'Completed'
-            WHERE u.user_role = 'Player'
+            WHERE u.status != 'Deleted'
             GROUP BY u.user_id, u.username, u.first_name, u.last_name, u.email, u.phone, u.skill_level, u.user_role, u.status, u.team_name, u.created_at
-            ORDER BY u.first_name, u.last_name
+            ORDER BY u.user_role DESC, u.first_name, u.last_name
         ");
         $stmt->execute();
         
@@ -833,7 +831,29 @@ $allUsers = getAllUsersData();
     }
 
     function exportUsers() {
-      alert('Export users functionality');
+      try {
+        showNotification('Preparing user export...', 'info');
+        
+        // Create a temporary form to submit the export request
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = 'ajax/export-users-csv.php';
+        form.target = '_blank';
+        
+        // Submit the form
+        document.body.appendChild(form);
+        form.submit();
+        document.body.removeChild(form);
+        
+        // Show success notification
+        setTimeout(() => {
+          showNotification('User export downloaded successfully!', 'success');
+        }, 1000);
+        
+      } catch (error) {
+        console.error('Export error:', error);
+        showNotification('Error exporting users: ' + error.message, 'error');
+      }
     }
 
     function refreshUsers() {
@@ -876,27 +896,48 @@ $allUsers = getAllUsersData();
     document.getElementById('createUserForm').addEventListener('submit', function(e) {
       e.preventDefault();
       
+      console.log('Form submitted, creating user...');
+      
       const formData = new FormData(this);
       formData.append('action', 'create');
+      
+      // Show loading state
+      const submitBtn = this.querySelector('button[type="submit"]');
+      const originalText = submitBtn.textContent;
+      submitBtn.textContent = 'Creating...';
+      submitBtn.disabled = true;
       
       fetch('ajax/user-crud.php', {
         method: 'POST',
         body: formData
       })
-      .then(response => response.json())
+      .then(response => {
+        console.log('Response received:', response);
+        return response.json();
+      })
       .then(data => {
+        console.log('Data received:', data);
         if (data.success) {
-          alert('User created successfully');
+          showNotification('User created successfully!', 'success');
           $('#createUserModal').modal('hide');
           this.reset(); // Reset form
-          location.reload(); // Refresh the page
+          
+          // Delay refresh to allow modal to close
+          setTimeout(() => {
+            location.reload();
+          }, 500);
         } else {
-          alert('Error: ' + data.message);
+          showNotification('Error: ' + data.message, 'error');
         }
       })
       .catch(error => {
         console.error('Error:', error);
-        alert('An error occurred while creating user');
+        showNotification('An error occurred while creating user', 'error');
+      })
+      .finally(() => {
+        // Restore button state
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
       });
     });
 
@@ -932,11 +973,64 @@ $allUsers = getAllUsersData();
     
     // Initial call
     updateCountdown();
+    
+    // Search and filter functionality
+    function filterUsers() {
+      const searchTerm = document.getElementById('userSearch').value.toLowerCase();
+      const skillFilter = document.getElementById('skillFilter').value;
+      const statusFilter = document.getElementById('statusFilter').value;
+      
+      const rows = document.querySelectorAll('#usersTableBody tr');
+      
+      rows.forEach(row => {
+        const name = row.cells[1]?.textContent.toLowerCase() || '';
+        const email = row.cells[2]?.textContent.toLowerCase() || '';
+        const skill = row.cells[4]?.textContent.toLowerCase() || '';
+        const status = row.cells[5]?.textContent.toLowerCase() || '';
+        
+        const matchesSearch = searchTerm === '' || 
+          name.includes(searchTerm) || 
+          email.includes(searchTerm);
+        
+        const matchesSkill = skillFilter === '' || skill.includes(skillFilter.toLowerCase());
+        const matchesStatus = statusFilter === '' || status.includes(statusFilter.toLowerCase());
+        
+        if (matchesSearch && matchesSkill && matchesStatus) {
+          row.style.display = '';
+        } else {
+          row.style.display = 'none';
+        }
+      });
+    }
+    
+    // Add event listeners for search and filters
+    document.getElementById('userSearch').addEventListener('input', filterUsers);
+    document.getElementById('skillFilter').addEventListener('change', filterUsers);
+    document.getElementById('statusFilter').addEventListener('change', filterUsers);
+    
+    // Notification function
+    function showNotification(message, type = 'info') {
+      // Create notification element
+      const notification = document.createElement('div');
+      notification.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+      notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+      notification.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      `;
+      
+      document.body.appendChild(notification);
+      
+      // Auto remove after 3 seconds
+      setTimeout(() => {
+        if (notification.parentNode) {
+          notification.remove();
+        }
+      }, 3000);
+    }
   </script>
 
   <?php include 'modals/user-management-modals.php'; ?>
-  
-  <?php include 'includes/admin-popup.php'; ?>
 
 </body>
 

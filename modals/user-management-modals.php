@@ -136,7 +136,11 @@
           </div>
           <div class="mb-3">
             <label for="editTeamName" class="form-label">Team Name</label>
-            <input type="text" class="form-control" id="editTeamName" name="team_name" placeholder="Leave empty for no team">
+            <select class="form-select" id="editTeamName" name="team_name">
+              <option value="">No Team</option>
+              <option value="Speedsters">Speedsters</option>
+              <option value="Crystal Strikes">Crystal Strikes</option>
+            </select>
           </div>
         </div>
         <div class="modal-footer">
@@ -206,7 +210,11 @@
           </div>
           <div class="mb-3">
             <label for="createTeamName" class="form-label">Team Name</label>
-            <input type="text" class="form-control" id="createTeamName" name="team_name" placeholder="Leave empty for no team">
+            <select class="form-select" id="createTeamName" name="team_name">
+              <option value="">No Team</option>
+              <option value="Speedsters">Speedsters</option>
+              <option value="Crystal Strikes">Crystal Strikes</option>
+            </select>
           </div>
         </div>
         <div class="modal-footer">
