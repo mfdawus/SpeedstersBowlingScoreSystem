@@ -1,3 +1,24 @@
+<?php
+require_once 'includes/auth.php';
+require_once 'includes/dashboard.php';
+requireAdmin(); // Ensure user is admin
+
+// Get current user info
+$currentUser = getCurrentUser();
+
+// Get admin statistics
+$adminStats = getAdminStats();
+$leaderboard = getLeaderboard(10);
+$teamStats = getTeamStats();
+$soloPlayersStats = getSoloPlayersStats();
+$allPlayersStats = getAllPlayersStats();
+$recentActivities = getRecentActivities();
+
+// Debug: Let's see what data we're getting
+// echo "<pre>All Players Stats Debug: "; print_r($allPlayersStats); echo "</pre>";
+// echo "<pre>Solo Players Stats Debug: "; print_r($soloPlayersStats); echo "</pre>";
+// echo "<pre>Team Stats Debug: "; print_r($teamStats); echo "</pre>";
+?>
 <!doctype html>
 <html lang="en">
 
@@ -194,6 +215,7 @@
                 <a class="nav-link " href="javascript:void(0)" id="drop2" data-bs-toggle="dropdown"
                   aria-expanded="false">
                   <img src="./assets/images/profile/user-1.jpg" alt="" width="35" height="35" class="rounded-circle">
+                  <span class="ms-2 text-dark"><?php echo htmlspecialchars($currentUser['first_name'] . ' ' . $currentUser['last_name']); ?> (Admin)</span>
                 </a>
                 <div class="dropdown-menu dropdown-menu-end dropdown-menu-animate-up" aria-labelledby="drop2">
                   <div class="message-body">
@@ -205,7 +227,7 @@
                       <i class="ti ti-settings fs-6"></i>
                       <p class="mb-0 fs-3">Settings</p>
                     </a>
-                    <a href="./authentication-login.php" class="btn btn-outline-primary mx-3 mt-2 d-block">Logout</a>
+                    <a href="logout.php" class="btn btn-outline-primary mx-3 mt-2 d-block">Logout</a>
                   </div>
                 </div>
               </li>
@@ -239,8 +261,8 @@
                   <div class="d-flex align-items-center">
                     <div class="flex-grow-1">
                       <h6 class="card-title text-white-50 mb-1">Total Players</h6>
-                      <h3 class="mb-0 text-white">1,247</h3>
-                      <small class="text-white-50">+12% this month</small>
+                      <h3 class="mb-0 text-white"><?php echo isset($adminStats['total_users']) ? $adminStats['total_users'] : '0'; ?></h3>
+                      <small class="text-white-50">Active players</small>
                     </div>
                     <div class="ms-3">
                       <i class="ti ti-users fs-1 text-white-50"></i>
@@ -254,9 +276,9 @@
                 <div class="card-body">
                   <div class="d-flex align-items-center">
                     <div class="flex-grow-1">
-                      <h6 class="card-title text-white-50 mb-1">Active Teams</h6>
-                      <h3 class="mb-0 text-white">89</h3>
-                      <small class="text-white-50">+5 new this week</small>
+                      <h6 class="card-title text-white-50 mb-1">Total Games</h6>
+                      <h3 class="mb-0 text-white"><?php echo isset($adminStats['total_games']) ? $adminStats['total_games'] : '0'; ?></h3>
+                      <small class="text-white-50">Games played</small>
                     </div>
                     <div class="ms-3">
                       <i class="ti ti-users-group fs-1 text-white-50"></i>
@@ -270,28 +292,28 @@
                 <div class="card-body">
                   <div class="d-flex align-items-center">
                     <div class="flex-grow-1">
-                      <h6 class="card-title text-white-50 mb-1">Games Today</h6>
-                      <h3 class="mb-0 text-white">156</h3>
-                      <small class="text-white-50">+23% vs yesterday</small>
+                      <h6 class="card-title text-white-50 mb-1">Total Matches</h6>
+                      <h3 class="mb-0 text-white"><?php echo isset($adminStats['total_matches']) ? $adminStats['total_matches'] : '0'; ?></h3>
+                      <small class="text-white-50">Matches played</small>
                     </div>
                     <div class="ms-3">
-                      <i class="ti ti-bowling fs-1 text-white-50"></i>
+                      <i class="ti ti-trophy fs-1 text-white-50"></i>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
             <div class="col-lg-3 col-md-6 mb-4">
-              <div class="card admin-card">
+              <div class="card admin-card player-card">
                 <div class="card-body">
                   <div class="d-flex align-items-center">
                     <div class="flex-grow-1">
-                      <h6 class="card-title text-muted mb-1">Revenue</h6>
-                      <h3 class="mb-0 text-primary">$12,450</h3>
-                      <small class="text-muted">+8% this month</small>
+                      <h6 class="card-title text-white-50 mb-1">Games Today</h6>
+                      <h3 class="mb-0 text-white"><?php echo isset($adminStats['games_today']) ? $adminStats['games_today'] : '0'; ?></h3>
+                      <small class="text-white-50">Today's games</small>
                     </div>
                     <div class="ms-3">
-                      <i class="ti ti-currency-dollar fs-1 text-muted"></i>
+                      <i class="ti ti-bowling fs-1 text-white-50"></i>
                     </div>
                   </div>
                 </div>
@@ -341,6 +363,11 @@
                       </button>
                     </li>
                     <li class="nav-item" role="presentation">
+                      <button class="nav-link" id="trio-tab" data-bs-toggle="tab" data-bs-target="#trio" type="button" role="tab">
+                        Trio Teams
+                      </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
                       <button class="nav-link" id="teams-tab" data-bs-toggle="tab" data-bs-target="#teams" type="button" role="tab">
                         Team (4-6 Players)
                       </button>
@@ -366,75 +393,65 @@
                             </tr>
                           </thead>
                           <tbody>
-                            <tr>
-                              <td><span class="badge bg-primary">1</span></td>
-                              <td>
-                                <div class="d-flex align-items-center">
-                                  <img src="assets/images/profile/user-1.jpg" alt="Player" class="rounded-circle me-2" width="32" height="32">
-                                  <div>
-                                    <h6 class="mb-0">Thunder Strikers</h6>
-                                    <small class="text-muted">John & Sarah</small>
-                                  </div>
-                                </div>
-                              </td>
-                              <td><span class="badge bg-success">Doubles</span></td>
-                              <td><span class="fw-bold text-success">2,443</span></td>
-                              <td>244.3</td>
-                              <td>5</td>
-                              <td><span class="text-warning">547</span></td>
-                              <td><span class="badge bg-success">Active</span></td>
-                              <td>
-                                <button class="btn btn-sm btn-outline-primary" onclick="viewDetails('team1')">
-                                  <i class="ti ti-eye"></i>
-                                </button>
-                              </td>
-                            </tr>
-                            <tr>
-                              <td><span class="badge bg-secondary">2</span></td>
-                              <td>
-                                <div class="d-flex align-items-center">
-                                  <img src="assets/images/profile/user-3.jpg" alt="Player" class="rounded-circle me-2" width="32" height="32">
-                                  <div>
-                                    <h6 class="mb-0">Mike Johnson</h6>
-                                    <small class="text-muted">Solo Player</small>
-                                  </div>
-                                </div>
-                              </td>
-                              <td><span class="badge bg-primary">Solo</span></td>
-                              <td><span class="fw-bold text-success">2,312</span></td>
-                              <td>231.2</td>
-                              <td>8</td>
-                              <td><span class="text-warning">289</span></td>
-                              <td><span class="badge bg-success">Active</span></td>
-                              <td>
-                                <button class="btn btn-sm btn-outline-primary" onclick="viewDetails('player1')">
-                                  <i class="ti ti-eye"></i>
-                                </button>
-                              </td>
-                            </tr>
-                            <tr>
-                              <td><span class="badge bg-warning">3</span></td>
-                              <td>
-                                <div class="d-flex align-items-center">
-                                  <img src="assets/images/profile/user-5.jpg" alt="Player" class="rounded-circle me-2" width="32" height="32">
-                                  <div>
-                                    <h6 class="mb-0">Lane Masters</h6>
-                                    <small class="text-muted">Tom, Emma, Alex, Maria</small>
-                                  </div>
-                                </div>
-                              </td>
-                              <td><span class="badge bg-warning">Team</span></td>
-                              <td><span class="fw-bold text-success">2,178</span></td>
-                              <td>217.8</td>
-                              <td>4</td>
-                              <td><span class="text-warning">498</span></td>
-                              <td><span class="badge bg-warning">Pending</span></td>
-                              <td>
-                                <button class="btn btn-sm btn-outline-primary" onclick="viewDetails('team2')">
-                                  <i class="ti ti-eye"></i>
-                                </button>
-                              </td>
-                            </tr>
+                            <?php if (!empty($allPlayersStats) && !isset($allPlayersStats['error'])): ?>
+                              <?php 
+                              $rank = 1;
+                              foreach ($allPlayersStats as $player): 
+                                $totalScore = $player['avg_score'] * $player['total_games'];
+                                $strikeRate = $player['total_games'] > 0 ? round(($player['strikes_count'] / $player['total_games']) * 100) : 0;
+                                
+                                // Determine badge color based on game modes played
+                                $badgeClass = 'bg-primary';
+                                $gameModeText = 'Mixed';
+                                if (strpos($player['game_modes_played'], 'Solo') !== false && strpos($player['game_modes_played'], ',') === false) {
+                                    $badgeClass = 'bg-primary';
+                                    $gameModeText = 'Solo';
+                                } elseif (strpos($player['game_modes_played'], 'Doubles') !== false && strpos($player['game_modes_played'], ',') === false) {
+                                    $badgeClass = 'bg-success';
+                                    $gameModeText = 'Doubles';
+                                } elseif (strpos($player['game_modes_played'], 'Trio') !== false && strpos($player['game_modes_played'], ',') === false) {
+                                    $badgeClass = 'bg-info';
+                                    $gameModeText = 'Trio';
+                                } elseif (strpos($player['game_modes_played'], 'Team') !== false && strpos($player['game_modes_played'], ',') === false) {
+                                    $badgeClass = 'bg-warning';
+                                    $gameModeText = 'Team';
+                                }
+                              ?>
+                                <tr>
+                                  <td><span class="badge bg-primary"><?php echo $rank; ?></span></td>
+                                  <td>
+                                    <div class="d-flex align-items-center">
+                                      <img src="assets/images/profile/user-<?php echo ($rank % 8) + 1; ?>.jpg" alt="Player" class="rounded-circle me-2" width="32" height="32">
+                                      <div>
+                                        <h6 class="mb-0"><?php echo htmlspecialchars($player['first_name'] . ' ' . $player['last_name']); ?></h6>
+                                        <small class="text-muted">Team: <?php echo htmlspecialchars($player['team_name'] ?? 'No Team'); ?></small>
+                                      </div>
+                                    </div>
+                                  </td>
+                                  <td><span class="badge <?php echo $badgeClass; ?>"><?php echo $gameModeText; ?></span></td>
+                                  <td><span class="fw-bold text-success"><?php echo number_format($totalScore); ?></span></td>
+                                  <td><?php echo number_format($player['avg_score'], 1); ?></td>
+                                  <td><?php echo $player['total_games']; ?></td>
+                                  <td><span class="text-warning"><?php echo $player['best_score']; ?></span></td>
+                                  <td><span class="badge bg-success">Active</span></td>
+                                  <td>
+                                    <button class="btn btn-sm btn-outline-primary" onclick="viewDetails('<?php echo $player['user_id']; ?>')">
+                                      <i class="ti ti-eye"></i>
+                                    </button>
+                                  </td>
+                                </tr>
+                              <?php 
+                              $rank++;
+                              endforeach; ?>
+                            <?php else: ?>
+                              <tr>
+                                <td colspan="9" class="text-center text-muted py-4">
+                                  <i class="ti ti-user fs-1 mb-2"></i>
+                                  <p class="mb-0">No player data available</p>
+                                  <small>Players will appear here once they start playing</small>
+                                </td>
+                              </tr>
+                            <?php endif; ?>
                           </tbody>
                         </table>
                       </div>
@@ -457,50 +474,47 @@
                             </tr>
                           </thead>
                           <tbody>
-                            <tr>
-                              <td><span class="badge bg-primary">1</span></td>
-                              <td>
-                                <div class="d-flex align-items-center">
-                                  <img src="assets/images/profile/user-3.jpg" alt="Player" class="rounded-circle me-2" width="32" height="32">
-                                  <div>
-                                    <h6 class="mb-0">Mike Johnson</h6>
-                                    <small class="text-muted">Pro Player</small>
-                                  </div>
-                                </div>
-                              </td>
-                              <td><span class="fw-bold text-success">2,312</span></td>
-                              <td>231.2</td>
-                              <td>8</td>
-                              <td><span class="text-warning">289</span></td>
-                              <td>85%</td>
-                              <td>
-                                <button class="btn btn-sm btn-outline-primary" onclick="viewDetails('player1')">
-                                  <i class="ti ti-eye"></i>
-                                </button>
-                              </td>
-                            </tr>
-                            <tr>
-                              <td><span class="badge bg-secondary">2</span></td>
-                              <td>
-                                <div class="d-flex align-items-center">
-                                  <img src="assets/images/profile/user-2.jpg" alt="Player" class="rounded-circle me-2" width="32" height="32">
-                                  <div>
-                                    <h6 class="mb-0">Sarah Wilson</h6>
-                                    <small class="text-muted">Elite Player</small>
-                                  </div>
-                                </div>
-                              </td>
-                              <td><span class="fw-bold text-success">2,198</span></td>
-                              <td>219.8</td>
-                              <td>7</td>
-                              <td><span class="text-warning">275</span></td>
-                              <td>82%</td>
-                              <td>
-                                <button class="btn btn-sm btn-outline-primary" onclick="viewDetails('player2')">
-                                  <i class="ti ti-eye"></i>
-                                </button>
-                              </td>
-                            </tr>
+                            <?php if (!empty($soloPlayersStats) && !isset($soloPlayersStats['error'])): ?>
+                              <?php 
+                              $rank = 1;
+                              foreach ($soloPlayersStats as $player): 
+                                $totalScore = $player['avg_score'] * $player['total_games'];
+                                $strikeRate = $player['total_games'] > 0 ? round(($player['strikes_count'] / $player['total_games']) * 100) : 0;
+                              ?>
+                                <tr>
+                                  <td><span class="badge bg-primary"><?php echo $rank; ?></span></td>
+                                  <td>
+                                    <div class="d-flex align-items-center">
+                                      <img src="assets/images/profile/user-<?php echo ($rank % 8) + 1; ?>.jpg" alt="Player" class="rounded-circle me-2" width="32" height="32">
+                                      <div>
+                                        <h6 class="mb-0"><?php echo htmlspecialchars($player['first_name'] . ' ' . $player['last_name']); ?></h6>
+                                        <small class="text-muted"><?php echo ucfirst($player['skill_level']); ?> Player</small>
+                                      </div>
+                                    </div>
+                                  </td>
+                                  <td><span class="fw-bold text-success"><?php echo number_format($totalScore); ?></span></td>
+                                  <td><?php echo number_format($player['avg_score'], 1); ?></td>
+                                  <td><?php echo $player['total_games']; ?></td>
+                                  <td><span class="text-warning"><?php echo $player['best_score']; ?></span></td>
+                                  <td><?php echo $strikeRate; ?>%</td>
+                                  <td>
+                                    <button class="btn btn-sm btn-outline-primary" onclick="viewDetails('<?php echo $player['user_id']; ?>')">
+                                      <i class="ti ti-eye"></i>
+                                    </button>
+                                  </td>
+                                </tr>
+                              <?php 
+                              $rank++;
+                              endforeach; ?>
+                            <?php else: ?>
+                              <tr>
+                                <td colspan="8" class="text-center text-muted py-4">
+                                  <i class="ti ti-user fs-1 mb-2"></i>
+                                  <p class="mb-0">No solo players data available</p>
+                                  <small>Players will appear here once they start playing solo games</small>
+                                </td>
+                              </tr>
+                            <?php endif; ?>
                           </tbody>
                         </table>
                       </div>
@@ -523,31 +537,125 @@
                             </tr>
                           </thead>
                           <tbody>
+                            <?php 
+                            $doublesTeams = array_filter($teamStats, function($team) {
+                                return $team['game_mode'] == 'Doubles';
+                            });
+                            ?>
+                            <?php if (!empty($doublesTeams)): ?>
+                              <?php 
+                              $rank = 1;
+                              foreach ($doublesTeams as $team): 
+                                $totalScore = $team['team_average'] * $team['total_games'];
+                              ?>
+                                <tr>
+                                  <td><span class="badge bg-primary"><?php echo $rank; ?></span></td>
+                                  <td>
+                                    <div class="d-flex align-items-center">
+                                      <div class="d-flex me-2">
+                                        <img src="assets/images/profile/user-<?php echo ($rank % 8) + 1; ?>.jpg" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
+                                        <img src="assets/images/profile/user-<?php echo (($rank + 1) % 8) + 1; ?>.jpg" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
+                                      </div>
+                                      <div>
+                                        <h6 class="mb-0"><?php echo htmlspecialchars($team['team_name']); ?></h6>
+                                        <small class="text-muted">Doubles Team</small>
+                                      </div>
+                                    </div>
+                                  </td>
+                                  <td><?php echo $team['players_count']; ?> players</td>
+                                  <td><span class="fw-bold text-success"><?php echo number_format($totalScore); ?></span></td>
+                                  <td><?php echo number_format($team['team_average'], 1); ?></td>
+                                  <td><?php echo $team['total_games']; ?></td>
+                                  <td><span class="text-warning"><?php echo $team['team_best']; ?></span></td>
+                                  <td>
+                                    <button class="btn btn-sm btn-outline-primary" onclick="viewDetails('<?php echo $team['team_name']; ?>')">
+                                      <i class="ti ti-eye"></i>
+                                    </button>
+                                  </td>
+                                </tr>
+                              <?php 
+                              $rank++;
+                              endforeach; ?>
+                            <?php else: ?>
+                              <tr>
+                                <td colspan="8" class="text-center text-muted py-4">
+                                  <i class="ti ti-users fs-1 mb-2"></i>
+                                  <p class="mb-0">No doubles teams data available</p>
+                                  <small>Doubles teams will appear here once they start playing</small>
+                                </td>
+                              </tr>
+                            <?php endif; ?>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    <!-- Trio Teams Tab -->
+                    <div class="tab-pane fade" id="trio" role="tabpanel">
+                      <div class="table-responsive">
+                        <table class="table table-hover">
+                          <thead>
                             <tr>
-                              <td><span class="badge bg-primary">1</span></td>
-                              <td>
-                                <div class="d-flex align-items-center">
-                                  <div class="d-flex me-2">
-                                    <img src="assets/images/profile/user-1.jpg" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
-                                    <img src="assets/images/profile/user-2.jpg" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
-                                  </div>
-                                  <div>
-                                    <h6 class="mb-0">Thunder Strikers</h6>
-                                    <small class="text-muted">Pro Team</small>
-                                  </div>
-                                </div>
-                              </td>
-                              <td>John & Sarah</td>
-                              <td><span class="fw-bold text-success">2,443</span></td>
-                              <td>244.3</td>
-                              <td>5</td>
-                              <td><span class="text-warning">547</span></td>
-                              <td>
-                                <button class="btn btn-sm btn-outline-primary" onclick="viewDetails('team1')">
-                                  <i class="ti ti-eye"></i>
-                                </button>
-                              </td>
+                              <th scope="col">Rank</th>
+                              <th scope="col">Team</th>
+                              <th scope="col">Players</th>
+                              <th scope="col">Total Score</th>
+                              <th scope="col">Avg/Game</th>
+                              <th scope="col">Games</th>
+                              <th scope="col">Best Score</th>
+                              <th scope="col">Actions</th>
                             </tr>
+                          </thead>
+                          <tbody>
+                            <?php 
+                            $trioTeams = array_filter($teamStats, function($team) {
+                                return $team['game_mode'] == 'Trio';
+                            });
+                            ?>
+                            <?php if (!empty($trioTeams)): ?>
+                              <?php 
+                              $rank = 1;
+                              foreach ($trioTeams as $team): 
+                                $totalScore = $team['team_average'] * $team['total_games'];
+                              ?>
+                                <tr>
+                                  <td><span class="badge bg-primary"><?php echo $rank; ?></span></td>
+                                  <td>
+                                    <div class="d-flex align-items-center">
+                                      <div class="d-flex me-2">
+                                        <img src="assets/images/profile/user-<?php echo ($rank % 8) + 1; ?>.jpg" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
+                                        <img src="assets/images/profile/user-<?php echo (($rank + 1) % 8) + 1; ?>.jpg" alt="Player 2" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
+                                        <img src="assets/images/profile/user-<?php echo (($rank + 2) % 8) + 1; ?>.jpg" alt="Player 3" class="rounded-circle border border-2 border-white" width="32">
+                                      </div>
+                                      <div>
+                                        <h6 class="mb-0"><?php echo htmlspecialchars($team['team_name']); ?></h6>
+                                        <small class="text-muted">Trio Team</small>
+                                      </div>
+                                    </div>
+                                  </td>
+                                  <td><?php echo $team['players_count']; ?> players</td>
+                                  <td><span class="fw-bold text-success"><?php echo number_format($totalScore); ?></span></td>
+                                  <td><?php echo number_format($team['team_average'], 1); ?></td>
+                                  <td><?php echo $team['total_games']; ?></td>
+                                  <td><span class="text-warning"><?php echo $team['team_best']; ?></span></td>
+                                  <td>
+                                    <button class="btn btn-sm btn-outline-primary" onclick="viewDetails('<?php echo $team['team_name']; ?>')">
+                                      <i class="ti ti-eye"></i>
+                                    </button>
+                                  </td>
+                                </tr>
+                              <?php 
+                              $rank++;
+                              endforeach; ?>
+                            <?php else: ?>
+                              <tr>
+                                <td colspan="8" class="text-center text-muted py-4">
+                                  <i class="ti ti-users fs-1 mb-2"></i>
+                                  <p class="mb-0">No trio teams data available</p>
+                                  <small>Trio teams will appear here once they start playing</small>
+                                </td>
+                              </tr>
+                            <?php endif; ?>
                           </tbody>
                         </table>
                       </div>
@@ -570,33 +678,56 @@
                             </tr>
                           </thead>
                           <tbody>
-                            <tr>
-                              <td><span class="badge bg-primary">1</span></td>
-                              <td>
-                                <div class="d-flex align-items-center">
-                                  <div class="d-flex me-2">
-                                    <img src="assets/images/profile/user-5.jpg" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
-                                    <img src="assets/images/profile/user-6.jpg" alt="Player 2" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
-                                    <img src="assets/images/profile/user-7.jpg" alt="Player 3" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
-                                    <img src="assets/images/profile/user-8.jpg" alt="Player 4" class="rounded-circle border border-2 border-white" width="32">
-                                  </div>
-                                  <div>
-                                    <h6 class="mb-0">Lane Masters</h6>
-                                    <small class="text-muted">Elite Team</small>
-                                  </div>
-                                </div>
-                              </td>
-                              <td>Tom, Emma, Alex, Maria</td>
-                              <td><span class="fw-bold text-success">2,178</span></td>
-                              <td>217.8</td>
-                              <td>4</td>
-                              <td><span class="text-warning">498</span></td>
-                              <td>
-                                <button class="btn btn-sm btn-outline-primary" onclick="viewDetails('team2')">
-                                  <i class="ti ti-eye"></i>
-                                </button>
-                              </td>
-                            </tr>
+                            <?php 
+                            $teamGroups = array_filter($teamStats, function($team) {
+                                return $team['game_mode'] == 'Team';
+                            });
+                            ?>
+                            <?php if (!empty($teamGroups)): ?>
+                              <?php 
+                              $rank = 1;
+                              foreach ($teamGroups as $team): 
+                                $totalScore = $team['team_average'] * $team['total_games'];
+                              ?>
+                                <tr>
+                                  <td><span class="badge bg-primary"><?php echo $rank; ?></span></td>
+                                  <td>
+                                    <div class="d-flex align-items-center">
+                                      <div class="d-flex me-2">
+                                        <img src="assets/images/profile/user-<?php echo ($rank % 8) + 1; ?>.jpg" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
+                                        <img src="assets/images/profile/user-<?php echo (($rank + 1) % 8) + 1; ?>.jpg" alt="Player 2" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
+                                        <img src="assets/images/profile/user-<?php echo (($rank + 2) % 8) + 1; ?>.jpg" alt="Player 3" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
+                                        <img src="assets/images/profile/user-<?php echo (($rank + 3) % 8) + 1; ?>.jpg" alt="Player 4" class="rounded-circle border border-2 border-white" width="32">
+                                      </div>
+                                      <div>
+                                        <h6 class="mb-0"><?php echo htmlspecialchars($team['team_name']); ?></h6>
+                                        <small class="text-muted">Team (4-6 Players)</small>
+                                      </div>
+                                    </div>
+                                  </td>
+                                  <td><?php echo $team['players_count']; ?> players</td>
+                                  <td><span class="fw-bold text-success"><?php echo number_format($totalScore); ?></span></td>
+                                  <td><?php echo number_format($team['team_average'], 1); ?></td>
+                                  <td><?php echo $team['total_games']; ?></td>
+                                  <td><span class="text-warning"><?php echo $team['team_best']; ?></span></td>
+                                  <td>
+                                    <button class="btn btn-sm btn-outline-primary" onclick="viewDetails('<?php echo $team['team_name']; ?>')">
+                                      <i class="ti ti-eye"></i>
+                                    </button>
+                                  </td>
+                                </tr>
+                              <?php 
+                              $rank++;
+                              endforeach; ?>
+                            <?php else: ?>
+                              <tr>
+                                <td colspan="8" class="text-center text-muted py-4">
+                                  <i class="ti ti-users fs-1 mb-2"></i>
+                                  <p class="mb-0">No team data available</p>
+                                  <small>Teams will appear here once they start playing</small>
+                                </td>
+                              </tr>
+                            <?php endif; ?>
                           </tbody>
                         </table>
                       </div>
@@ -615,21 +746,13 @@
                     <i class="ti ti-user-plus fs-4 text-primary me-2"></i>
                     <h5 class="card-title mb-0">Create New Account</h5>
                   </div>
-                  <p class="text-muted mb-3">Add new players or teams to the system</p>
+                  <p class="text-muted mb-3">Add new players to the system</p>
                   
                   <div class="d-grid gap-2">
-                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createPlayerModal">
+                    <a href="admin-create-account.php" class="btn btn-primary">
                       <i class="ti ti-user-plus me-2"></i>
                       Add New Player
-                    </button>
-                    <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#createTeamModal">
-                      <i class="ti ti-users-plus me-2"></i>
-                      Create Team
-                    </button>
-                    <button class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#bulkImportModal">
-                      <i class="ti ti-upload me-2"></i>
-                      Bulk Import
-                    </button>
+                    </a>
                   </div>
                 </div>
               </div>
@@ -644,45 +767,25 @@
                   </div>
                   
                   <div class="activity-list">
-                    <div class="d-flex align-items-center mb-3">
-                      <div class="bg-success rounded-circle p-2 me-3">
-                        <i class="ti ti-user-plus text-white fs-6"></i>
+                    <?php if (!empty($recentActivities) && !isset($recentActivities['error'])): ?>
+                      <?php foreach ($recentActivities as $activity): ?>
+                        <div class="d-flex align-items-center mb-3">
+                          <div class="<?php echo $activity['icon_color']; ?> rounded-circle p-2 me-3">
+                            <i class="<?php echo $activity['icon']; ?> text-white fs-6"></i>
+                          </div>
+                          <div class="flex-grow-1">
+                            <h6 class="mb-0 fw-bold"><?php echo $activity['title']; ?></h6>
+                            <small class="text-muted"><?php echo $activity['description']; ?> - <?php echo $activity['time']; ?></small>
+                          </div>
+                        </div>
+                      <?php endforeach; ?>
+                    <?php else: ?>
+                      <div class="text-center text-muted py-4">
+                        <i class="ti ti-activity fs-1 mb-2"></i>
+                        <p class="mb-0">No recent activities</p>
+                        <small>Activities will appear here as players achieve high scores</small>
                       </div>
-                      <div class="flex-grow-1">
-                        <h6 class="mb-0 fw-bold">New Player Added</h6>
-                        <small class="text-muted">Mike Johnson joined - 2 hours ago</small>
-                      </div>
-                    </div>
-                    
-                    <div class="d-flex align-items-center mb-3">
-                      <div class="bg-primary rounded-circle p-2 me-3">
-                        <i class="ti ti-trophy text-white fs-6"></i>
-                      </div>
-                      <div class="flex-grow-1">
-                        <h6 class="mb-0 fw-bold">High Score Record</h6>
-                        <small class="text-muted">Thunder Strikers scored 547 - 1 hour ago</small>
-                      </div>
-                    </div>
-                    
-                    <div class="d-flex align-items-center mb-3">
-                      <div class="bg-warning rounded-circle p-2 me-3">
-                        <i class="ti ti-users text-white fs-6"></i>
-                      </div>
-                      <div class="flex-grow-1">
-                        <h6 class="mb-0 fw-bold">Team Created</h6>
-                        <small class="text-muted">Lane Masters team formed - 3 hours ago</small>
-                      </div>
-                    </div>
-                    
-                    <div class="d-flex align-items-center">
-                      <div class="bg-info rounded-circle p-2 me-3">
-                        <i class="ti ti-calendar text-white fs-6"></i>
-                      </div>
-                      <div class="flex-grow-1">
-                        <h6 class="mb-0 fw-bold">Tournament Scheduled</h6>
-                        <small class="text-muted">SPEEDSTERS Championship - Mar 15</small>
-                      </div>
-                    </div>
+                    <?php endif; ?>
                   </div>
                 </div>
               </div>
@@ -740,76 +843,6 @@
     </div>
   </div>
 
-  <!-- Create Team Modal -->
-  <div class="modal fade" id="createTeamModal" tabindex="-1" aria-labelledby="createTeamModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="createTeamModalLabel">Create New Team</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body">
-          <form id="createTeamForm">
-            <div class="row">
-              <div class="col-md-6 mb-3">
-                <label for="teamName" class="form-label">Team Name</label>
-                <input type="text" class="form-control" id="teamName" required>
-              </div>
-              <div class="col-md-6 mb-3">
-                <label for="teamType" class="form-label">Team Type</label>
-                <select class="form-select" id="teamType" required>
-                  <option value="">Select Team Type</option>
-                  <option value="doubles">Doubles (2 Players)</option>
-                  <option value="team">Team (4-6 Players)</option>
-                </select>
-              </div>
-            </div>
-            <div class="mb-3">
-              <label for="teamDescription" class="form-label">Team Description</label>
-              <textarea class="form-control" id="teamDescription" rows="3"></textarea>
-            </div>
-            <div class="mb-3">
-              <label class="form-label">Select Team Members</label>
-              <div class="row" id="teamMembersList">
-                <!-- Team members will be populated here -->
-              </div>
-            </div>
-          </form>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-          <button type="button" class="btn btn-primary" onclick="createTeam()">Create Team</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Bulk Import Modal -->
-  <div class="modal fade" id="bulkImportModal" tabindex="-1" aria-labelledby="bulkImportModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="bulkImportModalLabel">Bulk Import Users</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body">
-          <div class="mb-3">
-            <label for="importFile" class="form-label">Upload CSV File</label>
-            <input type="file" class="form-control" id="importFile" accept=".csv">
-            <div class="form-text">Upload a CSV file with columns: Name, Email, Phone, Skill Level</div>
-          </div>
-          <div class="alert alert-info">
-            <i class="ti ti-info-circle me-2"></i>
-            <strong>CSV Format:</strong> Name, Email, Phone, Skill Level (beginner/intermediate/advanced/pro)
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-          <button type="button" class="btn btn-primary" onclick="bulkImport()">Import Users</button>
-        </div>
-      </div>
-    </div>
-  </div>
 
 
   <script src="./assets/libs/jquery/dist/jquery.min.js"></script>
@@ -850,34 +883,6 @@
       }, 1000);
     }
 
-    function createTeam() {
-      const form = document.getElementById('createTeamForm');
-      const formData = new FormData(form);
-      
-      // Simulate API call
-      setTimeout(() => {
-        showNotification('Team created successfully!', 'success');
-        $('#createTeamModal').modal('hide');
-        form.reset();
-      }, 1000);
-    }
-
-    function bulkImport() {
-      const fileInput = document.getElementById('importFile');
-      const file = fileInput.files[0];
-      
-      if (!file) {
-        showNotification('Please select a CSV file to import', 'warning');
-        return;
-      }
-      
-      // Simulate file processing
-      setTimeout(() => {
-        showNotification('Users imported successfully!', 'success');
-        $('#bulkImportModal').modal('hide');
-        fileInput.value = '';
-      }, 2000);
-    }
 
     // Score Update Functions
     function updateScore() {
