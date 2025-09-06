@@ -1,3 +1,50 @@
+<?php
+require_once 'includes/auth.php';
+require_once 'includes/dashboard.php';
+require_once 'includes/user-management.php';
+requireAdmin(); // Ensure user is admin
+
+// Get current user info
+$currentUser = getCurrentUser();
+
+// Get all users data
+function getAllUsersData() {
+    try {
+        $pdo = getDBConnection();
+        
+        $stmt = $pdo->prepare("
+            SELECT 
+                u.user_id,
+                u.username,
+                u.first_name,
+                u.last_name,
+                u.email,
+                u.phone,
+                u.skill_level,
+                u.user_role,
+                u.status,
+                u.team_name,
+                u.created_at,
+                COUNT(gs.score_id) as total_games,
+                AVG(gs.player_score) as avg_score,
+                MAX(gs.player_score) as best_score
+            FROM users u
+            LEFT JOIN game_scores gs ON u.user_id = gs.user_id AND gs.status = 'Completed'
+            WHERE u.user_role = 'Player'
+            GROUP BY u.user_id, u.username, u.first_name, u.last_name, u.email, u.phone, u.skill_level, u.user_role, u.status, u.team_name, u.created_at
+            ORDER BY u.first_name, u.last_name
+        ");
+        $stmt->execute();
+        
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+    } catch(PDOException $e) {
+        return ['error' => $e->getMessage()];
+    }
+}
+
+$allUsers = getAllUsersData();
+?>
 <!doctype html>
 <html lang="en">
 
@@ -183,13 +230,13 @@
                   <div class="message-body">
                     <a href="javascript:void(0)" class="d-flex align-items-center gap-2 dropdown-item">
                       <i class="ti ti-user fs-6"></i>
-                      <p class="mb-0 fs-3">Admin Profile</p>
+                      <p class="mb-0 fs-3"><?php echo htmlspecialchars($currentUser['first_name'] . ' ' . $currentUser['last_name']); ?> (Admin)</p>
                     </a>
                     <a href="javascript:void(0)" class="d-flex align-items-center gap-2 dropdown-item">
                       <i class="ti ti-settings fs-6"></i>
                       <p class="mb-0 fs-3">Settings</p>
                     </a>
-                    <a href="./authentication-login.php" class="btn btn-outline-primary mx-3 mt-2 d-block">Logout</a>
+                    <a href="./logout.php" class="btn btn-outline-primary mx-3 mt-2 d-block">Logout</a>
                   </div>
                 </div>
               </li>
@@ -227,7 +274,7 @@
                       <span class="fw-normal text-muted">Manage all players and their information</span>
                     </div>
                     <div class="d-flex gap-2">
-                      <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createPlayerModal">
+                      <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createUserModal">
                         <i class="ti ti-user-plus me-2"></i>
                         Add New Player
                       </button>
@@ -296,7 +343,70 @@
                         </tr>
                       </thead>
                       <tbody id="usersTableBody">
-                        <!-- Users will be populated here -->
+                        <?php if (!empty($allUsers) && !isset($allUsers['error'])): ?>
+                          <?php foreach ($allUsers as $user): ?>
+                            <tr>
+                              <td>
+                                <input type="checkbox" class="user-checkbox" value="<?php echo $user['user_id']; ?>">
+                              </td>
+                              <td>
+                                <div class="d-flex align-items-center">
+                                  <img src="assets/images/profile/user-<?php echo ($user['user_id'] % 8) + 1; ?>.jpg" alt="Player" class="rounded-circle me-2" width="32" height="32">
+                                  <div>
+                                    <h6 class="mb-0 fw-bold"><?php echo htmlspecialchars($user['first_name'] . ' ' . $user['last_name']); ?></h6>
+                                    <small class="text-muted">Team: <?php echo htmlspecialchars($user['team_name'] ?? 'No Team'); ?></small>
+                                  </div>
+                                </div>
+                              </td>
+                              <td><?php echo htmlspecialchars($user['email'] ?? 'N/A'); ?></td>
+                              <td><?php echo htmlspecialchars($user['phone'] ?? 'N/A'); ?></td>
+                              <td>
+                                <?php 
+                                $skillBadgeClass = 'bg-secondary';
+                                if ($user['skill_level'] == 'beginner') $skillBadgeClass = 'bg-info';
+                                if ($user['skill_level'] == 'intermediate') $skillBadgeClass = 'bg-warning';
+                                if ($user['skill_level'] == 'advanced') $skillBadgeClass = 'bg-primary';
+                                if ($user['skill_level'] == 'pro') $skillBadgeClass = 'bg-success';
+                                ?>
+                                <span class="badge <?php echo $skillBadgeClass; ?>"><?php echo ucfirst($user['skill_level'] ?? 'Unknown'); ?></span>
+                              </td>
+                              <td>
+                                <?php 
+                                $statusBadgeClass = 'bg-secondary';
+                                if ($user['status'] == 'Active') $statusBadgeClass = 'bg-success';
+                                if ($user['status'] == 'Inactive') $statusBadgeClass = 'bg-warning';
+                                if ($user['status'] == 'Suspended') $statusBadgeClass = 'bg-danger';
+                                ?>
+                                <span class="badge <?php echo $statusBadgeClass; ?>"><?php echo ucfirst($user['status'] ?? 'Unknown'); ?></span>
+                              </td>
+                              <td><?php echo $user['total_games'] ?? '0'; ?></td>
+                              <td><span class="fw-bold text-warning"><?php echo $user['best_score'] ?? '0'; ?></span></td>
+                              <td><?php echo $user['avg_score'] ? number_format($user['avg_score'], 1) : '0.0'; ?></td>
+                              <td><?php echo $user['created_at'] ? date('M j, Y', strtotime($user['created_at'])) : 'N/A'; ?></td>
+                              <td>
+                                <div class="btn-group" role="group">
+                                  <button class="btn btn-sm btn-outline-primary" onclick="viewUser(<?php echo $user['user_id']; ?>)" title="View Details">
+                                    <i class="ti ti-eye"></i>
+                                  </button>
+                                  <button class="btn btn-sm btn-outline-warning" onclick="editUser(<?php echo $user['user_id']; ?>)" title="Edit User">
+                                    <i class="ti ti-edit"></i>
+                                  </button>
+                                  <button class="btn btn-sm btn-outline-danger" onclick="deleteUser(<?php echo $user['user_id']; ?>)" title="Delete User">
+                                    <i class="ti ti-trash"></i>
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          <?php endforeach; ?>
+                        <?php else: ?>
+                          <tr>
+                            <td colspan="11" class="text-center text-muted py-4">
+                              <i class="ti ti-users fs-1 mb-2"></i>
+                              <p class="mb-0">No users found</p>
+                              <small>Users will appear here once they are added to the system</small>
+                            </td>
+                          </tr>
+                        <?php endif; ?>
                       </tbody>
                     </table>
                   </div>
@@ -550,231 +660,10 @@
     let currentPage = 1;
     const usersPerPage = 10;
 
-    // Sample user data
-    const sampleUsers = [
-      {
-        id: 1,
-        name: 'Mike Johnson',
-        email: 'mike.johnson@email.com',
-        phone: '+1 555 0123',
-        skill: 'pro',
-        status: 'active',
-        gamesPlayed: 8,
-        bestScore: 289,
-        average: 231.2,
-        joinDate: '2024-01-15',
-        notes: 'Professional player with excellent technique',
-        avatar: 'assets/images/profile/user-3.jpg'
-      },
-      {
-        id: 2,
-        name: 'Sarah Wilson',
-        email: 'sarah.wilson@email.com',
-        phone: '+1 555 0124',
-        skill: 'advanced',
-        status: 'active',
-        gamesPlayed: 7,
-        bestScore: 275,
-        average: 219.8,
-        joinDate: '2024-01-20',
-        notes: 'Consistent performer, team player',
-        avatar: 'assets/images/profile/user-2.jpg'
-      },
-      {
-        id: 3,
-        name: 'Alex Rodriguez',
-        email: 'alex.rodriguez@email.com',
-        phone: '+1 555 0125',
-        skill: 'intermediate',
-        status: 'active',
-        gamesPlayed: 5,
-        bestScore: 245,
-        average: 198.4,
-        joinDate: '2024-02-01',
-        notes: 'Improving rapidly, great potential',
-        avatar: 'assets/images/profile/user-4.jpg'
-      },
-      {
-        id: 4,
-        name: 'Emma Davis',
-        email: 'emma.davis@email.com',
-        phone: '+1 555 0126',
-        skill: 'beginner',
-        status: 'active',
-        gamesPlayed: 3,
-        bestScore: 189,
-        average: 156.7,
-        joinDate: '2024-02-15',
-        notes: 'New player, learning the basics',
-        avatar: 'assets/images/profile/user-5.jpg'
-      },
-      {
-        id: 5,
-        name: 'Tom Anderson',
-        email: 'tom.anderson@email.com',
-        phone: '+1 555 0127',
-        skill: 'advanced',
-        status: 'inactive',
-        gamesPlayed: 12,
-        bestScore: 298,
-        average: 245.3,
-        joinDate: '2023-12-10',
-        notes: 'Experienced player, currently on break',
-        avatar: 'assets/images/profile/user-6.jpg'
-      },
-      {
-        id: 6,
-        name: 'Maria Garcia',
-        email: 'maria.garcia@email.com',
-        phone: '+1 555 0128',
-        skill: 'pro',
-        status: 'active',
-        gamesPlayed: 15,
-        bestScore: 300,
-        average: 267.8,
-        joinDate: '2023-11-20',
-        notes: 'Elite player, tournament champion',
-        avatar: 'assets/images/profile/user-7.jpg'
-      }
-    ];
+    // No dummy data - using PHP data from database
+    // Table is rendered by PHP - no JavaScript rendering needed
 
-    function loadUsers() {
-      currentUsers = [...sampleUsers];
-      filteredUsers = [...currentUsers];
-      currentPage = 1;
-      renderUsers();
-      renderPagination();
-    }
-
-    function renderUsers() {
-      const tbody = document.getElementById('usersTableBody');
-      const startIndex = (currentPage - 1) * usersPerPage;
-      const endIndex = startIndex + usersPerPage;
-      const pageUsers = filteredUsers.slice(startIndex, endIndex);
-
-      if (pageUsers.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="11" class="text-center text-muted">No users found</td></tr>';
-        return;
-      }
-
-      tbody.innerHTML = pageUsers.map(user => `
-        <tr>
-          <td>
-            <input type="checkbox" class="user-checkbox" value="${user.id}">
-          </td>
-          <td>
-            <div class="d-flex align-items-center">
-              <img src="${user.avatar}" alt="Player" class="rounded-circle me-2" width="32" height="32">
-              <div>
-                <h6 class="mb-0">${user.name}</h6>
-                <small class="text-muted">ID: ${user.id}</small>
-              </div>
-            </div>
-          </td>
-          <td>${user.email}</td>
-          <td>${user.phone}</td>
-          <td><span class="badge bg-${getSkillBadgeColor(user.skill)}">${capitalizeFirst(user.skill)}</span></td>
-          <td><span class="badge bg-${getStatusBadgeColor(user.status)}">${capitalizeFirst(user.status)}</span></td>
-          <td>${user.gamesPlayed}</td>
-          <td><span class="fw-bold text-success">${user.bestScore}</span></td>
-          <td>${user.average}</td>
-          <td>${formatDate(user.joinDate)}</td>
-          <td>
-            <div class="btn-group" role="group">
-              <button class="btn btn-sm btn-outline-primary" onclick="viewUserDetails(${user.id})" title="View Details">
-                <i class="ti ti-eye"></i>
-              </button>
-              <button class="btn btn-sm btn-outline-warning" onclick="editUser(${user.id})" title="Edit">
-                <i class="ti ti-edit"></i>
-              </button>
-              <button class="btn btn-sm btn-outline-danger" onclick="deleteUser(${user.id})" title="Delete">
-                <i class="ti ti-trash"></i>
-              </button>
-            </div>
-          </td>
-        </tr>
-      `).join('');
-    }
-
-    function renderPagination() {
-      const totalPages = Math.ceil(filteredUsers.length / usersPerPage);
-      const pagination = document.getElementById('usersPagination');
-      
-      if (totalPages <= 1) {
-        pagination.innerHTML = '';
-        return;
-      }
-
-      let paginationHTML = '';
-      
-      // Previous button
-      paginationHTML += `
-        <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
-          <a class="page-link" href="#" onclick="changePage(${currentPage - 1})">Previous</a>
-        </li>
-      `;
-      
-      // Page numbers
-      for (let i = 1; i <= totalPages; i++) {
-        if (i === 1 || i === totalPages || (i >= currentPage - 2 && i <= currentPage + 2)) {
-          paginationHTML += `
-            <li class="page-item ${i === currentPage ? 'active' : ''}">
-              <a class="page-link" href="#" onclick="changePage(${i})">${i}</a>
-            </li>
-          `;
-        } else if (i === currentPage - 3 || i === currentPage + 3) {
-          paginationHTML += '<li class="page-item disabled"><span class="page-link">...</span></li>';
-        }
-      }
-      
-      // Next button
-      paginationHTML += `
-        <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
-          <a class="page-link" href="#" onclick="changePage(${currentPage + 1})">Next</a>
-        </li>
-      `;
-      
-      pagination.innerHTML = paginationHTML;
-    }
-
-    function changePage(page) {
-      const totalPages = Math.ceil(filteredUsers.length / usersPerPage);
-      if (page >= 1 && page <= totalPages) {
-        currentPage = page;
-        renderUsers();
-        renderPagination();
-      }
-    }
-
-    function searchUsers() {
-      const searchTerm = document.getElementById('userSearch').value.toLowerCase();
-      const skillFilter = document.getElementById('skillFilter').value;
-      const statusFilter = document.getElementById('statusFilter').value;
-      
-      filteredUsers = currentUsers.filter(user => {
-        const matchesSearch = user.name.toLowerCase().includes(searchTerm) || 
-                            user.email.toLowerCase().includes(searchTerm);
-        const matchesSkill = !skillFilter || user.skill === skillFilter;
-        const matchesStatus = !statusFilter || user.status === statusFilter;
-        
-        return matchesSearch && matchesSkill && matchesStatus;
-      });
-      
-      currentPage = 1;
-      renderUsers();
-      renderPagination();
-    }
-
-    function clearFilters() {
-      document.getElementById('userSearch').value = '';
-      document.getElementById('skillFilter').value = '';
-      document.getElementById('statusFilter').value = '';
-      filteredUsers = [...currentUsers];
-      currentPage = 1;
-      renderUsers();
-      renderPagination();
-    }
-
+    // Simplified functions for user management
     function toggleSelectAll() {
       const selectAll = document.getElementById('selectAll');
       const checkboxes = document.querySelectorAll('.user-checkbox');
@@ -784,230 +673,244 @@
       });
     }
 
-    function viewUserDetails(userId) {
-      const user = currentUsers.find(u => u.id === userId);
-      if (!user) return;
+    // CRUD Functions
+    function viewUser(userId) {
+      console.log('Attempting to view user:', userId);
       
-      // Populate details modal
-      document.getElementById('detailPlayerName').textContent = user.name;
-      document.getElementById('detailPlayerEmail').textContent = user.email;
-      document.getElementById('detailPlayerPhone').textContent = user.phone;
-      document.getElementById('detailPlayerSkill').textContent = capitalizeFirst(user.skill);
-      document.getElementById('detailPlayerStatus').textContent = capitalizeFirst(user.status);
-      document.getElementById('detailPlayerGames').textContent = user.gamesPlayed;
-      document.getElementById('detailPlayerBestScore').textContent = user.bestScore;
-      document.getElementById('detailPlayerAverage').textContent = user.average;
-      document.getElementById('detailPlayerJoinDate').textContent = formatDate(user.joinDate);
-      document.getElementById('detailPlayerNotes').textContent = user.notes || 'No notes available';
-      
-      // Update avatar
-      document.querySelector('#userDetailsModal img').src = user.avatar;
-      
-      // Update skill and status badge colors
-      const skillBadge = document.getElementById('detailPlayerSkill');
-      const statusBadge = document.getElementById('detailPlayerStatus');
-      skillBadge.className = `badge bg-${getSkillBadgeColor(user.skill)}`;
-      statusBadge.className = `badge bg-${getStatusBadgeColor(user.status)} ms-2`;
-      
-      // Show recent games (sample data)
-      const gamesTable = document.getElementById('detailPlayerGamesTable');
-      const recentGames = [
-        { date: '2024-01-15', type: 'Tournament', game1: 245, game2: 267, game3: 289, game4: 275, game5: 298, total: 1374 },
-        { date: '2024-01-12', type: 'League', game1: 198, game2: 234, game3: 256, game4: 0, game5: 0, total: 688 },
-        { date: '2024-01-10', type: 'Practice', game1: 189, game2: 201, game3: 223, game4: 195, game5: 0, total: 808 }
-      ];
-      
-      gamesTable.innerHTML = recentGames.map(game => `
-        <tr>
-          <td>${formatDate(game.date)}</td>
-          <td><span class="badge bg-primary">${game.type}</span></td>
-          <td>${game.game1 || '-'}</td>
-          <td>${game.game2 || '-'}</td>
-          <td>${game.game3 || '-'}</td>
-          <td>${game.game4 || '-'}</td>
-          <td>${game.game5 || '-'}</td>
-          <td><strong>${game.total}</strong></td>
-        </tr>
-      `).join('');
-      
-      $('#userDetailsModal').modal('show');
-    }
-
-    function editUser(userId) {
-      const user = currentUsers.find(u => u.id === userId);
-      if (!user) return;
-      
-      // Populate edit form
-      document.getElementById('editUserId').value = user.id;
-      document.getElementById('editPlayerName').value = user.name;
-      document.getElementById('editPlayerEmail').value = user.email;
-      document.getElementById('editPlayerPhone').value = user.phone;
-      document.getElementById('editPlayerSkill').value = user.skill;
-      document.getElementById('editPlayerStatus').value = user.status;
-      document.getElementById('editPlayerJoinDate').value = user.joinDate;
-      document.getElementById('editPlayerGames').value = user.gamesPlayed;
-      document.getElementById('editPlayerBestScore').value = user.bestScore;
-      document.getElementById('editPlayerAverage').value = user.average;
-      document.getElementById('editPlayerNotes').value = user.notes || '';
-      
-      $('#editUserModal').modal('show');
-    }
-
-    function editUserFromDetails() {
-      const userId = document.getElementById('editUserId').value || 
-                    currentUsers.find(u => u.name === document.getElementById('detailPlayerName').textContent)?.id;
-      if (userId) {
-        editUser(userId);
-        $('#userDetailsModal').modal('hide');
-      }
-    }
-
-    function updateUser() {
-      const userId = parseInt(document.getElementById('editUserId').value);
-      const userIndex = currentUsers.findIndex(u => u.id === userId);
-      
-      if (userIndex === -1) return;
-      
-      // Update user data
-      currentUsers[userIndex] = {
-        ...currentUsers[userIndex],
-        name: document.getElementById('editPlayerName').value,
-        email: document.getElementById('editPlayerEmail').value,
-        phone: document.getElementById('editPlayerPhone').value,
-        skill: document.getElementById('editPlayerSkill').value,
-        status: document.getElementById('editPlayerStatus').value,
-        notes: document.getElementById('editPlayerNotes').value
-      };
-      
-      // Refresh display
-      searchUsers();
-      $('#editUserModal').modal('hide');
-      showNotification('Player updated successfully!', 'success');
-    }
-
-    function deleteUser(userId) {
-      if (confirm('Are you sure you want to delete this player? This action cannot be undone.')) {
-        const userIndex = currentUsers.findIndex(u => u.id === userId);
-        if (userIndex !== -1) {
-          currentUsers.splice(userIndex, 1);
-          searchUsers();
-          showNotification('Player deleted successfully!', 'success');
+      fetch('ajax/user-crud.php', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: 'action=view&user_id=' + userId
+      })
+      .then(response => {
+        console.log('Response status:', response.status);
+        console.log('Response headers:', response.headers);
+        
+        if (!response.ok) {
+          throw new Error('HTTP error! status: ' + response.status);
         }
-      }
-    }
-
-    function createPlayer() {
-      const form = document.getElementById('createPlayerForm');
-      const formData = new FormData(form);
-      
-      // Simulate API call
-      setTimeout(() => {
-        showNotification('Player account created successfully!', 'success');
-        $('#createPlayerModal').modal('hide');
-        form.reset();
-        loadUsers(); // Refresh the user list
-      }, 1000);
-    }
-
-    function exportUsers() {
-      // Simulate export
-      showNotification('Users exported successfully!', 'success');
-    }
-
-    function refreshUsers() {
-      loadUsers();
-      showNotification('Users refreshed!', 'info');
-    }
-
-    // Helper functions
-    function getSkillBadgeColor(skill) {
-      const colors = {
-        'beginner': 'secondary',
-        'intermediate': 'info',
-        'advanced': 'warning',
-        'pro': 'danger'
-      };
-      return colors[skill] || 'secondary';
-    }
-
-    function getStatusBadgeColor(status) {
-      const colors = {
-        'active': 'success',
-        'inactive': 'secondary',
-        'suspended': 'danger'
-      };
-      return colors[status] || 'secondary';
-    }
-
-    function capitalizeFirst(str) {
-      return str.charAt(0).toUpperCase() + str.slice(1);
-    }
-
-    function formatDate(dateString) {
-      const date = new Date(dateString);
-      return date.toLocaleDateString('en-US', { 
-        year: 'numeric', 
-        month: 'short', 
-        day: 'numeric' 
+        
+        return response.text(); // Get as text first to see what we're getting
+      })
+      .then(text => {
+        console.log('Raw response:', text);
+        
+        try {
+          const data = JSON.parse(text);
+          console.log('Parsed response data:', data);
+          
+          if (data.success) {
+            console.log('User data received:', data.data);
+            populateViewModal(data.data);
+            $('#viewUserModal').modal('show');
+          } else {
+            console.error('Server error:', data.message);
+            alert('Error: ' + data.message);
+          }
+        } catch (e) {
+          console.error('JSON parse error:', e);
+          console.error('Raw response text:', text);
+          alert('Invalid response from server: ' + text.substring(0, 100));
+        }
+      })
+      .catch(error => {
+        console.error('Fetch error:', error);
+        alert('An error occurred while fetching user details: ' + error.message);
       });
     }
 
-    function showNotification(message, type = 'info') {
-      const notification = document.createElement('div');
-      notification.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
-      notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
-      notification.innerHTML = `
-        ${message}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-      `;
-      
-      document.body.appendChild(notification);
-      
-      setTimeout(() => {
-        if (notification.parentNode) {
-          notification.remove();
+    function editUser(userId) {
+      fetch('ajax/user-crud.php', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: 'action=view&user_id=' + userId
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          populateEditModal(data.data);
+          $('#editUserModal').modal('show');
+        } else {
+          alert('Error: ' + data.message);
         }
-      }, 3000);
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred while fetching user details');
+      });
     }
 
-    // Initialize on page load
-    document.addEventListener('DOMContentLoaded', function() {
-      loadUsers();
+    function deleteUser(userId) {
+      if (confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
+        fetch('ajax/user-crud.php', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: 'action=delete&user_id=' + userId
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            alert('User deleted successfully');
+            location.reload(); // Refresh the page
+          } else {
+            alert('Error: ' + data.message);
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          alert('An error occurred while deleting user');
+        });
+      }
+    }
+
+    function populateViewModal(user) {
+      console.log('Populating modal with user data:', user);
       
-      // Search functionality
-      const userSearch = document.getElementById('userSearch');
-      const skillFilter = document.getElementById('skillFilter');
-      const statusFilter = document.getElementById('statusFilter');
+      // Handle undefined values safely
+      const firstName = user.first_name || '';
+      const lastName = user.last_name || '';
+      const fullName = (firstName + ' ' + lastName).trim() || 'Unknown User';
       
-      if (userSearch) {
-        userSearch.addEventListener('input', searchUsers);
+      document.getElementById('viewUserName').textContent = fullName;
+      document.getElementById('viewUserTeam').textContent = 'Team: ' + (user.team_name || 'No Team');
+      document.getElementById('viewUserUsername').textContent = user.username || 'N/A';
+      document.getElementById('viewUserEmail').textContent = user.email || 'N/A';
+      document.getElementById('viewUserPhone').textContent = user.phone || 'N/A';
+      document.getElementById('viewUserSkill').textContent = user.skill_level || 'N/A';
+      document.getElementById('viewUserStatus').textContent = user.status || 'N/A';
+      document.getElementById('viewUserGames').textContent = user.total_games || '0';
+      document.getElementById('viewUserBestScore').textContent = user.best_score || '0';
+      document.getElementById('viewUserAvgScore').textContent = user.avg_score ? parseFloat(user.avg_score).toFixed(1) : '0.0';
+      document.getElementById('viewUserJoined').textContent = user.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A';
+      
+      // Update avatar
+      document.getElementById('viewUserAvatar').src = 'assets/images/profile/user-' + ((user.user_id % 8) + 1) + '.jpg';
+      
+      // Populate recent games
+      const gamesTable = document.getElementById('viewUserGamesTable');
+      if (user.recent_games && user.recent_games.length > 0) {
+        gamesTable.innerHTML = user.recent_games.map(game => `
+          <tr>
+            <td>${new Date(game.game_date).toLocaleDateString()}</td>
+            <td><span class="badge bg-primary">${game.game_mode}</span></td>
+            <td>${game.player_score}</td>
+            <td>${game.team_name || 'Solo'}</td>
+            <td>${game.lane_number}</td>
+        </tr>
+      `).join('');
+      } else {
+        gamesTable.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No recent games</td></tr>';
       }
-      if (skillFilter) {
-        skillFilter.addEventListener('change', searchUsers);
-      }
-      if (statusFilter) {
-        statusFilter.addEventListener('change', searchUsers);
-      }
+    }
+
+    function populateEditModal(user) {
+      document.getElementById('editUserId').value = user.user_id;
+      document.getElementById('editUsername').value = user.username;
+      document.getElementById('editFirstName').value = user.first_name;
+      document.getElementById('editLastName').value = user.last_name;
+      document.getElementById('editEmail').value = user.email;
+      document.getElementById('editPhone').value = user.phone || '';
+      document.getElementById('editSkillLevel').value = user.skill_level;
+      document.getElementById('editStatus').value = user.status;
+      document.getElementById('editTeamName').value = user.team_name || '';
+    }
+
+    function editUserFromView() {
+      $('#viewUserModal').modal('hide');
+      setTimeout(() => {
+        editUser(document.getElementById('editUserId').value);
+      }, 300);
+    }
+
+    function exportUsers() {
+      alert('Export users functionality');
+    }
+
+    function refreshUsers() {
+      location.reload();
+    }
+
+    function clearFilters() {
+      document.getElementById('userSearch').value = '';
+      document.getElementById('skillFilter').value = '';
+      document.getElementById('statusFilter').value = '';
+    }
+
+    // Form submission handlers
+    document.getElementById('editUserForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      const formData = new FormData(this);
+      formData.append('action', 'update');
+      
+      fetch('ajax/user-crud.php', {
+        method: 'POST',
+        body: formData
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          alert('User updated successfully');
+          $('#editUserModal').modal('hide');
+          location.reload(); // Refresh the page
+        } else {
+          alert('Error: ' + data.message);
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred while updating user');
+      });
     });
-  </script>
-  
-  <!-- Countdown Timer Script -->
-  <script>
-    // Set the target date for the tournament (you can change this)
-    const targetDate = new Date('2025-03-15T18:00:00').getTime();
-    
-    function updateCountdown() {
-      const now = new Date().getTime();
-      const distance = targetDate - now;
+
+    document.getElementById('createUserForm').addEventListener('submit', function(e) {
+      e.preventDefault();
       
-      if (distance < 0) {
-        // Event has passed
-        document.getElementById('days').innerHTML = '00';
-        document.getElementById('hours').innerHTML = '00';
-        document.getElementById('minutes').innerHTML = '00';
-        document.getElementById('seconds').innerHTML = '00';
-        return;
-      }
+      const formData = new FormData(this);
+      formData.append('action', 'create');
+      
+      fetch('ajax/user-crud.php', {
+        method: 'POST',
+        body: formData
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          alert('User created successfully');
+          $('#createUserModal').modal('hide');
+          this.reset(); // Reset form
+          location.reload(); // Refresh the page
+        } else {
+          alert('Error: ' + data.message);
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred while creating user');
+      });
+    });
+
+    // Initialize page
+    document.addEventListener('DOMContentLoaded', function() {
+      // Page is ready - PHP data is already loaded
+    });
+
+
+
+
+    // All old functions removed - using PHP data only
+
+    // Tournament countdown functionality
+    function updateCountdown() {
+      const tournamentDate = new Date('2024-12-25T00:00:00').getTime();
+      const now = new Date().getTime();
+      const distance = tournamentDate - now;
       
       const days = Math.floor(distance / (1000 * 60 * 60 * 24));
       const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
@@ -1026,6 +929,9 @@
     // Initial call
     updateCountdown();
   </script>
+
+  <?php include 'modals/user-management-modals.php'; ?>
+
 </body>
 
 </html>
