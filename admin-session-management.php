@@ -246,7 +246,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 <li class="sidebar-item">
                   <a href="./admin-score-monitoring-team.php" class="sidebar-link">
                     <i class="ti ti-users-group"></i>
-                    <span class="hide-menu">Team (4-6 Players)</span>
+                    <span class="hide-menu">Team</span>
                   </a>
                 </li>
               </ul>

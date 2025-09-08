@@ -4,7 +4,7 @@ requireAdmin(); // Ensure only admins can access this page
 
 // Check maintenance bypass for admin users
 require_once 'includes/maintenance-bypass.php';
-requireMaintenanceBypass('doubles-admin', 'Doubles Score Monitoring (Admin)');
+requireMaintenanceBypass('trio-admin', 'Trio Score Monitoring (Admin)');
 ?>
 <!doctype html>
 <html lang="en">
@@ -12,7 +12,7 @@ requireMaintenanceBypass('doubles-admin', 'Doubles Score Monitoring (Admin)');
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Admin - Doubles Teams Score Monitoring - SPEEDSTERS Bowling System</title>
+  <title>Admin - Trio Score Monitoring - SPEEDSTERS Bowling System</title>
   <link rel="shortcut icon" type="image/png" href="./assets/images/logos/speedster main logo.png" />
   <link rel="stylesheet" href="./assets/css/styles.min.css" />
   <style>
@@ -42,8 +42,8 @@ requireMaintenanceBypass('doubles-admin', 'Doubles Score Monitoring (Admin)');
     .rank-3 { background: linear-gradient(135deg, #CD7F32 0%, #B8860B 100%); }
     .rank-other { background: linear-gradient(135deg, #6c757d 0%, #495057 100%); }
     .player-avatar {
-      width: 40px;
-      height: 40px;
+      width: 30px;
+      height: 30px;
       border-radius: 50%;
       object-fit: cover;
     }
@@ -51,8 +51,8 @@ requireMaintenanceBypass('doubles-admin', 'Doubles Score Monitoring (Admin)');
       display: flex;
       align-items: center;
     }
-    .team-avatars img:first-child {
-      margin-right: -10px;
+    .team-avatars img {
+      margin-right: -8px;
       border: 2px solid white;
     }
     .score-highlight {
@@ -97,7 +97,7 @@ requireMaintenanceBypass('doubles-admin', 'Doubles Score Monitoring (Admin)');
                     <li class="breadcrumb-item"><a href="./index.php">Home</a></li>
                     <li class="breadcrumb-item"><a href="./admin-dashboard.php">Admin Dashboard</a></li>
                     <li class="breadcrumb-item"><a href="javascript:void(0)">Score Monitoring</a></li>
-                    <li class="breadcrumb-item active">Doubles Teams</li>
+                    <li class="breadcrumb-item active">Trio Teams</li>
                   </ol>
                 </div>
               </div>
@@ -111,12 +111,12 @@ requireMaintenanceBypass('doubles-admin', 'Doubles Score Monitoring (Admin)');
                 <div class="card-body">
                   <div class="d-flex align-items-center">
                     <div class="flex-grow-1">
-                      <h6 class="card-title text-muted mb-1">Total Doubles Teams</h6>
-                      <h3 class="mb-0 text-primary">89</h3>
-                      <small class="text-muted">+5 new this week</small>
+                      <h6 class="card-title text-muted mb-1">Total Teams</h6>
+                      <h3 class="mb-0 text-primary">23</h3>
+                      <small class="text-muted">+2 new this week</small>
                     </div>
                     <div class="ms-3">
-                      <i class="ti ti-users fs-1 text-muted"></i>
+                      <i class="ti ti-users-group fs-1 text-muted"></i>
                     </div>
                   </div>
                 </div>
@@ -128,8 +128,8 @@ requireMaintenanceBypass('doubles-admin', 'Doubles Score Monitoring (Admin)');
                   <div class="d-flex align-items-center">
                     <div class="flex-grow-1">
                       <h6 class="card-title text-muted mb-1">Active Today</h6>
-                      <h3 class="mb-0 text-success">34</h3>
-                      <small class="text-muted">+8 vs yesterday</small>
+                      <h3 class="mb-0 text-success">12</h3>
+                      <small class="text-muted">+3 vs yesterday</small>
                     </div>
                     <div class="ms-3">
                       <i class="ti ti-users-check fs-1 text-success"></i>
@@ -144,8 +144,8 @@ requireMaintenanceBypass('doubles-admin', 'Doubles Score Monitoring (Admin)');
                   <div class="d-flex align-items-center">
                     <div class="flex-grow-1">
                       <h6 class="card-title text-muted mb-1">Avg Team Score</h6>
-                      <h3 class="mb-0 text-warning">467.8</h3>
-                      <small class="text-muted">+12.3 vs last week</small>
+                      <h3 class="mb-0 text-warning">1,156.4</h3>
+                      <small class="text-muted">+18.7 vs last week</small>
                     </div>
                     <div class="ms-3">
                       <i class="ti ti-target fs-1 text-warning"></i>
@@ -160,8 +160,8 @@ requireMaintenanceBypass('doubles-admin', 'Doubles Score Monitoring (Admin)');
                   <div class="d-flex align-items-center">
                     <div class="flex-grow-1">
                       <h6 class="card-title text-muted mb-1">Games Today</h6>
-                      <h3 class="mb-0 text-info">78</h3>
-                      <small class="text-muted">+15% vs yesterday</small>
+                      <h3 class="mb-0 text-info">36</h3>
+                      <small class="text-muted">+8% vs yesterday</small>
                     </div>
                     <div class="ms-3">
                       <i class="ti ti-bowling fs-1 text-info"></i>
@@ -179,8 +179,11 @@ requireMaintenanceBypass('doubles-admin', 'Doubles Score Monitoring (Admin)');
                 <div class="card-body">
                   <div class="d-flex align-items-center justify-content-between mb-4">
                     <div>
-                      <h5 class="card-title fw-semibold mb-1">Doubles Teams Score Monitoring</h5>
-                      <span class="fw-normal text-muted">Admin view with enhanced team management features</span>
+                      <h5 class="card-title fw-semibold mb-1">
+                        <i class="ti ti-users me-2 text-primary"></i>
+                        Trio Score Monitoring
+                      </h5>
+                      <span class="fw-normal text-muted">Admin view with enhanced trio team management features</span>
                     </div>
                     <div class="d-flex gap-2">
                       <button class="btn btn-success btn-sm" onclick="exportData()">
@@ -194,6 +197,10 @@ requireMaintenanceBypass('doubles-admin', 'Doubles Score Monitoring (Admin)');
                       <button class="btn btn-info btn-sm" onclick="manageTeams()">
                         <i class="ti ti-users-plus me-1"></i>
                         Manage Teams
+                      </button>
+                      <button class="btn btn-secondary btn-sm" onclick="teamAnalytics()">
+                        <i class="ti ti-chart-line me-1"></i>
+                        Analytics
                       </button>
                       <select class="form-select form-select-sm" id="dateFilter" style="width: auto;">
                         <option value="today">Today</option>
@@ -270,21 +277,23 @@ requireMaintenanceBypass('doubles-admin', 'Doubles Score Monitoring (Admin)');
                               <td>
                                 <div class="d-flex align-items-center">
                                   <div class="d-flex me-2">
-                                    <img src="assets/images/profile/user-1.jpg" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
-                                    <img src="assets/images/profile/user-2.jpg" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
+                                    <img src="assets/images/profile/user-5.jpg" alt="Player 1" class="player-avatar">
+                                    <img src="assets/images/profile/user-6.jpg" alt="Player 2" class="player-avatar">
+                                    <img src="assets/images/profile/user-7.jpg" alt="Player 3" class="player-avatar">
+                                    <img src="assets/images/profile/user-8.jpg" alt="Player 4" class="player-avatar">
                                   </div>
                                   <div>
-                                    <h6 class="mb-0">Thunder Strikers</h6>
-                                    <small class="text-muted">Pro Team</small>
+                                    <h6 class="mb-0">Lane Masters</h6>
+                                    <small class="text-muted">Elite Team</small>
                                   </div>
                                 </div>
                               </td>
-                              <td>John & Sarah</td>
-                              <td><span class="fw-bold text-success">2,443</span></td>
-                              <td>244.3</td>
-                              <td>5</td>
-                              <td><span class="text-warning">547</span></td>
-                              <td>87</td>
+                              <td>Tom, Emma, Alex, Maria</td>
+                              <td><span class="fw-bold text-success">2,178</span></td>
+                              <td>217.8</td>
+                              <td>4</td>
+                              <td><span class="text-warning">498</span></td>
+                              <td>75</td>
                               <td><span class="badge bg-success">Active</span></td>
                               <td><small class="text-muted">2 hours ago</small></td>
                               <td>
@@ -309,21 +318,24 @@ requireMaintenanceBypass('doubles-admin', 'Doubles Score Monitoring (Admin)');
                               <td>
                                 <div class="d-flex align-items-center">
                                   <div class="d-flex me-2">
-                                    <img src="assets/images/profile/user-3.jpg" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
-                                    <img src="assets/images/profile/user-4.jpg" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
+                                    <img src="assets/images/profile/user-1.jpg" alt="Player 1" class="player-avatar">
+                                    <img src="assets/images/profile/user-2.jpg" alt="Player 2" class="player-avatar">
+                                    <img src="assets/images/profile/user-3.jpg" alt="Player 3" class="player-avatar">
+                                    <img src="assets/images/profile/user-4.jpg" alt="Player 4" class="player-avatar">
+                                    <img src="assets/images/profile/user-5.jpg" alt="Player 5" class="player-avatar">
                                   </div>
                                   <div>
                                     <h6 class="mb-0">Pin Crushers</h6>
-                                    <small class="text-muted">Elite Team</small>
+                                    <small class="text-muted">Pro Team</small>
                                   </div>
                                 </div>
                               </td>
-                              <td>Mike & Lisa</td>
-                              <td><span class="fw-bold text-success">2,312</span></td>
-                              <td>231.2</td>
-                              <td>5</td>
-                              <td><span class="text-warning">523</span></td>
-                              <td>80</td>
+                              <td>David, Lisa, James, Anna, Mark</td>
+                              <td><span class="fw-bold text-success">2,145</span></td>
+                              <td>214.5</td>
+                              <td>4</td>
+                              <td><span class="text-warning">485</span></td>
+                              <td>72</td>
                               <td><span class="badge bg-success">Active</span></td>
                               <td><small class="text-muted">1 hour ago</small></td>
                               <td>
@@ -348,21 +360,25 @@ requireMaintenanceBypass('doubles-admin', 'Doubles Score Monitoring (Admin)');
                               <td>
                                 <div class="d-flex align-items-center">
                                   <div class="d-flex me-2">
-                                    <img src="assets/images/profile/user-5.jpg" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
-                                    <img src="assets/images/profile/user-6.jpg" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
+                                    <img src="assets/images/profile/user-6.jpg" alt="Player 1" class="player-avatar">
+                                    <img src="assets/images/profile/user-7.jpg" alt="Player 2" class="player-avatar">
+                                    <img src="assets/images/profile/user-8.jpg" alt="Player 3" class="player-avatar">
+                                    <img src="assets/images/profile/user-1.jpg" alt="Player 4" class="player-avatar">
+                                    <img src="assets/images/profile/user-2.jpg" alt="Player 5" class="player-avatar">
+                                    <img src="assets/images/profile/user-3.jpg" alt="Player 6" class="player-avatar">
                                   </div>
                                   <div>
-                                    <h6 class="mb-0">Lane Masters</h6>
+                                    <h6 class="mb-0">Strike Force</h6>
                                     <small class="text-muted">Advanced Team</small>
                                   </div>
                                 </div>
                               </td>
-                              <td>Tom & Emma</td>
-                              <td><span class="fw-bold text-success">2,178</span></td>
-                              <td>217.8</td>
-                              <td>5</td>
-                              <td><span class="text-warning">498</span></td>
-                              <td>75</td>
+                              <td>Chris, Sarah, Mike, Lisa, Tom, Emma</td>
+                              <td><span class="fw-bold text-success">2,089</span></td>
+                              <td>208.9</td>
+                              <td>4</td>
+                              <td><span class="text-warning">472</span></td>
+                              <td>68</td>
                               <td><span class="badge bg-warning">Pending</span></td>
                               <td><small class="text-muted">30 min ago</small></td>
                               <td>
@@ -387,8 +403,10 @@ requireMaintenanceBypass('doubles-admin', 'Doubles Score Monitoring (Admin)');
                               <td>
                                 <div class="d-flex align-items-center">
                                   <div class="d-flex me-2">
-                                    <img src="assets/images/profile/user-7.jpg" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
-                                    <img src="assets/images/profile/user-8.jpg" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
+                                    <img src="assets/images/profile/user-4.jpg" alt="Player 1" class="player-avatar">
+                                    <img src="assets/images/profile/user-5.jpg" alt="Player 2" class="player-avatar">
+                                    <img src="assets/images/profile/user-6.jpg" alt="Player 3" class="player-avatar">
+                                    <img src="assets/images/profile/user-7.jpg" alt="Player 4" class="player-avatar">
                                   </div>
                                   <div>
                                     <h6 class="mb-0">Spare Seekers</h6>
@@ -396,12 +414,12 @@ requireMaintenanceBypass('doubles-admin', 'Doubles Score Monitoring (Admin)');
                                   </div>
                                 </div>
                               </td>
-                              <td>Alex & Maria</td>
-                              <td><span class="fw-bold text-success">2,045</span></td>
-                              <td>204.5</td>
-                              <td>5</td>
-                              <td><span class="text-warning">472</span></td>
-                              <td>70</td>
+                              <td>Alex, Maria, Chris, Wilson</td>
+                              <td><span class="fw-bold text-success">1,956</span></td>
+                              <td>195.6</td>
+                              <td>4</td>
+                              <td><span class="text-warning">445</span></td>
+                              <td>62</td>
                               <td><span class="badge bg-success">Active</span></td>
                               <td><small class="text-muted">15 min ago</small></td>
                               <td>
@@ -426,8 +444,11 @@ requireMaintenanceBypass('doubles-admin', 'Doubles Score Monitoring (Admin)');
                               <td>
                                 <div class="d-flex align-items-center">
                                   <div class="d-flex me-2">
-                                    <img src="assets/images/profile/user-1.jpg" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
-                                    <img src="assets/images/profile/user-3.jpg" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
+                                    <img src="assets/images/profile/user-8.jpg" alt="Player 1" class="player-avatar">
+                                    <img src="assets/images/profile/user-1.jpg" alt="Player 2" class="player-avatar">
+                                    <img src="assets/images/profile/user-2.jpg" alt="Player 3" class="player-avatar">
+                                    <img src="assets/images/profile/user-3.jpg" alt="Player 4" class="player-avatar">
+                                    <img src="assets/images/profile/user-4.jpg" alt="Player 5" class="player-avatar">
                                   </div>
                                   <div>
                                     <h6 class="mb-0">Gutter Guards</h6>
@@ -435,12 +456,12 @@ requireMaintenanceBypass('doubles-admin', 'Doubles Score Monitoring (Admin)');
                                   </div>
                                 </div>
                               </td>
-                              <td>David & Anna</td>
-                              <td><span class="fw-bold text-success">1,956</span></td>
-                              <td>195.6</td>
-                              <td>5</td>
-                              <td><span class="text-warning">445</span></td>
-                              <td>65</td>
+                              <td>David, Anna, Mark, Lisa, James</td>
+                              <td><span class="fw-bold text-success">1,823</span></td>
+                              <td>182.3</td>
+                              <td>4</td>
+                              <td><span class="text-warning">412</span></td>
+                              <td>58</td>
                               <td><span class="badge bg-danger">Inactive</span></td>
                               <td><small class="text-muted">5 min ago</small></td>
                               <td>
@@ -475,8 +496,7 @@ requireMaintenanceBypass('doubles-admin', 'Doubles Score Monitoring (Admin)');
                               <th scope="col">Team</th>
                               <th scope="col">Players</th>
                               <th scope="col">Score</th>
-                              <th scope="col">Player 1 Score</th>
-                              <th scope="col">Player 2 Score</th>
+                              <th scope="col">Individual Scores</th>
                               <th scope="col">Combined Strikes</th>
                               <th scope="col">Time</th>
                               <th scope="col">Admin Actions</th>
@@ -488,19 +508,20 @@ requireMaintenanceBypass('doubles-admin', 'Doubles Score Monitoring (Admin)');
                               <td>
                                 <div class="d-flex align-items-center">
                                   <div class="d-flex me-2">
-                                    <img src="assets/images/profile/user-1.jpg" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
-                                    <img src="assets/images/profile/user-2.jpg" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
+                                    <img src="assets/images/profile/user-5.jpg" alt="Player 1" class="player-avatar">
+                                    <img src="assets/images/profile/user-6.jpg" alt="Player 2" class="player-avatar">
+                                    <img src="assets/images/profile/user-7.jpg" alt="Player 3" class="player-avatar">
+                                    <img src="assets/images/profile/user-8.jpg" alt="Player 4" class="player-avatar">
                                   </div>
                                   <div>
-                                    <h6 class="mb-0">Thunder Strikers</h6>
+                                    <h6 class="mb-0">Lane Masters</h6>
                                   </div>
                                 </div>
                               </td>
-                              <td>John & Sarah</td>
-                              <td><span class="fw-bold text-success">547</span></td>
-                              <td>279</td>
-                              <td>268</td>
-                              <td>19</td>
+                              <td>Tom, Emma, Alex, Maria</td>
+                              <td><span class="fw-bold text-success">498</span></td>
+                              <td>125, 128, 120, 125</td>
+                              <td>15</td>
                               <td><small class="text-muted">9:30 AM</small></td>
                               <td>
                                 <div class="admin-actions">
@@ -518,19 +539,21 @@ requireMaintenanceBypass('doubles-admin', 'Doubles Score Monitoring (Admin)');
                               <td>
                                 <div class="d-flex align-items-center">
                                   <div class="d-flex me-2">
-                                    <img src="assets/images/profile/user-3.jpg" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
-                                    <img src="assets/images/profile/user-4.jpg" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
+                                    <img src="assets/images/profile/user-1.jpg" alt="Player 1" class="player-avatar">
+                                    <img src="assets/images/profile/user-2.jpg" alt="Player 2" class="player-avatar">
+                                    <img src="assets/images/profile/user-3.jpg" alt="Player 3" class="player-avatar">
+                                    <img src="assets/images/profile/user-4.jpg" alt="Player 4" class="player-avatar">
+                                    <img src="assets/images/profile/user-5.jpg" alt="Player 5" class="player-avatar">
                                   </div>
                                   <div>
                                     <h6 class="mb-0">Pin Crushers</h6>
                                   </div>
                                 </div>
                               </td>
-                              <td>Mike & Lisa</td>
-                              <td><span class="fw-bold text-success">523</span></td>
-                              <td>255</td>
-                              <td>268</td>
-                              <td>17</td>
+                              <td>David, Lisa, James, Anna, Mark</td>
+                              <td><span class="fw-bold text-success">485</span></td>
+                              <td>98, 102, 95, 98, 92</td>
+                              <td>14</td>
                               <td><small class="text-muted">9:45 AM</small></td>
                               <td>
                                 <div class="admin-actions">
@@ -548,19 +571,22 @@ requireMaintenanceBypass('doubles-admin', 'Doubles Score Monitoring (Admin)');
                               <td>
                                 <div class="d-flex align-items-center">
                                   <div class="d-flex me-2">
-                                    <img src="assets/images/profile/user-5.jpg" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
-                                    <img src="assets/images/profile/user-6.jpg" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
+                                    <img src="assets/images/profile/user-6.jpg" alt="Player 1" class="player-avatar">
+                                    <img src="assets/images/profile/user-7.jpg" alt="Player 2" class="player-avatar">
+                                    <img src="assets/images/profile/user-8.jpg" alt="Player 3" class="player-avatar">
+                                    <img src="assets/images/profile/user-1.jpg" alt="Player 4" class="player-avatar">
+                                    <img src="assets/images/profile/user-2.jpg" alt="Player 5" class="player-avatar">
+                                    <img src="assets/images/profile/user-3.jpg" alt="Player 6" class="player-avatar">
                                   </div>
                                   <div>
-                                    <h6 class="mb-0">Lane Masters</h6>
+                                    <h6 class="mb-0">Strike Force</h6>
                                   </div>
                                 </div>
                               </td>
-                              <td>Tom & Emma</td>
-                              <td><span class="fw-bold text-success">498</span></td>
-                              <td>242</td>
-                              <td>256</td>
-                              <td>15</td>
+                              <td>Chris, Sarah, Mike, Lisa, Tom, Emma</td>
+                              <td><span class="fw-bold text-success">472</span></td>
+                              <td>78, 82, 75, 78, 82, 77</td>
+                              <td>13</td>
                               <td><small class="text-muted">10:00 AM</small></td>
                               <td>
                                 <div class="admin-actions">
@@ -624,7 +650,7 @@ requireMaintenanceBypass('doubles-admin', 'Doubles Score Monitoring (Admin)');
   <script src="https://cdn.jsdelivr.net/npm/iconify-icon@1.0.8/dist/iconify-icon.min.js"></script>
   
   <script>
-    // Admin-specific functions for doubles teams
+    // Admin-specific functions for teams
     function viewTeamDetails(teamId) {
       showNotification('Opening detailed view for team: ' + teamId, 'info');
       // Here you would open a detailed team modal or navigate to team details page
@@ -658,7 +684,7 @@ requireMaintenanceBypass('doubles-admin', 'Doubles Score Monitoring (Admin)');
     }
 
     function exportData() {
-      showNotification('Exporting doubles teams data...', 'info');
+      showNotification('Exporting team data...', 'info');
       // Here you would generate and download the data export
     }
 
@@ -670,6 +696,11 @@ requireMaintenanceBypass('doubles-admin', 'Doubles Score Monitoring (Admin)');
     function manageTeams() {
       showNotification('Opening team management interface...', 'info');
       // Here you would open team creation/management interface
+    }
+
+    function teamAnalytics() {
+      showNotification('Opening team analytics dashboard...', 'info');
+      // Here you would open team performance analytics
     }
 
     // Date filter functionality
@@ -713,7 +744,7 @@ requireMaintenanceBypass('doubles-admin', 'Doubles Score Monitoring (Admin)');
       // Simulate loading
       setTimeout(() => {
         icon.classList.remove('ti-spin');
-        showNotification('Admin doubles table refreshed successfully!', 'success');
+        showNotification('Admin team table refreshed successfully!', 'success');
       }, 1000);
     }
 
@@ -721,12 +752,12 @@ requireMaintenanceBypass('doubles-admin', 'Doubles Score Monitoring (Admin)');
     document.querySelectorAll('[data-bs-toggle="tab"]').forEach(tab => {
       tab.addEventListener('shown.bs.tab', function(e) {
         const targetId = e.target.getAttribute('data-bs-target');
-        console.log('Switched to admin doubles tab:', targetId);
+        console.log('Switched to admin team tab:', targetId);
         
         // Simulate loading data for specific game
         if (targetId !== '#overall') {
           const gameNumber = targetId.replace('#game', '');
-          showNotification('Loading Game ' + gameNumber + ' admin doubles data...', 'info');
+          showNotification('Loading Game ' + gameNumber + ' admin team data...', 'info');
         }
       });
     });
@@ -753,7 +784,7 @@ requireMaintenanceBypass('doubles-admin', 'Doubles Score Monitoring (Admin)');
     // Auto-refresh table every 30 seconds
     setInterval(() => {
       if (!document.hidden) {
-        console.log('Auto-refreshing admin doubles table...');
+        console.log('Auto-refreshing admin team table...');
       }
     }, 30000);
   </script>

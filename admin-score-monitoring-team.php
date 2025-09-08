@@ -78,178 +78,13 @@ requireMaintenanceBypass('team-admin', 'Team Score Monitoring (Admin)');
   <!--  Body Wrapper -->
   <div class="page-wrapper" id="main-wrapper" data-layout="vertical" data-navbarbg="skin6" data-sidebartype="full"
     data-sidebar-position="fixed" data-header-position="fixed" style="margin-top: 0; padding-top: 0;">
-    
-    <!-- Tournament Countdown Banner -->
-    <div class="app-topstrip bg-gradient-primary py-0 px-3 w-100 d-flex align-items-center justify-content-between flex-wrap">
-      <!-- Left side: Tournament Info -->
-      <div class="d-flex align-items-center gap-2 mb-2 mb-lg-0">
-        <i class="ti ti-trophy text-warning fs-4"></i>
-        <div>
-          <h6 class="mb-0 fw-bold text-white">SPEEDSTERS Championship 2025</h6>
-          <small class="text-white-50 d-block">Next Bowling Tournament</small>
-        </div>
-      </div>
+   <?php include 'includes/app-topstrip.php'; ?>
 
-      <!-- Right side: Countdown + Register Button -->
-      <div class="d-flex align-items-center gap-2 flex-wrap">
-        <div class="d-flex gap-2">
-         <div class="text-center"> <div class="bg-white bg-opacity-20 rounded p-n2 mt-1">
-              <span class="text-white fw-bold fs-6" id="days">00</span>
-            </div>
-            <small class="text-white-50" style="font-size: 10px;">Days</small>
-          </div>
-         <div class="text-center"> <div class="bg-white bg-opacity-20 rounded p-n2 mt-1">
-              <span class="text-white fw-bold fs-6" id="hours">00</span>
-            </div>
-            <small class="text-white-50" style="font-size: 10px;">Hours</small>
-          </div>
-         <div class="text-center"> <div class="bg-white bg-opacity-20 rounded p-n2 mt-1">
-              <span class="text-white fw-bold fs-6" id="minutes">00</span>
-            </div>
-            <small class="text-white-50" style="font-size: 10px;">Min</small>
-          </div>
-         <div class="text-center"> <div class="bg-white bg-opacity-20 rounded p-n2 mt-1">
-              <span class="text-white fw-bold fs-6" id="seconds">00</span>
-            </div>
-            <small class="text-white-50" style="font-size: 10px;">Sec</small>
-          </div>
-        </div>
-
-        <a class="btn btn-warning btn-sm d-flex align-items-center gap-1">
-          <i class="ti ti-calendar-event fs-6"></i>
-          Register
-        </a>
-      </div>
-    </div>
-
-    <!-- Sidebar Start -->
-    <aside class="left-sidebar">
-      <!-- Sidebar scroll-->
-      <div>
-        <div class="brand-logo d-flex align-items-center justify-content-between">
-          <a href="./index.php" class="text-nowrap logo-img d-flex flex-column align-items-start text-decoration-none">
-            <img src="assets/images/logos/speedster main logo.png" alt="SPEEDSTERS Logo" width="90" />
-            <span class="text-muted fw-semibold mt-1" style="font-size: 0.75rem; letter-spacing: 0.5px;">Admin Panel</span>
-          </a>
-          <div class="close-btn d-xl-none d-block sidebartoggler cursor-pointer" id="sidebarCollapse">
-            <i class="ti ti-x fs-6"></i>
-          </div>
-        </div>
-        <!-- Sidebar navigation-->
-        <nav class="sidebar-nav scroll-sidebar" data-simplebar="">
-          <ul id="sidebarnav">
-            <li class="nav-small-cap">
-              <iconify-icon icon="solar:menu-dots-linear" class="nav-small-cap-icon fs-4"></iconify-icon>
-              <span class="hide-menu">Admin Panel</span>
-            </li>
-            <li class="sidebar-item">
-              <a class="sidebar-link" href="./admin-dashboard.php" aria-expanded="false">
-                <i class="ti ti-dashboard"></i>
-                <span class="hide-menu">Dashboard</span>
-              </a>
-            </li>
-            <li class="sidebar-item">
-              <a class="sidebar-link" href="./admin-user-management.php">
-                <i class="ti ti-users"></i>
-                <span class="hide-menu">User Management</span>
-              </a>
-            </li>
-            <li class="sidebar-item">
-              <a class="sidebar-link" href="./admin-events.php">
-                <i class="ti ti-calendar-event"></i>
-                <span class="hide-menu">Events Management</span>
-              </a>
-            </li>
-            <li class="sidebar-item">
-              <a class="sidebar-link has-arrow" href="javascript:void(0)" aria-expanded="false">
-                <i class="ti ti-chart-bar"></i>
-                <span class="hide-menu">Score Monitoring</span>
-              </a>
-              <ul aria-expanded="false" class="collapse first-level">
-                <li class="sidebar-item">
-                  <a href="./admin-score-monitoring-solo.php" class="sidebar-link">
-                    <i class="ti ti-user"></i>
-                    <span class="hide-menu">Solo Players</span>
-                  </a>
-                </li>
-                <li class="sidebar-item">
-                  <a href="./admin-score-monitoring-doubles.php" class="sidebar-link">
-                    <i class="ti ti-users"></i>
-                    <span class="hide-menu">Doubles Teams</span>
-                  </a>
-                </li>
-                <li class="sidebar-item">
-                  <a href="./admin-score-monitoring-team.php" class="sidebar-link active">
-                    <i class="ti ti-users-group"></i>
-                    <span class="hide-menu">Team (4-6 Players)</span>
-                  </a>
-                </li>
-              </ul>
-            </li>
-            <li class="sidebar-item">
-              <a class="sidebar-link" href="./admin-score-update.php">
-                <i class="ti ti-edit"></i>
-                <span class="hide-menu">Update Scores</span>
-              </a>
-            </li>
-            <li class="sidebar-item">
-              <a class="sidebar-link" href="javascript:void(0)" aria-expanded="false">
-                <i class="ti ti-user-plus"></i>
-                <span class="hide-menu">Create Account</span>
-              </a>
-            </li>
-            <li class="sidebar-item">
-              <a class="sidebar-link" href="javascript:void(0)" aria-expanded="false">
-                <i class="ti ti-settings"></i>
-                <span class="hide-menu">System Settings</span>
-              </a>
-            </li>
-          </ul>
-        </nav>
-        <!-- End Sidebar navigation -->
-      </div>
-      <!-- End Sidebar scroll-->
-    </aside>
-    <!--  Sidebar End -->
+    <?php include 'includes/sidebar.php'; ?>
     
     <!--  Main wrapper -->
     <div class="body-wrapper">
-      <!--  Header Start -->
-      <header class="app-header">
-        <nav class="navbar navbar-expand-lg navbar-light">
-          <ul class="navbar-nav">
-            <li class="nav-item d-block d-xl-none">
-              <a class="nav-link sidebartoggler " id="headerCollapse" href="javascript:void(0)">
-                <i class="ti ti-menu-2"></i>
-              </a>
-            </li>
-          </ul>
-          <div class="navbar-collapse justify-content-end px-0" id="navbarNav">
-            <ul class="navbar-nav flex-row ms-auto align-items-center justify-content-end">
-              <li class="nav-item dropdown">
-                <a class="nav-link " href="javascript:void(0)" id="drop2" data-bs-toggle="dropdown"
-                  aria-expanded="false">
-                  <img src="./assets/images/profile/user-1.jpg" alt="" width="35" height="35" class="rounded-circle">
-                </a>
-                <div class="dropdown-menu dropdown-menu-end dropdown-menu-animate-up" aria-labelledby="drop2">
-                  <div class="message-body">
-                    <a href="javascript:void(0)" class="d-flex align-items-center gap-2 dropdown-item">
-                      <i class="ti ti-user fs-6"></i>
-                      <p class="mb-0 fs-3">Admin Profile</p>
-                    </a>
-                    <a href="javascript:void(0)" class="d-flex align-items-center gap-2 dropdown-item">
-                      <i class="ti ti-settings fs-6"></i>
-                      <p class="mb-0 fs-3">Settings</p>
-                    </a>
-                    <a href="./authentication-login.php" class="btn btn-outline-primary mx-3 mt-2 d-block">Logout</a>
-                  </div>
-                </div>
-              </li>
-            </ul>
-          </div>
-        </nav>
-      </header>
-      <!--  Header End -->
+      <?php include 'includes/header.php'; ?>
       
       <div class="body-wrapper-inner">
         <div class="container-fluid">
@@ -262,7 +97,7 @@ requireMaintenanceBypass('team-admin', 'Team Score Monitoring (Admin)');
                     <li class="breadcrumb-item"><a href="./index.php">Home</a></li>
                     <li class="breadcrumb-item"><a href="./admin-dashboard.php">Admin Dashboard</a></li>
                     <li class="breadcrumb-item"><a href="javascript:void(0)">Score Monitoring</a></li>
-                    <li class="breadcrumb-item active">Team (4-6 Players)</li>
+                    <li class="breadcrumb-item active">Team</li>
                   </ol>
                 </div>
               </div>
@@ -346,7 +181,7 @@ requireMaintenanceBypass('team-admin', 'Team Score Monitoring (Admin)');
                     <div>
                       <h5 class="card-title fw-semibold mb-1">
                         <i class="ti ti-users me-2 text-primary"></i>
-                        Team Score Monitoring (4-6 Players)
+                        Team Score Monitoring
                       </h5>
                       <span class="fw-normal text-muted">Admin view with enhanced team management features</span>
                     </div>

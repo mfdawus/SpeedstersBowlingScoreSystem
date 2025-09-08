@@ -176,7 +176,7 @@
                 <li class="sidebar-item">
                   <a href="./score-table-team.php" class="sidebar-link">
                     <i class="ti ti-users"></i>
-                    <span class="hide-menu">Team (4-6 Players)</span>
+                    <span class="hide-menu">Team</span>
                   </a>
                 </li>
               </ul>
@@ -352,7 +352,7 @@
                           <option value="solo">Solo Games</option>
                           <option value="duo" selected>Duo Teams</option>
                           <option value="trio">Trio Teams</option>
-                          <option value="team">Team (4-6 Players)</option>
+                          <option value="team">Team</option>
                         </select>
                       </div>
                     </div>

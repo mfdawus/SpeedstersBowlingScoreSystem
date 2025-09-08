@@ -310,7 +310,7 @@ requireMaintenanceBypass('events', 'Events Calendar');
         date: "2025-03-25",
         time: "20:00",
         location: "All Lanes",
-        description: "Championship for registered teams. 4-6 players per team required.",
+        description: "Championship for registered teams. Multiple players per team required.",
         prize: "Team trophy + $1,000",
         maxParticipants: 48,
         currentParticipants: 36,

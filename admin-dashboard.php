@@ -68,139 +68,10 @@ $activeSession = getActiveSession();
   <!--  Body Wrapper -->
   <div class="page-wrapper" id="main-wrapper" data-layout="vertical" data-navbarbg="skin6" data-sidebartype="full"
     data-sidebar-position="fixed" data-header-position="fixed" style="margin-top: 0; padding-top: 0;">
-    
-    <!-- Tournament Countdown Banner -->
-    <div class="app-topstrip bg-gradient-primary py-0 px-3 w-100 d-flex align-items-center justify-content-between flex-wrap">
-      <!-- Left side: Tournament Info -->
-      <div class="d-flex align-items-center gap-2 mb-2 mb-lg-0">
-        <i class="ti ti-trophy text-warning fs-4"></i>
-        <div>
-          <h6 class="mb-0 fw-bold text-white">SPEEDSTERS Championship 2025</h6>
-          <small class="text-white-50 d-block">Next Bowling Tournament</small>
-        </div>
-      </div>
+   <?php include 'includes/app-topstrip.php'; ?>
 
-      <!-- Right side: Countdown + Register Button -->
-      <div class="d-flex align-items-center gap-2 flex-wrap">
-        <div class="d-flex gap-2">
-         <div class="text-center"> <div class="bg-white bg-opacity-20 rounded p-n2 mt-1">
-              <span class="text-white fw-bold fs-6" id="days">00</span>
-            </div>
-            <small class="text-white-50" style="font-size: 10px;">Days</small>
-          </div>
-         <div class="text-center"> <div class="bg-white bg-opacity-20 rounded p-n2 mt-1">
-              <span class="text-white fw-bold fs-6" id="hours">00</span>
-            </div>
-            <small class="text-white-50" style="font-size: 10px;">Hours</small>
-          </div>
-         <div class="text-center"> <div class="bg-white bg-opacity-20 rounded p-n2 mt-1">
-              <span class="text-white fw-bold fs-6" id="minutes">00</span>
-            </div>
-            <small class="text-white-50" style="font-size: 10px;">Min</small>
-          </div>
-         <div class="text-center"> <div class="bg-white bg-opacity-20 rounded p-n2 mt-1">
-              <span class="text-white fw-bold fs-6" id="seconds">00</span>
-            </div>
-            <small class="text-white-50" style="font-size: 10px;">Sec</small>
-          </div>
-        </div>
 
-        <a class="btn btn-warning btn-sm d-flex align-items-center gap-1">
-          <i class="ti ti-calendar-event fs-6"></i>
-          Register
-        </a>
-      </div>
-    </div>
-
-    <!-- Sidebar Start -->
-    <aside class="left-sidebar">
-      <!-- Sidebar scroll-->
-      <div>
-        <div class="brand-logo d-flex align-items-center justify-content-between">
-          <a href="./index.php" class="text-nowrap logo-img d-flex flex-column align-items-start text-decoration-none">
-            <img src="assets/images/logos/speedster main logo.png" alt="SPEEDSTERS Logo" width="90" />
-            <span class="text-muted fw-semibold mt-1" style="font-size: 0.75rem; letter-spacing: 0.5px;">Admin Panel</span>
-          </a>
-          <div class="close-btn d-xl-none d-block sidebartoggler cursor-pointer" id="sidebarCollapse">
-            <i class="ti ti-x fs-6"></i>
-          </div>
-        </div>
-        <!-- Sidebar navigation-->
-        <nav class="sidebar-nav scroll-sidebar" data-simplebar="">
-          <ul id="sidebarnav">
-            <li class="nav-small-cap">
-              <iconify-icon icon="solar:menu-dots-linear" class="nav-small-cap-icon fs-4"></iconify-icon>
-              <span class="hide-menu">Admin Panel</span>
-            </li>
-            <li class="sidebar-item">
-              <a class="sidebar-link active" href="./admin-dashboard.php" aria-expanded="false">
-                <i class="ti ti-dashboard"></i>
-                <span class="hide-menu">Dashboard</span>
-              </a>
-            </li>
-            <li class="sidebar-item">
-              <a class="sidebar-link" href="./admin-user-management.php">
-                <i class="ti ti-users"></i>
-                <span class="hide-menu">User Management</span>
-              </a>
-            </li>
-            <li class="sidebar-item">
-              <a class="sidebar-link" href="./admin-events.php">
-                <i class="ti ti-calendar-event"></i>
-                <span class="hide-menu">Events Management</span>
-              </a>
-            </li>
-            <li class="sidebar-item">
-              <a class="sidebar-link has-arrow" href="javascript:void(0)" aria-expanded="false">
-                <i class="ti ti-chart-bar"></i>
-                <span class="hide-menu">Score Monitoring</span>
-              </a>
-              <ul aria-expanded="false" class="collapse first-level">
-                <li class="sidebar-item">
-                  <a href="./admin-score-monitoring-solo.php" class="sidebar-link">
-                    <i class="ti ti-user"></i>
-                    <span class="hide-menu">Solo Players</span>
-                  </a>
-                </li>
-                <li class="sidebar-item">
-                  <a href="./admin-score-monitoring-doubles.php" class="sidebar-link">
-                    <i class="ti ti-users"></i>
-                    <span class="hide-menu">Doubles Teams</span>
-                  </a>
-                </li>
-                <li class="sidebar-item">
-                  <a href="./admin-score-monitoring-team.php" class="sidebar-link">
-                    <i class="ti ti-users-group"></i>
-                    <span class="hide-menu">Team (4-6 Players)</span>
-                  </a>
-                </li>
-              </ul>
-            </li>
-            <li class="sidebar-item">
-              <a class="sidebar-link" href="./admin-score-update.php">
-                <i class="ti ti-edit"></i>
-                <span class="hide-menu">Update Scores</span>
-              </a>
-            </li>
-            <li class="sidebar-item">
-              <a class="sidebar-link" href="./admin-create-account.php">
-                <i class="ti ti-user-plus"></i>
-                <span class="hide-menu">Create Account</span>
-              </a>
-            </li>
-            <li class="sidebar-item">
-              <a class="sidebar-link" href="javascript:void(0)" aria-expanded="false">
-                <i class="ti ti-settings"></i>
-                <span class="hide-menu">System Settings</span>
-              </a>
-            </li>
-          </ul>
-        </nav>
-        <!-- End Sidebar navigation -->
-      </div>
-      <!-- End Sidebar scroll-->
-    </aside>
-    <!--  Sidebar End -->
+    <?php include 'includes/sidebar.php'; ?>
     
     <!--  Main wrapper -->
     <div class="body-wrapper">
@@ -492,7 +363,7 @@ $activeSession = getActiveSession();
                     </li>
                     <li class="nav-item" role="presentation">
                       <button class="nav-link" id="teams-tab" data-bs-toggle="tab" data-bs-target="#teams" type="button" role="tab">
-                        Team (4-6 Players)
+                        Team
                       </button>
                     </li>
                   </ul>
@@ -786,7 +657,7 @@ $activeSession = getActiveSession();
                       </div>
                     </div>
 
-                    <!-- Team (4-6 Players) Tab -->
+                    <!-- Team Tab -->
                     <div class="tab-pane fade" id="teams" role="tabpanel">
                       <div class="table-responsive">
                         <table class="table table-hover" id="teamStatsTable">
@@ -826,7 +697,7 @@ $activeSession = getActiveSession();
                                       </div>
                                       <div>
                                         <h6 class="mb-0"><?php echo htmlspecialchars($team['team_name']); ?></h6>
-                                        <small class="text-muted">Team (4-6 Players)</small>
+                                        <small class="text-muted">Team</small>
                                       </div>
                                     </div>
                                   </td>
@@ -864,25 +735,6 @@ $activeSession = getActiveSession();
 
             <!-- Quick Actions & Account Management -->
             <div class="col-lg-4">
-              <!-- Create New Account Card -->
-              <div class="card admin-card mb-4">
-                <div class="card-body">
-                  <div class="d-flex align-items-center mb-3">
-                    <i class="ti ti-user-plus fs-4 text-primary me-2"></i>
-                    <h5 class="card-title mb-0">Create New Account</h5>
-                  </div>
-                  <p class="text-muted mb-3">Add new players to the system</p>
-                  
-                  <div class="d-grid gap-2">
-                    <a href="admin-create-account.php" class="btn btn-primary">
-                      <i class="ti ti-user-plus me-2"></i>
-                      Add New Player
-                    </a>
-                  </div>
-                </div>
-              </div>
-
-
               <!-- Recent Activity -->
               <div class="card admin-card">
                 <div class="card-body">
@@ -1669,7 +1521,7 @@ $activeSession = getActiveSession();
             { name: 'Alex Rodriguez', color: 'bg-success' }
           ]
         },
-        'team3': { // Lane Masters (4-6 Players)
+        'team3': { // Lane Masters
           members: [
             { name: 'Tom Anderson', color: 'bg-primary' },
             { name: 'Emma Davis', color: 'bg-success' },
@@ -1679,7 +1531,7 @@ $activeSession = getActiveSession();
             { name: 'Sarah Johnson', color: 'bg-dark' }
           ]
         },
-        'team4': { // Pin Crushers (4-6 Players)
+        'team4': { // Pin Crushers
           members: [
             { name: 'David Lee', color: 'bg-primary' },
             { name: 'Lisa Brown', color: 'bg-success' },

@@ -95,7 +95,7 @@ requireMaintenanceBypass('team', 'Team Score Table');
                   <ol class="breadcrumb m-0">
                     <li class="breadcrumb-item"><a href="./index.php">Dashboard</a></li>
                     <li class="breadcrumb-item"><a href="javascript:void(0)">Score Table</a></li>
-                    <li class="breadcrumb-item active">Team (4-6 Players)</li>
+                    <li class="breadcrumb-item active">Team</li>
                   </ol>
                 </div>
               </div>
@@ -109,7 +109,7 @@ requireMaintenanceBypass('team', 'Team Score Table');
                 <div class="card-body">
                   <div class="d-flex align-items-center justify-content-between mb-4">
                     <div>
-                      <h5 class="card-title fw-semibold mb-1">Team Score Table (4-6 Players)</h5>
+                      <h5 class="card-title fw-semibold mb-1">Team Score Table</h5>
                       <span class="fw-normal text-muted">Multi-player team rankings and scores</span>
                     </div>
                     <div class="d-flex gap-2">

@@ -672,7 +672,7 @@ requireMaintenanceBypass('group', 'Group Selection');
       switch(type) {
         case 'duo': return 'Duo Teams';
         case 'trio': return 'Trio Teams';
-        case 'team': return 'Teams (4-6 Players)';
+        case 'team': return 'Teams';
         default: return 'Teams';
       }
     }
