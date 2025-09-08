@@ -84,19 +84,27 @@
 
 <!-- Edit User Modal -->
 <div class="modal fade" id="editUserModal" tabindex="-1" aria-labelledby="editUserModalLabel" aria-hidden="true">
-  <div class="modal-dialog">
+  <div class="modal-dialog modal-lg">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title" id="editUserModalLabel">Edit User</h5>
+        <h5 class="modal-title" id="editUserModalLabel">Edit Player Information</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <form id="editUserForm">
         <div class="modal-body">
           <input type="hidden" id="editUserId" name="user_id">
-          <div class="mb-3">
-            <label for="editUsername" class="form-label">Username</label>
-            <input type="text" class="form-control" id="editUsername" name="username" required>
+          
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label for="editUsername" class="form-label">Username</label>
+              <input type="text" class="form-control" id="editUsername" name="username" required>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="editEmail" class="form-label">Email Address</label>
+              <input type="email" class="form-control" id="editEmail" name="email" required>
+            </div>
           </div>
+          
           <div class="row">
             <div class="col-md-6 mb-3">
               <label for="editFirstName" class="form-label">First Name</label>
@@ -107,24 +115,25 @@
               <input type="text" class="form-control" id="editLastName" name="last_name">
             </div>
           </div>
-          <div class="mb-3">
-            <label for="editEmail" class="form-label">Email</label>
-            <input type="email" class="form-control" id="editEmail" name="email" required>
-          </div>
-          <div class="mb-3">
-            <label for="editPhone" class="form-label">Phone</label>
-            <input type="text" class="form-control" id="editPhone" name="phone">
-          </div>
+          
           <div class="row">
+            <div class="col-md-6 mb-3">
+              <label for="editPhone" class="form-label">Phone Number</label>
+              <input type="text" class="form-control" id="editPhone" name="phone">
+            </div>
             <div class="col-md-6 mb-3">
               <label for="editSkillLevel" class="form-label">Skill Level</label>
               <select class="form-select" id="editSkillLevel" name="skill_level" required>
-                <option value="beginner">Beginner</option>
-                <option value="intermediate">Intermediate</option>
-                <option value="advanced">Advanced</option>
-                <option value="pro">Professional</option>
+                <option value="Beginner">Beginner</option>
+                <option value="Intermediate">Intermediate</option>
+                <option value="Advanced">Advanced</option>
+                <option value="Elite">Elite</option>
+                <option value="Pro">Professional</option>
               </select>
             </div>
+          </div>
+          
+          <div class="row">
             <div class="col-md-6 mb-3">
               <label for="editStatus" class="form-label">Status</label>
               <select class="form-select" id="editStatus" name="status" required>
@@ -133,7 +142,27 @@
                 <option value="Suspended">Suspended</option>
               </select>
             </div>
+            <div class="col-md-6 mb-3">
+              <label for="editJoinDate" class="form-label">Join Date</label>
+              <input type="date" class="form-control" id="editJoinDate" name="created_at" readonly>
+            </div>
           </div>
+          
+          <div class="row">
+            <div class="col-md-4 mb-3">
+              <label for="editGamesPlayed" class="form-label">Games Played</label>
+              <input type="number" class="form-control" id="editGamesPlayed" name="total_games" readonly>
+            </div>
+            <div class="col-md-4 mb-3">
+              <label for="editBestScore" class="form-label">Best Score</label>
+              <input type="number" class="form-control" id="editBestScore" name="best_score" readonly>
+            </div>
+            <div class="col-md-4 mb-3">
+              <label for="editAverageScore" class="form-label">Average Score</label>
+              <input type="number" class="form-control" id="editAverageScore" name="avg_score" readonly step="0.1">
+            </div>
+          </div>
+          
           <div class="mb-3">
             <label for="editTeamName" class="form-label">Team Name</label>
             <select class="form-select" id="editTeamName" name="team_name">
@@ -142,10 +171,20 @@
               <option value="Crystal Strikes">Crystal Strikes</option>
             </select>
           </div>
+          
+          <div class="mb-3">
+            <label for="editNotes" class="form-label">Notes</label>
+            <textarea class="form-control" id="editNotes" name="notes" rows="3" placeholder="Additional notes about the player..."></textarea>
+          </div>
+          
+          <div class="alert alert-info">
+            <i class="ti ti-info-circle me-2"></i>
+            <strong>Note:</strong> Statistics (Games Played, Best Score, Average) are calculated automatically from game records.
+          </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-          <button type="submit" class="btn btn-primary">Update User</button>
+          <button type="submit" class="btn btn-warning">Update Player</button>
         </div>
       </form>
     </div>
@@ -189,24 +228,13 @@
             <input type="password" class="form-control" id="createPassword" name="password" value="password123" required>
             <small class="form-text text-muted">Default password is "password123"</small>
           </div>
-          <div class="row">
-            <div class="col-md-6 mb-3">
-              <label for="createSkillLevel" class="form-label">Skill Level</label>
-              <select class="form-select" id="createSkillLevel" name="skill_level" required>
-                <option value="beginner">Beginner</option>
-                <option value="intermediate">Intermediate</option>
-                <option value="advanced">Advanced</option>
-                <option value="pro">Professional</option>
-              </select>
-            </div>
-            <div class="col-md-6 mb-3">
-              <label for="createStatus" class="form-label">Status</label>
-              <select class="form-select" id="createStatus" name="status" required>
-                <option value="Active">Active</option>
-                <option value="Inactive">Inactive</option>
-                <option value="Suspended">Suspended</option>
-              </select>
-            </div>
+          <div class="mb-3">
+            <label for="createStatus" class="form-label">Status</label>
+            <select class="form-select" id="createStatus" name="status" required>
+              <option value="Active">Active</option>
+              <option value="Inactive">Inactive</option>
+              <option value="Suspended">Suspended</option>
+            </select>
           </div>
           <div class="mb-3">
             <label for="createTeamName" class="form-label">Team Name</label>

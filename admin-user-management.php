@@ -232,7 +232,7 @@ $allUsers = getAllUsersData();
                   <div class="message-body">
                     <a href="javascript:void(0)" class="d-flex align-items-center gap-2 dropdown-item">
                       <i class="ti ti-user fs-6"></i>
-                      <p class="mb-0 fs-3"><?php echo htmlspecialchars($currentUser['first_name'] . ' ' . $currentUser['last_name']); ?> (Admin)</p>
+                      <p class="mb-0 fs-3"><?php echo htmlspecialchars($currentUser['username']); ?> (Admin)</p>
                     </a>
                     <a href="javascript:void(0)" class="d-flex align-items-center gap-2 dropdown-item">
                       <i class="ti ti-settings fs-6"></i>
@@ -355,7 +355,7 @@ $allUsers = getAllUsersData();
                                 <div class="d-flex align-items-center">
                                   <img src="assets/images/profile/user-<?php echo ($user['user_id'] % 8) + 1; ?>.jpg" alt="Player" class="rounded-circle me-2" width="32" height="32">
                                   <div>
-                                    <h6 class="mb-0 fw-bold"><?php echo htmlspecialchars($user['first_name'] . ' ' . $user['last_name']); ?></h6>
+                                    <h6 class="mb-0 fw-bold"><?php echo htmlspecialchars($user['username']); ?></h6>
                                     <small class="text-muted">Team: <?php echo htmlspecialchars($user['team_name'] ?? 'No Team'); ?></small>
                                   </div>
                                 </div>
@@ -474,93 +474,7 @@ $allUsers = getAllUsersData();
     </div>
   </div>
 
-  <!-- Edit User Modal -->
-  <div class="modal fade" id="editUserModal" tabindex="-1" aria-labelledby="editUserModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="editUserModalLabel">Edit Player Information</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body">
-          <form id="editUserForm">
-            <input type="hidden" id="editUserId">
-            
-            <div class="row">
-              <div class="col-md-6 mb-3">
-                <label for="editPlayerName" class="form-label">Full Name</label>
-                <input type="text" class="form-control" id="editPlayerName" required>
-              </div>
-              <div class="col-md-6 mb-3">
-                <label for="editPlayerEmail" class="form-label">Email Address</label>
-                <input type="email" class="form-control" id="editPlayerEmail" required>
-              </div>
-            </div>
-            
-            <div class="row">
-              <div class="col-md-6 mb-3">
-                <label for="editPlayerPhone" class="form-label">Phone Number</label>
-                <input type="tel" class="form-control" id="editPlayerPhone">
-              </div>
-              <div class="col-md-6 mb-3">
-                <label for="editPlayerSkill" class="form-label">Skill Level</label>
-                <select class="form-select" id="editPlayerSkill" required>
-                  <option value="beginner">Beginner</option>
-                  <option value="intermediate">Intermediate</option>
-                  <option value="advanced">Advanced</option>
-                  <option value="pro">Professional</option>
-                </select>
-              </div>
-            </div>
-            
-            <div class="row">
-              <div class="col-md-6 mb-3">
-                <label for="editPlayerStatus" class="form-label">Status</label>
-                <select class="form-select" id="editPlayerStatus" required>
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                  <option value="suspended">Suspended</option>
-                </select>
-              </div>
-              <div class="col-md-6 mb-3">
-                <label for="editPlayerJoinDate" class="form-label">Join Date</label>
-                <input type="date" class="form-control" id="editPlayerJoinDate" readonly>
-              </div>
-            </div>
-            
-            <div class="row">
-              <div class="col-md-4 mb-3">
-                <label for="editPlayerGames" class="form-label">Games Played</label>
-                <input type="number" class="form-control" id="editPlayerGames" readonly>
-              </div>
-              <div class="col-md-4 mb-3">
-                <label for="editPlayerBestScore" class="form-label">Best Score</label>
-                <input type="number" class="form-control" id="editPlayerBestScore" readonly>
-              </div>
-              <div class="col-md-4 mb-3">
-                <label for="editPlayerAverage" class="form-label">Average Score</label>
-                <input type="number" class="form-control" id="editPlayerAverage" readonly step="0.1">
-              </div>
-            </div>
-            
-            <div class="mb-3">
-              <label for="editPlayerNotes" class="form-label">Notes</label>
-              <textarea class="form-control" id="editPlayerNotes" rows="3" placeholder="Additional notes about the player..."></textarea>
-            </div>
-            
-            <div class="alert alert-info">
-              <i class="ti ti-info-circle me-2"></i>
-              <strong>Note:</strong> Statistics (Games Played, Best Score, Average) are calculated automatically from game records.
-            </div>
-          </form>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-          <button type="button" class="btn btn-warning" onclick="updateUser()">Update Player</button>
-        </div>
-      </div>
-    </div>
-  </div>
+  <!-- Edit User Modal - Using centralized modal -->
 
   <!-- User Details Modal -->
   <div class="modal fade" id="userDetailsModal" tabindex="-1" aria-labelledby="userDetailsModalLabel" aria-hidden="true">
@@ -677,7 +591,6 @@ $allUsers = getAllUsersData();
 
     // CRUD Functions
     function viewUser(userId) {
-      console.log('Attempting to view user:', userId);
       
       fetch('ajax/user-crud.php', {
         method: 'POST',
@@ -687,38 +600,25 @@ $allUsers = getAllUsersData();
         body: 'action=view&user_id=' + userId
       })
       .then(response => {
-        console.log('Response status:', response.status);
-        console.log('Response headers:', response.headers);
-        
         if (!response.ok) {
           throw new Error('HTTP error! status: ' + response.status);
         }
-        
-        return response.text(); // Get as text first to see what we're getting
+        return response.text();
       })
       .then(text => {
-        console.log('Raw response:', text);
-        
         try {
           const data = JSON.parse(text);
-          console.log('Parsed response data:', data);
-          
           if (data.success) {
-            console.log('User data received:', data.data);
             populateViewModal(data.data);
             $('#viewUserModal').modal('show');
           } else {
-            console.error('Server error:', data.message);
             alert('Error: ' + data.message);
           }
         } catch (e) {
-          console.error('JSON parse error:', e);
-          console.error('Raw response text:', text);
           alert('Invalid response from server: ' + text.substring(0, 100));
         }
       })
       .catch(error => {
-        console.error('Fetch error:', error);
         alert('An error occurred while fetching user details: ' + error.message);
       });
     }
@@ -741,7 +641,6 @@ $allUsers = getAllUsersData();
         }
       })
       .catch(error => {
-        console.error('Error:', error);
         alert('An error occurred while fetching user details');
       });
     }
@@ -765,21 +664,17 @@ $allUsers = getAllUsersData();
           }
         })
         .catch(error => {
-          console.error('Error:', error);
           alert('An error occurred while deleting user');
         });
       }
     }
 
     function populateViewModal(user) {
-      console.log('Populating modal with user data:', user);
       
       // Handle undefined values safely
-      const firstName = user.first_name || '';
-      const lastName = user.last_name || '';
-      const fullName = (firstName + ' ' + lastName).trim() || 'Unknown User';
+      const username = user.username || 'Unknown User';
       
-      document.getElementById('viewUserName').textContent = fullName;
+      document.getElementById('viewUserName').textContent = username;
       document.getElementById('viewUserTeam').textContent = 'Team: ' + (user.team_name || 'No Team');
       document.getElementById('viewUserUsername').textContent = user.username || 'N/A';
       document.getElementById('viewUserEmail').textContent = user.email || 'N/A';
@@ -812,15 +707,32 @@ $allUsers = getAllUsersData();
     }
 
     function populateEditModal(user) {
+      // Basic Information
       document.getElementById('editUserId').value = user.user_id;
-      document.getElementById('editUsername').value = user.username;
-      document.getElementById('editFirstName').value = user.first_name;
-      document.getElementById('editLastName').value = user.last_name;
-      document.getElementById('editEmail').value = user.email;
+      document.getElementById('editUsername').value = user.username || '';
+      document.getElementById('editEmail').value = user.email || '';
+      document.getElementById('editFirstName').value = user.first_name || '';
+      document.getElementById('editLastName').value = user.last_name || '';
       document.getElementById('editPhone').value = user.phone || '';
-      document.getElementById('editSkillLevel').value = user.skill_level;
-      document.getElementById('editStatus').value = user.status;
+      
+      // Skill and Status
+      document.getElementById('editSkillLevel').value = user.skill_level || 'Beginner';
+      document.getElementById('editStatus').value = user.status || 'Active';
+      
+      // Join Date (readonly)
+      if (user.created_at) {
+        const joinDate = new Date(user.created_at);
+        document.getElementById('editJoinDate').value = joinDate.toISOString().split('T')[0];
+      }
+      
+      // Statistics (readonly)
+      document.getElementById('editGamesPlayed').value = user.total_games || 0;
+      document.getElementById('editBestScore').value = user.best_score || 0;
+      document.getElementById('editAverageScore').value = user.avg_score ? parseFloat(user.avg_score).toFixed(1) : 0.0;
+      
+      // Team and Notes
       document.getElementById('editTeamName').value = user.team_name || '';
+      document.getElementById('editNotes').value = user.notes || '';
     }
 
     function editUserFromView() {
@@ -866,84 +778,109 @@ $allUsers = getAllUsersData();
       document.getElementById('statusFilter').value = '';
     }
 
-    // Form submission handlers
-    document.getElementById('editUserForm').addEventListener('submit', function(e) {
-      e.preventDefault();
-      
-      const formData = new FormData(this);
-      formData.append('action', 'update');
-      
-      fetch('ajax/user-crud.php', {
-        method: 'POST',
-        body: formData
-      })
-      .then(response => response.json())
-      .then(data => {
-        if (data.success) {
-          alert('User updated successfully');
-          $('#editUserModal').modal('hide');
-          location.reload(); // Refresh the page
-        } else {
-          alert('Error: ' + data.message);
-        }
-      })
-      .catch(error => {
-        console.error('Error:', error);
-        alert('An error occurred while updating user');
-      });
-    });
+    // Form submission handlers - moved to DOMContentLoaded
 
-    document.getElementById('createUserForm').addEventListener('submit', function(e) {
-      e.preventDefault();
-      
-      console.log('Form submitted, creating user...');
-      
-      const formData = new FormData(this);
-      formData.append('action', 'create');
-      
-      // Show loading state
-      const submitBtn = this.querySelector('button[type="submit"]');
-      const originalText = submitBtn.textContent;
-      submitBtn.textContent = 'Creating...';
-      submitBtn.disabled = true;
-      
-      fetch('ajax/user-crud.php', {
-        method: 'POST',
-        body: formData
-      })
-      .then(response => {
-        console.log('Response received:', response);
-        return response.json();
-      })
-      .then(data => {
-        console.log('Data received:', data);
-        if (data.success) {
-          showNotification('User created successfully!', 'success');
-          $('#createUserModal').modal('hide');
-          this.reset(); // Reset form
-          
-          // Delay refresh to allow modal to close
-          setTimeout(() => {
-            location.reload();
-          }, 500);
-        } else {
-          showNotification('Error: ' + data.message, 'error');
-        }
-      })
-      .catch(error => {
-        console.error('Error:', error);
-        showNotification('An error occurred while creating user', 'error');
-      })
-      .finally(() => {
-        // Restore button state
-        submitBtn.textContent = originalText;
-        submitBtn.disabled = false;
-      });
-    });
+    // Create user form handler - moved to DOMContentLoaded
 
     // Initialize page
     document.addEventListener('DOMContentLoaded', function() {
       // Page is ready - PHP data is already loaded
+      
+      // Set up edit form listener
+      const editForm = document.getElementById('editUserForm');
+      if (editForm) {
+        editForm.addEventListener('submit', function(e) {
+          e.preventDefault();
+          
+          const formData = new FormData(this);
+          formData.append('action', 'update');
+          
+          // Show loading state
+          const submitBtn = this.querySelector('button[type="submit"]');
+          const originalText = submitBtn.textContent;
+          submitBtn.textContent = 'Updating...';
+          submitBtn.disabled = true;
+          
+          fetch('ajax/user-crud.php', {
+            method: 'POST',
+            body: formData
+          })
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              showNotification('User updated successfully!', 'success');
+              // Close modal using Bootstrap's native method
+              const modal = bootstrap.Modal.getInstance(document.getElementById('editUserModal'));
+              if (modal) {
+                modal.hide();
+              }
+              // Refresh the page after a short delay
+              setTimeout(() => {
+                location.reload();
+              }, 500);
+            } else {
+              showNotification('Error: ' + data.message, 'error');
+            }
+          })
+          .catch(error => {
+            showNotification('An error occurred while updating user', 'error');
+          })
+          .finally(() => {
+            // Restore button state
+            submitBtn.textContent = originalText;
+            submitBtn.disabled = false;
+          });
+        });
+      }
+      
+      // Set up create user form listener
+      const createForm = document.getElementById('createUserForm');
+      if (createForm) {
+        createForm.addEventListener('submit', function(e) {
+          e.preventDefault();
+          
+          const formData = new FormData(this);
+          formData.append('action', 'create');
+          
+          // Show loading state
+          const submitBtn = this.querySelector('button[type="submit"]');
+          const originalText = submitBtn.textContent;
+          submitBtn.textContent = 'Creating...';
+          submitBtn.disabled = true;
+          
+          fetch('ajax/user-crud.php', {
+            method: 'POST',
+            body: formData
+          })
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              showNotification('User created successfully!', 'success');
+              // Close modal using Bootstrap's native method
+              const modal = bootstrap.Modal.getInstance(document.getElementById('createUserModal'));
+              if (modal) {
+                modal.hide();
+              }
+              this.reset(); // Reset form
+              
+              // Delay refresh to allow modal to close
+              setTimeout(() => {
+                location.reload();
+              }, 500);
+            } else {
+              showNotification('Error: ' + data.message, 'error');
+            }
+          })
+          .catch(error => {
+            showNotification('An error occurred while creating user', 'error');
+          })
+          .finally(() => {
+            // Restore button state
+            submitBtn.textContent = originalText;
+            submitBtn.disabled = false;
+          });
+        });
+      }
     });
 
 

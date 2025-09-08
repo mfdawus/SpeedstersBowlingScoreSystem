@@ -41,10 +41,11 @@ try {
                     $user['recent_games'] = getUserRecentGames($userId, 5);
                     $response = ['success' => true, 'data' => $user];
                 } else {
-                    $response['message'] = 'User not found';
+                    $response['message'] = 'User not found: ' . ($user['error'] ?? 'Unknown error');
+                    $response['debug'] = ['user_id' => $userId, 'user_data' => $user];
                 }
             } else {
-                $response['message'] = 'Invalid user ID';
+                $response['message'] = 'Invalid user ID: ' . $userId;
             }
             break;
             
@@ -59,16 +60,18 @@ try {
                     'phone' => $_POST['phone'] ?? '',
                     'skill_level' => $_POST['skill_level'] ?? '',
                     'status' => $_POST['status'] ?? '',
-                    'team_name' => $_POST['team_name'] ?? ''
+                    'team_name' => $_POST['team_name'] ?? '',
+                    'notes' => $_POST['notes'] ?? ''
                 ];
+                
                 
                 if (updateUser($userId, $data)) {
                     $response = ['success' => true, 'message' => 'User updated successfully'];
                 } else {
-                    $response['message'] = 'Failed to update user';
+                    $response['message'] = 'Failed to update user - check database connection';
                 }
             } else {
-                $response['message'] = 'Invalid user ID';
+                $response['message'] = 'Invalid user ID: ' . $userId;
             }
             break;
             

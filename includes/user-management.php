@@ -19,7 +19,8 @@ function getUserById($userId) {
                 user_role,
                 status,
                 team_name,
-                created_at
+                created_at,
+                notes
             FROM users 
             WHERE user_id = ?
         ");
@@ -27,7 +28,7 @@ function getUserById($userId) {
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
         
         if (!$user) {
-            return ['error' => 'User not found'];
+            return ['error' => 'User not found with ID: ' . $userId];
         }
         
         // Then get game statistics separately
@@ -77,7 +78,8 @@ function updateUser($userId, $data) {
                 phone = ?,
                 skill_level = ?,
                 status = ?,
-                team_name = ?
+                team_name = ?,
+                notes = ?
             WHERE user_id = ?
         ");
         
@@ -90,8 +92,10 @@ function updateUser($userId, $data) {
             $data['skill_level'],
             $data['status'],
             $data['team_name'],
+            $data['notes'],
             $userId
         ]);
+        
         
         return $result;
         

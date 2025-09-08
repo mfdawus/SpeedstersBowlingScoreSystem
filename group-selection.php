@@ -131,182 +131,48 @@ requireMaintenanceBypass('group', 'Group Selection');
 </head>
 
 <body>
-  <div class="page-wrapper" id="main-wrapper" data-layout="vertical" data-navbarbg="skin6" data-sidebartype="full" data-sidebar-position="fixed" data-header-position="fixed" style="margin-top: 0; padding-top: 15;">
-    <!-- Sidebar Start -->
-    <aside class="left-sidebar">
-      <div>
-        <div class="brand-logo d-flex align-items-center justify-content-between">
-          <a href="./index.php" class="text-nowrap logo-img d-flex flex-column align-items-start text-decoration-none">
-            <img src="assets/images/logos/speedster main logo.png" alt="SPEEDSTERS Logo" width="90" />
-            <span class="text-muted fw-semibold mt-1" style="font-size: 0.75rem; letter-spacing: 0.5px;">Bowling Score System</span>
-          </a>
-          <div class="close-btn d-xl-none d-block sidebartoggler cursor-pointer" id="sidebarCollapse">
-            <i class="ti ti-x fs-6"></i>
-          </div>
-        </div>
-        <nav class="sidebar-nav scroll-sidebar" data-simplebar="">
-          <ul id="sidebarnav">
-            <li class="nav-small-cap">
-              <iconify-icon icon="solar:menu-dots-linear" class="nav-small-cap-icon fs-4"></iconify-icon>
-              <span class="hide-menu">Home</span>
-            </li>
-            <li class="sidebar-item">
-              <a class="sidebar-link" href="./dashboard.php" aria-expanded="false">
-                <i class="ti ti-atom"></i>
-                <span class="hide-menu">Dashboard</span>
-              </a>
-            </li>
-            <li class="sidebar-item">
-              <a class="sidebar-link" href="./lane-booking.php" aria-expanded="false">
-                <i class="ti ti-calendar-plus"></i>
-                <span class="hide-menu">Lane Booking</span>
-              </a>
-            </li>
-            <li class="sidebar-item">
-              <a class="sidebar-link active" href="./group-selection.php" aria-expanded="false">
-                <i class="ti ti-users"></i>
-                <span class="hide-menu">Join Group</span>
-              </a>
-            </li>
-            <li class="sidebar-item">
-              <a class="sidebar-link" href="./events.php" aria-expanded="false">
-                <i class="ti ti-calendar-event"></i>
-                <span class="hide-menu">Events</span>
-              </a>
-            </li>
-            <li class="sidebar-item">
-              <a class="sidebar-link has-arrow" href="javascript:void(0)" aria-expanded="false">
-                <i class="ti ti-table"></i>
-                <span class="hide-menu">Score Table</span>
-              </a>
-              <ul aria-expanded="false" class="collapse first-level">
-                <li class="sidebar-item">
-                  <a href="./score-table-solo.php" class="sidebar-link">
-                    <i class="ti ti-user"></i>
-                    <span class="hide-menu">Solo Games</span>
-                  </a>
-                </li>
-                <li class="sidebar-item">
-                  <a href="./score-table-doubles.php" class="sidebar-link">
-                    <i class="ti ti-users"></i>
-                    <span class="hide-menu">Doubles</span>
-                  </a>
-                </li>
-                <li class="sidebar-item">
-                  <a href="./score-table-team.php" class="sidebar-link">
-                    <i class="ti ti-users"></i>
-                    <span class="hide-menu">Team (4-6 Players)</span>
-                  </a>
-                </li>
-              </ul>
-            </li>
-          </ul>
-        </nav>
-      </div>
-    </aside>
-    <!-- Sidebar End -->
-
+  <div class="page-wrapper" id="main-wrapper" data-layout="vertical" data-navbarbg="skin6" data-sidebartype="full" data-sidebar-position="fixed" data-header-position="fixed" style="margin-top: 0; padding-top: 0;">
+    <?php include 'includes/app-topstrip.php'; ?>
+    <?php include 'includes/sidebar.php'; ?>
+    
     <!-- Main wrapper -->
     <div class="body-wrapper">
-      <!-- Tournament Countdown Banner -->
-      <div class="app-topstrip bg-gradient-primary py-0 px-3 w-100 d-flex align-items-center justify-content-between flex-wrap">
-        <!-- Left side: Tournament Info -->
-        <div class="d-flex align-items-center gap-2 mb-2 mb-lg-0">
-          <i class="ti ti-trophy text-warning fs-4"></i>
-          <div>
-            <h6 class="mb-0 fw-bold text-white">SPEEDSTERS Championship 2025</h6>
-            <small class="text-white-50 d-block">Next Bowling Tournament</small>
-          </div>
-        </div>
-
-        <!-- Right side: Countdown + Register Button -->
-        <div class="d-flex align-items-center gap-2 flex-wrap">
-          <div class="d-flex gap-2">
-           <div class="text-center"> <div class="bg-white bg-opacity-20 rounded p-n2 mt-1">
-                <span class="text-white fw-bold fs-6" id="days">00</span>
-              </div>
-              <small class="text-white-50" style="font-size: 10px;">Days</small>
-            </div>
-           <div class="text-center"> <div class="bg-white bg-opacity-20 rounded p-n2 mt-1">
-                <span class="text-white fw-bold fs-6" id="hours">00</span>
-              </div>
-              <small class="text-white-50" style="font-size: 10px;">Hours</small>
-            </div>
-           <div class="text-center"> <div class="bg-white bg-opacity-20 rounded p-n2 mt-1">
-                <span class="text-white fw-bold fs-6" id="minutes">00</span>
-              </div>
-              <small class="text-white-50" style="font-size: 10px;">Min</small>
-            </div>
-           <div class="text-center"> <div class="bg-white bg-opacity-20 rounded p-n2 mt-1">
-                <span class="text-white fw-bold fs-6" id="seconds">00</span>
-              </div>
-              <small class="text-white-50" style="font-size: 10px;">Sec</small>
-            </div>
-          </div>
-
-          <a class="btn btn-warning btn-sm d-flex align-items-center gap-1">
-            <i class="ti ti-calendar-event fs-6"></i>
-            Register
-          </a>
-        </div>
-      </div>
-      <!-- Header Start -->
-      <header class="app-header">
-        <nav class="navbar navbar-expand-lg navbar-light">
-          <ul class="navbar-nav">
-            <li class="nav-item d-block d-xl-none">
-              <a class="nav-link sidebartoggler nav-icon-hover" id="headerCollapse" href="javascript:void(0)">
-                <i class="ti ti-menu-2"></i>
-              </a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link nav-icon-hover" href="javascript:void(0)">
-                <i class="ti ti-bell-ringing"></i>
-                <div class="notification bg-primary rounded-circle"></div>
-              </a>
-            </li>
-          </ul>
-          <div class="navbar-collapse justify-content-end px-0" id="navbarNav">
-            <ul class="navbar-nav flex-row ms-auto align-items-center justify-content-end">
-              <li class="nav-item dropdown">
-                <a class="nav-link nav-icon-hover" href="javascript:void(0)" id="drop2" data-bs-toggle="dropdown" aria-expanded="false">
-                  <img src="./assets/images/profile/user-1.jpg" alt="" width="35" height="35" class="rounded-circle">
-                </a>
-                <div class="dropdown-menu dropdown-menu-end dropdown-menu-animate-up" aria-labelledby="drop2">
-                  <div class="message-body">
-                    <a href="./my-profile.php" class="d-flex align-items-center gap-2 dropdown-item">
-                      <i class="ti ti-user fs-6"></i>
-                      <p class="mb-0 fs-3">My Profile</p>
-                    </a>
-                    <a href="./authentication-login.php" class="btn btn-outline-primary mx-3 mt-2 d-block">Logout</a>
-                  </div>
-                </div>
-              </li>
-            </ul>
-          </div>
-        </nav>
-      </header>
-      <!-- Header End -->
+      <?php include 'includes/header.php'; ?>
 
       
 
-      <div class="container-fluid" style="margin-top: 30px;">
-        <!-- Team Type Selection -->
-        <div class="row mb-4">
-          <div class="col-12">
-            <div class="card">
-              <div class="card-body">
-                <div class="d-flex align-items-center mb-3">
-                  <div class="group-logo me-3">
-                    <div class="logo-circle">
-                      <i class="ti ti-users-group"></i>
+      <div class="body-wrapper-inner">
+        <div class="container-fluid" style="margin-top: 30px;">
+          <!-- Page Header -->
+          <div class="row">
+            <div class="col-12">
+              <div class="page-title-box d-flex align-items-center justify-content-between">
+                <div class="page-title-right">
+                  <ol class="breadcrumb m-0">
+                    <li class="breadcrumb-item"><a href="./dashboard.php">Dashboard</a></li>
+                    <li class="breadcrumb-item active">Join Group</li>
+                  </ol>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Team Type Selection -->
+          <div class="row mb-4">
+            <div class="col-12">
+              <div class="card">
+                <div class="card-body">
+                  <div class="d-flex align-items-center mb-3">
+                    <div class="group-logo me-3">
+                      <div class="logo-circle">
+                        <i class="ti ti-users-group"></i>
+                      </div>
+                    </div>
+                    <div>
+                      <h4 class="fw-semibold mb-1">Join a Bowling Team</h4>
+                      <span class="fw-normal text-muted">First, select your preferred team size</span>
                     </div>
                   </div>
-                  <div>
-                    <h4 class="fw-semibold mb-1">Join a Bowling Team</h4>
-                    <span class="fw-normal text-muted">First, select your preferred team size</span>
-                  </div>
-                </div>
                 
                 <div class="row">
                   <div class="col-md-4 mb-3">
@@ -333,9 +199,9 @@ requireMaintenanceBypass('group', 'Group Selection');
                     <div class="card team-type-card" onclick="selectTeamType('team')" id="teamCard">
                       <div class="card-body text-center">
                         <i class="ti ti-users-group fs-1 text-warning mb-3"></i>
-                        <h6 class="card-title">Team (4-6 Players)</h6>
-                        <p class="text-muted small">4-6 players per team</p>
-                        <span class="badge bg-warning">4-6 Players</span>
+                        <h6 class="card-title">Team</h6>
+                        <p class="text-muted small">10 or More players per team</p>
+                        <span class="badge bg-warning">10 or More Players</span>
                       </div>
                     </div>
                   </div>
@@ -550,6 +416,9 @@ requireMaintenanceBypass('group', 'Group Selection');
             <i class="ti ti-check me-1"></i>
             Join This Group
           </button>
+        </div>
+      </div>
+    </div>
         </div>
       </div>
     </div>
