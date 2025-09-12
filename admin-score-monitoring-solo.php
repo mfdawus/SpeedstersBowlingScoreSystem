@@ -141,7 +141,7 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
                   ended_at,
                   created_at
               FROM game_sessions 
-              WHERE DATE(session_date) = CURDATE() AND status = 'Active'
+              WHERE DATE(session_date) = CURDATE() AND status = 'Active' AND game_mode = 'Solo'
               ORDER BY started_at DESC
               LIMIT 1
             ");
@@ -150,9 +150,17 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
             if ($todaySession): 
               // Get session participants count
+              if ($todaySession['game_mode'] === 'Solo') {
+                // For solo games, count Speedsters players (Player + Admin roles)
+                $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM users WHERE team_name = 'Speedsters' AND (user_role = 'Player' OR user_role = 'Admin') AND status = 'Active'");
+                $stmt->execute();
+                $participantCount = $stmt->fetch(PDO::FETCH_ASSOC)['count'];
+              } else {
+                // For team games, count session participants
               $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM session_participants WHERE session_id = ?");
               $stmt->execute([$todaySession['session_id']]);
               $participantCount = $stmt->fetch(PDO::FETCH_ASSOC)['count'];
+              }
               
               // Get session scores count
               $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM game_scores WHERE session_id = ? AND DATE(created_at) = CURDATE()");
@@ -226,46 +234,46 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
             $stmt->execute();
             $totalPlayers = $stmt->fetch(PDO::FETCH_ASSOC)['count'];
             
-            // Get players who played today (using session dates)
+            // Get players who played today (using session dates, Solo only)
             $stmt = $pdo->prepare("
               SELECT COUNT(DISTINCT gs.user_id) as count 
               FROM game_scores gs
               INNER JOIN game_sessions sess ON gs.session_id = sess.session_id
-              WHERE DATE(sess.session_date) = CURDATE() AND gs.status = 'Completed'
+              WHERE DATE(sess.session_date) = CURDATE() AND gs.status = 'Completed' AND gs.game_mode = 'Solo'
             ");
             $stmt->execute();
             $activeToday = $stmt->fetch(PDO::FETCH_ASSOC)['count'];
             $playersWithScores = $activeToday; // Set this variable for the card display
             
-            // Get average score today (using session dates)
+            // Get average score today (using session dates, Solo only)
             $stmt = $pdo->prepare("
               SELECT AVG(gs.player_score) as avg_score 
               FROM game_scores gs
               INNER JOIN game_sessions sess ON gs.session_id = sess.session_id
-              WHERE DATE(sess.session_date) = CURDATE() AND gs.status = 'Completed'
+              WHERE DATE(sess.session_date) = CURDATE() AND gs.status = 'Completed' AND gs.game_mode = 'Solo'
             ");
             $stmt->execute();
             $avgScoreToday = $stmt->fetch(PDO::FETCH_ASSOC)['avg_score'];
             $avgScoreToday = $avgScoreToday ? round($avgScoreToday, 1) : 0;
             
-            // Get total games played today (using session dates)
+            // Get total games played today (using session dates, Solo only)
             $stmt = $pdo->prepare("
               SELECT COUNT(*) as count 
               FROM game_scores gs
               INNER JOIN game_sessions sess ON gs.session_id = sess.session_id
-              WHERE DATE(sess.session_date) = CURDATE() AND gs.status = 'Completed'
+              WHERE DATE(sess.session_date) = CURDATE() AND gs.status = 'Completed' AND gs.game_mode = 'Solo'
             ");
             $stmt->execute();
             $gamesToday = $stmt->fetch(PDO::FETCH_ASSOC)['count'];
             
-            // Get yesterday's stats for comparison (using session dates)
+            // Get yesterday's stats for comparison (using session dates, Solo only)
             $stmt = $pdo->prepare("
               SELECT COUNT(DISTINCT gs.user_id) as active_yesterday,
                      COUNT(*) as games_yesterday,
                      AVG(gs.player_score) as avg_yesterday
               FROM game_scores gs
               INNER JOIN game_sessions sess ON gs.session_id = sess.session_id
-              WHERE DATE(sess.session_date) = DATE_SUB(CURDATE(), INTERVAL 1 DAY) AND gs.status = 'Completed'
+              WHERE DATE(sess.session_date) = DATE_SUB(CURDATE(), INTERVAL 1 DAY) AND gs.status = 'Completed' AND gs.game_mode = 'Solo'
             ");
             $stmt->execute();
             $yesterdayStats = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -381,17 +389,16 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         try {
                           $pdo = getDBConnection();
                           
-                          // Get session dates with score counts
+                          // Get session dates with score counts (Solo sessions only)
                           $stmt = $pdo->prepare("
                             SELECT 
                               DATE(gs.session_date) as match_date,
-                              gs.session_id,
-                              gs.session_name,
+                              COUNT(DISTINCT gs.session_id) as session_count,
                               COUNT(gsc.score_id) as score_count
                             FROM game_sessions gs
                             LEFT JOIN game_scores gsc ON gs.session_id = gsc.session_id AND gsc.status = 'Completed'
-                            WHERE gs.status = 'Active' OR gs.status = 'Completed'
-                            GROUP BY gs.session_id, DATE(gs.session_date), gs.session_name
+                            WHERE (gs.status = 'Active' OR gs.status = 'Completed') AND gs.game_mode = 'Solo'
+                            GROUP BY DATE(gs.session_date)
                             ORDER BY gs.session_date DESC
                           ");
                           $stmt->execute();
@@ -400,14 +407,55 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
                           // Debug: Log the dates found
                           error_log("Found " . count($sessionDates) . " session dates: " . json_encode($sessionDates));
                           
-                          // Add dates to dropdown
-                          $first = true;
-                          foreach ($sessionDates as $session) {
-                            $formattedDate = date('M j, Y', strtotime($session['match_date']));
-                            $selected = $first ? ' selected' : '';
-                            $scoreInfo = $session['score_count'] > 0 ? " ({$session['score_count']} scores)" : " (no scores)";
-                            echo '<option value="' . $session['match_date'] . '"' . $selected . '>' . $formattedDate . $scoreInfo . '</option>';
-                            $first = false;
+                          // Check for active session first
+                          $activeSessionDate = null;
+                          $stmt = $pdo->prepare("
+                            SELECT DATE(session_date) as match_date
+                            FROM game_sessions 
+                            WHERE DATE(session_date) = CURDATE() AND status = 'Active' AND game_mode = 'Solo'
+                            ORDER BY started_at DESC
+                            LIMIT 1
+                          ");
+                          $stmt->execute();
+                          $activeSession = $stmt->fetch(PDO::FETCH_ASSOC);
+                          
+                          $selectedDate = null;
+                          $selectedDateInfo = null;
+                          
+                          if ($activeSession) {
+                            $activeSessionDate = $activeSession['match_date'];
+                            // Find the active session in our dates list
+                            foreach ($sessionDates as $date) {
+                              if ($date['match_date'] === $activeSessionDate) {
+                                $selectedDateInfo = $date;
+                                $selectedDate = $date['match_date'];
+                                break;
+                              }
+                            }
+                          }
+                          
+                          // If no active session found, select the most recent date
+                          if (!$selectedDateInfo && !empty($sessionDates)) {
+                            $selectedDateInfo = $sessionDates[0];
+                            $selectedDate = $sessionDates[0]['match_date'];
+                          }
+                          
+                          // Display selected date first
+                          if ($selectedDateInfo) {
+                            $formattedDate = date('M j, Y', strtotime($selectedDateInfo['match_date']));
+                            $scoreInfo = $selectedDateInfo['score_count'] > 0 ? " ({$selectedDateInfo['score_count']} scores)" : " (no scores)";
+                            echo '<option value="' . $selectedDateInfo['match_date'] . '" selected>' . $formattedDate . $scoreInfo . '</option>';
+                          } else {
+                            echo '<option value="today" selected>Today</option>';
+                          }
+                          
+                          // Add other dates (excluding the selected date)
+                          foreach ($sessionDates as $date) {
+                            if ($date['match_date'] !== $selectedDate) {
+                              $formattedDate = date('M j, Y', strtotime($date['match_date']));
+                              $scoreInfo = $date['score_count'] > 0 ? " ({$date['score_count']} scores)" : " (no scores)";
+                              echo '<option value="' . $date['match_date'] . '">' . $formattedDate . $scoreInfo . '</option>';
+                            }
                           }
                           
                           // Add "All Time" option
@@ -467,7 +515,6 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
                           <thead>
                             <tr>
                               <th scope="col">Player</th>
-                              <th scope="col">Team Name</th>
                               <th scope="col">Total Score</th>
                               <th scope="col">Avg/Game</th>
                               <th scope="col">Games Played</th>
@@ -497,7 +544,7 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                     u.team_name,
                                     u.created_at
                                 FROM users u 
-                                WHERE u.user_role = 'Player' AND u.status = 'Active'
+                                WHERE (u.user_role = 'Player' OR u.user_role = 'Admin') AND u.status = 'Active' AND u.team_name = 'Speedsters'
                                 ORDER BY u.first_name, u.last_name
                               ");
                               $stmt->execute();
@@ -506,7 +553,7 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
                               if (!empty($allPlayers)): 
                                 // Calculate rankings and stats for each player
                                 $playerStats = [];
-                                // Get all today's scores in one query
+                                // Get all today's scores in one query (Solo only)
                                 $stmt = $pdo->prepare("
                                   SELECT 
                                       user_id,
@@ -515,7 +562,7 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                       spares,
                                       created_at
                                   FROM game_scores 
-                                  WHERE status = 'Completed' AND DATE(created_at) = CURDATE()
+                                  WHERE status = 'Completed' AND game_mode = 'Solo' AND DATE(created_at) = CURDATE()
                                   ORDER BY user_id, created_at DESC
                                 ");
                                 $stmt->execute();
@@ -567,10 +614,10 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                         <img src="assets/images/profile/user-<?php echo ($player['user_id'] % 8) + 1; ?>.jpg" alt="Player" class="rounded-circle me-2" width="32">
                                   <div>
                                           <h6 class="mb-0"><?php echo htmlspecialchars($player['first_name'] . ' ' . $player['last_name']); ?></h6>
+                                          <small class="text-muted"><?php echo htmlspecialchars($player['user_role']); ?></small>
                                   </div>
                                 </div>
                               </td>
-                                    <td><span class="badge bg-info"><?php echo $player['team_name'] ?: 'No Team'; ?></span></td>
                                     <td><span class="fw-bold text-success"><?php echo $stats['total_score']; ?></span></td>
                                     <td><span class="fw-bold text-primary"><?php echo $stats['avg_score']; ?></span></td>
                                     <td><?php echo $stats['games_played']; ?></td>
@@ -597,17 +644,17 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                 endforeach; ?>
                               <?php else: ?>
                                 <tr>
-                                  <td colspan="11" class="text-center text-muted py-4">
+                                  <td colspan="10" class="text-center text-muted py-4">
                                     <i class="ti ti-users fs-1 mb-3 d-block"></i>
-                                    No players found in the database.
+                                    No Speedsters players found in the database.
                                   </td>
                                 </tr>
                               <?php endif; ?>
                             <?php } catch (Exception $e) { ?>
                               <tr>
-                                <td colspan="12" class="text-center text-muted py-4">
+                                <td colspan="10" class="text-center text-muted py-4">
                                   <i class="ti ti-alert-triangle fs-1 mb-3 d-block"></i>
-                                  Error loading players: <?php echo htmlspecialchars($e->getMessage()); ?>
+                                  Error loading Speedsters players: <?php echo htmlspecialchars($e->getMessage()); ?>
                                 </td>
                               </tr>
                             <?php } ?>
@@ -633,14 +680,13 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
                             <table class="table table-bordered" id="game1Table">
                               <thead class="table-dark">
                                 <tr>
-                                  <th scope="col" style="width: 25%;">Player</th>
-                                  <th scope="col" style="width: 8%;">Team Name</th>
-                                  <th scope="col" style="width: 10%;">Score</th>
-                                  <th scope="col" style="width: 10%;">Strikes</th>
-                                  <th scope="col" style="width: 10%;">Spares</th>
-                                  <th scope="col" style="width: 10%;">Open Frames</th>
-                                  <th scope="col" style="width: 10%;">Status</th>
-                                  <th scope="col" style="width: 17%;">Actions</th>
+                                  <th scope="col" style="width: 30%;">Player</th>
+                                  <th scope="col" style="width: 12%;">Score</th>
+                                  <th scope="col" style="width: 12%;">Strikes</th>
+                                  <th scope="col" style="width: 12%;">Spares</th>
+                                  <th scope="col" style="width: 12%;">Open Frames</th>
+                                  <th scope="col" style="width: 12%;">Status</th>
+                                  <th scope="col" style="width: 20%;">Actions</th>
                             </tr>
                               </thead>
                               <tbody>
@@ -661,14 +707,14 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                         u.team_name,
                                         u.created_at
                                     FROM users u 
-                                    WHERE u.user_role = 'Player' AND u.status = 'Active'
+                                    WHERE (u.user_role = 'Player' OR u.user_role = 'Admin') AND u.status = 'Active' AND u.team_name = 'Speedsters'
                                     ORDER BY u.first_name, u.last_name
                                   ");
                                   $stmt->execute();
                                   $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                   
                                   if (!empty($allPlayers)): 
-                                    // Get all Game 1 scores for today in one query
+                                    // Get all Game 1 scores for today in one query (Solo only)
                                     $stmt = $pdo->prepare("
                                       SELECT 
                                           user_id,
@@ -678,7 +724,7 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                           open_frames,
                                           created_at
                                       FROM game_scores 
-                                      WHERE game_number = 1 AND status = 'Completed' AND DATE(created_at) = CURDATE()
+                                      WHERE game_number = 1 AND status = 'Completed' AND game_mode = 'Solo' AND DATE(created_at) = CURDATE()
                                       ORDER BY user_id, created_at DESC
                                     ");
                                     $stmt->execute();
@@ -702,11 +748,9 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                           <img src="assets/images/profile/user-<?php echo ($player['user_id'] % 8) + 1; ?>.jpg" alt="Player" class="rounded-circle me-2" width="32">
                                   <div>
                                             <strong><?php echo htmlspecialchars($player['first_name'] . ' ' . $player['last_name']); ?></strong>
+                                            <br><small class="text-muted"><?php echo htmlspecialchars($player['user_role']); ?></small>
                                   </div>
                                 </div>
-                              </td>
-                                      <td class="text-center">
-                                        <span class="badge bg-info"><?php echo $player['team_name'] ?: 'No Team'; ?></span>
                                       </td>
                                       <td>
                                         <input type="number" 
@@ -770,7 +814,7 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                   endforeach; ?>
                                 <?php else: ?>
                                   <tr>
-                                    <td colspan="8" class="text-center text-muted py-4">
+                                    <td colspan="7" class="text-center text-muted py-4">
                                       <i class="ti ti-users fs-1 mb-3 d-block"></i>
                                       No players found in the database.
                                     </td>
@@ -778,7 +822,7 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                 <?php endif; ?>
                                 <?php } catch (Exception $e) { ?>
                                   <tr>
-                                    <td colspan="8" class="text-center text-muted py-4">
+                                    <td colspan="7" class="text-center text-muted py-4">
                                       <i class="ti ti-alert-triangle fs-1 mb-3 d-block"></i>
                                       Error loading players: <?php echo htmlspecialchars($e->getMessage()); ?>
                                     </td>
@@ -807,14 +851,13 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
                             <table class="table table-bordered" id="game2Table">
                               <thead class="table-dark">
                                 <tr>
-                                  <th scope="col" style="width: 25%;">Player</th>
-                                  <th scope="col" style="width: 8%;">Team Name</th>
-                                  <th scope="col" style="width: 10%;">Score</th>
-                                  <th scope="col" style="width: 10%;">Strikes</th>
-                                  <th scope="col" style="width: 10%;">Spares</th>
-                                  <th scope="col" style="width: 10%;">Open Frames</th>
-                                  <th scope="col" style="width: 10%;">Status</th>
-                                  <th scope="col" style="width: 17%;">Actions</th>
+                                  <th scope="col" style="width: 30%;">Player</th>
+                                  <th scope="col" style="width: 12%;">Score</th>
+                                  <th scope="col" style="width: 12%;">Strikes</th>
+                                  <th scope="col" style="width: 12%;">Spares</th>
+                                  <th scope="col" style="width: 12%;">Open Frames</th>
+                                  <th scope="col" style="width: 12%;">Status</th>
+                                  <th scope="col" style="width: 20%;">Actions</th>
                             </tr>
                               </thead>
                               <tbody>
@@ -835,7 +878,7 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                         u.team_name,
                                         u.created_at
                                     FROM users u 
-                                    WHERE u.user_role = 'Player' AND u.status = 'Active'
+                                    WHERE (u.user_role = 'Player' OR u.user_role = 'Admin') AND u.status = 'Active' AND u.team_name = 'Speedsters'
                                     ORDER BY u.first_name, u.last_name
                                   ");
                                   $stmt->execute();
@@ -843,7 +886,7 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                   
                                   if (!empty($allPlayers)): 
                                     foreach ($allPlayers as $player):
-                                      // Get Game 2 score for this player (today only)
+                                      // Get Game 2 score for this player (today only, Solo only)
                                       $stmt = $pdo->prepare("
                                         SELECT 
                                             player_score,
@@ -852,7 +895,7 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                             open_frames,
                                             created_at
                                         FROM game_scores 
-                                        WHERE user_id = ? AND game_number = 2 AND status = 'Completed' AND DATE(created_at) = CURDATE()
+                                        WHERE user_id = ? AND game_number = 2 AND status = 'Completed' AND game_mode = 'Solo' AND DATE(created_at) = CURDATE()
                                         ORDER BY created_at DESC
                                         LIMIT 1
                                       ");
@@ -865,11 +908,9 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                           <img src="assets/images/profile/user-<?php echo ($player['user_id'] % 8) + 1; ?>.jpg" alt="Player" class="rounded-circle me-2" width="32">
                                   <div>
                                             <strong><?php echo htmlspecialchars($player['first_name'] . ' ' . $player['last_name']); ?></strong>
+                                            <br><small class="text-muted"><?php echo htmlspecialchars($player['user_role']); ?></small>
                                   </div>
                                 </div>
-                              </td>
-                                      <td class="text-center">
-                                        <span class="badge bg-info"><?php echo $player['team_name'] ?: 'No Team'; ?></span>
                                       </td>
                                       <td>
                                         <input type="number" 
@@ -933,7 +974,7 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                   endforeach; ?>
                                 <?php else: ?>
                                   <tr>
-                                    <td colspan="8" class="text-center text-muted py-4">
+                                    <td colspan="7" class="text-center text-muted py-4">
                                       <i class="ti ti-users fs-1 mb-3 d-block"></i>
                                       No players found in the database.
                                     </td>
@@ -941,7 +982,7 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                 <?php endif; ?>
                                 <?php } catch (Exception $e) { ?>
                                   <tr>
-                                    <td colspan="8" class="text-center text-muted py-4">
+                                    <td colspan="7" class="text-center text-muted py-4">
                                       <i class="ti ti-alert-triangle fs-1 mb-3 d-block"></i>
                                       Error loading players: <?php echo htmlspecialchars($e->getMessage()); ?>
                                     </td>
@@ -970,14 +1011,13 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
                             <table class="table table-bordered" id="game3Table">
                               <thead class="table-dark">
                                 <tr>
-                                  <th scope="col" style="width: 25%;">Player</th>
-                                  <th scope="col" style="width: 8%;">Team Name</th>
-                                  <th scope="col" style="width: 10%;">Score</th>
-                                  <th scope="col" style="width: 10%;">Strikes</th>
-                                  <th scope="col" style="width: 10%;">Spares</th>
-                                  <th scope="col" style="width: 10%;">Open Frames</th>
-                                  <th scope="col" style="width: 10%;">Status</th>
-                                  <th scope="col" style="width: 17%;">Actions</th>
+                                  <th scope="col" style="width: 30%;">Player</th>
+                                  <th scope="col" style="width: 12%;">Score</th>
+                                  <th scope="col" style="width: 12%;">Strikes</th>
+                                  <th scope="col" style="width: 12%;">Spares</th>
+                                  <th scope="col" style="width: 12%;">Open Frames</th>
+                                  <th scope="col" style="width: 12%;">Status</th>
+                                  <th scope="col" style="width: 20%;">Actions</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -998,7 +1038,7 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                         u.team_name,
                                         u.created_at
                                     FROM users u 
-                                    WHERE u.user_role = 'Player' AND u.status = 'Active'
+                                    WHERE (u.user_role = 'Player' OR u.user_role = 'Admin') AND u.status = 'Active' AND u.team_name = 'Speedsters'
                                     ORDER BY u.first_name, u.last_name
                                   ");
                                   $stmt->execute();
@@ -1006,7 +1046,7 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                   
                                   if (!empty($allPlayers)): 
                                     foreach ($allPlayers as $player):
-                                      // Get Game 3 score for this player (today only)
+                                      // Get Game 3 score for this player (today only, Solo only)
                                       $stmt = $pdo->prepare("
                                         SELECT 
                                             player_score,
@@ -1015,7 +1055,7 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                             open_frames,
                                             created_at
                                         FROM game_scores 
-                                        WHERE user_id = ? AND game_number = 3 AND status = 'Completed' AND DATE(created_at) = CURDATE()
+                                        WHERE user_id = ? AND game_number = 3 AND status = 'Completed' AND game_mode = 'Solo' AND DATE(created_at) = CURDATE()
                                         ORDER BY created_at DESC
                                         LIMIT 1
                                       ");
@@ -1028,11 +1068,9 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                           <img src="assets/images/profile/user-<?php echo ($player['user_id'] % 8) + 1; ?>.jpg" alt="Player" class="rounded-circle me-2" width="32">
                                   <div>
                                             <strong><?php echo htmlspecialchars($player['first_name'] . ' ' . $player['last_name']); ?></strong>
+                                            <br><small class="text-muted"><?php echo htmlspecialchars($player['user_role']); ?></small>
                                   </div>
                                 </div>
-                              </td>
-                                      <td class="text-center">
-                                        <span class="badge bg-info"><?php echo $player['team_name'] ?: 'No Team'; ?></span>
                                       </td>
                                       <td>
                                         <input type="number" 
@@ -1096,7 +1134,7 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                   endforeach; ?>
                                 <?php else: ?>
                                   <tr>
-                                    <td colspan="8" class="text-center text-muted py-4">
+                                    <td colspan="7" class="text-center text-muted py-4">
                                       <i class="ti ti-users fs-1 mb-3 d-block"></i>
                                       No players found in the database.
                                     </td>
@@ -1104,7 +1142,7 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                 <?php endif; ?>
                                 <?php } catch (Exception $e) { ?>
                                   <tr>
-                                    <td colspan="8" class="text-center text-muted py-4">
+                                    <td colspan="7" class="text-center text-muted py-4">
                                       <i class="ti ti-alert-triangle fs-1 mb-3 d-block"></i>
                                       Error loading players: <?php echo htmlspecialchars($e->getMessage()); ?>
                                     </td>
@@ -1133,14 +1171,13 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
                             <table class="table table-bordered" id="game4Table">
                               <thead class="table-dark">
                                 <tr>
-                                  <th scope="col" style="width: 25%;">Player</th>
-                                  <th scope="col" style="width: 8%;">Team Name</th>
-                                  <th scope="col" style="width: 10%;">Score</th>
-                                  <th scope="col" style="width: 10%;">Strikes</th>
-                                  <th scope="col" style="width: 10%;">Spares</th>
-                                  <th scope="col" style="width: 10%;">Open Frames</th>
-                                  <th scope="col" style="width: 10%;">Status</th>
-                                  <th scope="col" style="width: 17%;">Actions</th>
+                                  <th scope="col" style="width: 30%;">Player</th>
+                                  <th scope="col" style="width: 12%;">Score</th>
+                                  <th scope="col" style="width: 12%;">Strikes</th>
+                                  <th scope="col" style="width: 12%;">Spares</th>
+                                  <th scope="col" style="width: 12%;">Open Frames</th>
+                                  <th scope="col" style="width: 12%;">Status</th>
+                                  <th scope="col" style="width: 20%;">Actions</th>
                             </tr>
                               </thead>
                               <tbody>
@@ -1161,7 +1198,7 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                         u.team_name,
                                         u.created_at
                                     FROM users u 
-                                    WHERE u.user_role = 'Player' AND u.status = 'Active'
+                                    WHERE (u.user_role = 'Player' OR u.user_role = 'Admin') AND u.status = 'Active' AND u.team_name = 'Speedsters'
                                     ORDER BY u.first_name, u.last_name
                                   ");
                                   $stmt->execute();
@@ -1169,7 +1206,7 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                   
                                   if (!empty($allPlayers)): 
                                     foreach ($allPlayers as $player):
-                                      // Get Game 4 score for this player (today only)
+                                      // Get Game 4 score for this player (today only, Solo only)
                                       $stmt = $pdo->prepare("
                                         SELECT 
                                             player_score,
@@ -1178,7 +1215,7 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                             open_frames,
                                             created_at
                                         FROM game_scores 
-                                        WHERE user_id = ? AND game_number = 4 AND status = 'Completed' AND DATE(created_at) = CURDATE()
+                                        WHERE user_id = ? AND game_number = 4 AND status = 'Completed' AND game_mode = 'Solo' AND DATE(created_at) = CURDATE()
                                         ORDER BY created_at DESC
                                         LIMIT 1
                                       ");
@@ -1191,11 +1228,9 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                           <img src="assets/images/profile/user-<?php echo ($player['user_id'] % 8) + 1; ?>.jpg" alt="Player" class="rounded-circle me-2" width="32">
                                   <div>
                                             <strong><?php echo htmlspecialchars($player['first_name'] . ' ' . $player['last_name']); ?></strong>
+                                            <br><small class="text-muted"><?php echo htmlspecialchars($player['user_role']); ?></small>
                                   </div>
                                 </div>
-                              </td>
-                                      <td class="text-center">
-                                        <span class="badge bg-info"><?php echo $player['team_name'] ?: 'No Team'; ?></span>
                                       </td>
                                       <td>
                                         <input type="number" 
@@ -1259,7 +1294,7 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                   endforeach; ?>
                                 <?php else: ?>
                                   <tr>
-                                    <td colspan="8" class="text-center text-muted py-4">
+                                    <td colspan="7" class="text-center text-muted py-4">
                                       <i class="ti ti-users fs-1 mb-3 d-block"></i>
                                       No players found in the database.
                                     </td>
@@ -1267,7 +1302,7 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                 <?php endif; ?>
                                 <?php } catch (Exception $e) { ?>
                                   <tr>
-                                    <td colspan="8" class="text-center text-muted py-4">
+                                    <td colspan="7" class="text-center text-muted py-4">
                                       <i class="ti ti-alert-triangle fs-1 mb-3 d-block"></i>
                                       Error loading players: <?php echo htmlspecialchars($e->getMessage()); ?>
                                     </td>
@@ -1296,14 +1331,13 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
                             <table class="table table-bordered" id="game5Table">
                               <thead class="table-dark">
                                 <tr>
-                                  <th scope="col" style="width: 25%;">Player</th>
-                                  <th scope="col" style="width: 8%;">Team Name</th>
-                                  <th scope="col" style="width: 10%;">Score</th>
-                                  <th scope="col" style="width: 10%;">Strikes</th>
-                                  <th scope="col" style="width: 10%;">Spares</th>
-                                  <th scope="col" style="width: 10%;">Open Frames</th>
-                                  <th scope="col" style="width: 10%;">Status</th>
-                                  <th scope="col" style="width: 17%;">Actions</th>
+                                  <th scope="col" style="width: 30%;">Player</th>
+                                  <th scope="col" style="width: 12%;">Score</th>
+                                  <th scope="col" style="width: 12%;">Strikes</th>
+                                  <th scope="col" style="width: 12%;">Spares</th>
+                                  <th scope="col" style="width: 12%;">Open Frames</th>
+                                  <th scope="col" style="width: 12%;">Status</th>
+                                  <th scope="col" style="width: 20%;">Actions</th>
                                 </tr>
                               </thead>
                               <tbody>
@@ -1324,7 +1358,7 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                         u.team_name,
                                         u.created_at
                                     FROM users u 
-                                    WHERE u.user_role = 'Player' AND u.status = 'Active'
+                                    WHERE (u.user_role = 'Player' OR u.user_role = 'Admin') AND u.status = 'Active' AND u.team_name = 'Speedsters'
                                     ORDER BY u.first_name, u.last_name
                                   ");
                                   $stmt->execute();
@@ -1332,7 +1366,7 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                   
                                   if (!empty($allPlayers)): 
                                     foreach ($allPlayers as $player):
-                                      // Get Game 5 score for this player (today only)
+                                      // Get Game 5 score for this player (today only, Solo only)
                                       $stmt = $pdo->prepare("
                                         SELECT 
                                             player_score,
@@ -1341,7 +1375,7 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                             open_frames,
                                             created_at
                                         FROM game_scores 
-                                        WHERE user_id = ? AND game_number = 5 AND status = 'Completed' AND DATE(created_at) = CURDATE()
+                                        WHERE user_id = ? AND game_number = 5 AND status = 'Completed' AND game_mode = 'Solo' AND DATE(created_at) = CURDATE()
                                         ORDER BY created_at DESC
                                         LIMIT 1
                                       ");
@@ -1356,9 +1390,6 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                             <strong><?php echo htmlspecialchars($player['first_name'] . ' ' . $player['last_name']); ?></strong>
                       </div>
                     </div>
-                                      </td>
-                                      <td class="text-center">
-                                        <span class="badge bg-info"><?php echo $player['team_name'] ?: 'No Team'; ?></span>
                                       </td>
                                       <td>
                                         <input type="number" 
@@ -1422,7 +1453,7 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                   endforeach; ?>
                                 <?php else: ?>
                                   <tr>
-                                    <td colspan="8" class="text-center text-muted py-4">
+                                    <td colspan="7" class="text-center text-muted py-4">
                                       <i class="ti ti-users fs-1 mb-3 d-block"></i>
                                       No players found in the database.
                                     </td>
@@ -1430,7 +1461,7 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                 <?php endif; ?>
                                 <?php } catch (Exception $e) { ?>
                                   <tr>
-                                    <td colspan="8" class="text-center text-muted py-4">
+                                    <td colspan="7" class="text-center text-muted py-4">
                                       <i class="ti ti-alert-triangle fs-1 mb-3 d-block"></i>
                                       Error loading players: <?php echo htmlspecialchars($e->getMessage()); ?>
                                     </td>
@@ -1498,110 +1529,25 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
       // Here you would open a bulk editing interface
     }
 
-    // Date filter functionality
-    // Date filter change handler
-    document.getElementById('dateFilter').addEventListener('change', function() {
-      const selectedDate = this.value;
-      console.log('Date filter changed to:', selectedDate);
-      showNotification('Loading data for ' + selectedDate + '...', 'info');
-      loadDataForDateFilter(selectedDate);
-    });
-
-
-    // Refresh table functionality
-    function refreshTable() {
-      const refreshBtn = document.querySelector('button[onclick="refreshTable()"]');
-      const icon = refreshBtn.querySelector('i');
-      
-      // Add spinning animation
-      icon.classList.add('ti-spin');
-      
-      // Simulate loading
-      setTimeout(() => {
-        icon.classList.remove('ti-spin');
-        showNotification('Admin table refreshed successfully!', 'success');
-      }, 1000);
-    }
-
-    // Tab switching with data loading simulation
-    document.querySelectorAll('[data-bs-toggle="tab"]').forEach(tab => {
-      tab.addEventListener('shown.bs.tab', function(e) {
-        const targetId = e.target.getAttribute('data-bs-target');
-        console.log('Switched to admin tab:', targetId);
-        
-        // Simulate loading data for specific game
-        if (targetId !== '#overall') {
-          const gameNumber = targetId.replace('#game', '');
-          showNotification('Loading Game ' + gameNumber + ' admin data...', 'info');
-        }
-      });
-    });
-
-    // Notification function
-    function showNotification(message, type = 'info') {
-      const notification = document.createElement('div');
-      notification.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
-      notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
-      notification.innerHTML = `
-        ${message}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-      `;
-      
-      document.body.appendChild(notification);
-      
-      setTimeout(() => {
-        if (notification.parentNode) {
-          notification.remove();
-        }
-      }, 3000);
-    }
-
-    // Auto-refresh table every 30 seconds
-    setInterval(() => {
-      if (!document.hidden) {
-        console.log('Auto-refreshing admin table...');
-      }
-    }, 30000);
-  </script>
-  
-  <!-- Countdown Timer Script -->
-  <script>
-    // Set the target date for the tournament (you can change this)
-    const targetDate = new Date('2025-03-15T18:00:00').getTime();
+    // Session Management Functions
+    // Track ongoing submissions to prevent duplicates
+    const ongoingSubmissions = new Set();
     
-    function updateCountdown() {
-      const now = new Date().getTime();
-      const distance = targetDate - now;
+    function savePlayerScore(userId, gameNumber, playerName) {
+      console.log('savePlayerScore called:', {userId, gameNumber, playerName});
       
-      if (distance < 0) {
-        // Event has passed
-        document.getElementById('days').innerHTML = '00';
-        document.getElementById('hours').innerHTML = '00';
-        document.getElementById('minutes').innerHTML = '00';
-        document.getElementById('seconds').innerHTML = '00';
+      // Create unique submission key
+      const submissionKey = `${userId}-${gameNumber}`;
+      
+      // Prevent duplicate submissions
+      if (ongoingSubmissions.has(submissionKey)) {
+        console.log('Submission already in progress for:', submissionKey);
+        showNotification('Score is already being saved, please wait...', 'warning');
         return;
       }
       
-      const days = Math.floor(distance / (1000 * 60 * 60 * 24));
-      const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-      const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-      const seconds = Math.floor((distance % (1000 * 60)) / 1000);
-      
-      document.getElementById('days').innerHTML = days.toString().padStart(2, '0');
-      document.getElementById('hours').innerHTML = hours.toString().padStart(2, '0');
-      document.getElementById('minutes').innerHTML = minutes.toString().padStart(2, '0');
-      document.getElementById('seconds').innerHTML = seconds.toString().padStart(2, '0');
-    }
-    
-    // Update countdown every second
-    setInterval(updateCountdown, 1000);
-    
-    // Initial call
-    updateCountdown();
-
-    // Session Management Functions
-    function savePlayerScore(userId, gameNumber, playerName) {
-      console.log('savePlayerScore called:', {userId, gameNumber, playerName});
+      // Add to ongoing submissions
+      ongoingSubmissions.add(submissionKey);
       
       const tableId = `game${gameNumber}Table`;
       const table = document.getElementById(tableId);
@@ -1654,11 +1600,13 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
       
       if (hasErrors) {
         showNotification('Please fix invalid score (0-300)', 'error');
+        ongoingSubmissions.delete(submissionKey);
         return;
       }
       
       if (!scoreData.player_score) {
         showNotification('Please enter a score for ' + playerName, 'warning');
+        ongoingSubmissions.delete(submissionKey);
         return;
       }
       
@@ -1668,6 +1616,7 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
       
       if (!saveBtn) {
         showNotification('Save button not found', 'error');
+        ongoingSubmissions.delete(submissionKey);
         return;
       }
       
@@ -1680,6 +1629,8 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
       formData.append('action', 'add_score');
       // Use the session_id from the selected date, fallback to PHP session_id
       const sessionId = window.currentSessionId || <?php echo $sessionId ? $sessionId : 'null'; ?>;
+      console.log('Using session_id for save:', sessionId);
+      console.log('window.currentSessionId:', window.currentSessionId);
       formData.append('session_id', sessionId);
       formData.append('user_id', userId);
       formData.append('game_number', gameNumber);
@@ -1687,6 +1638,7 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
       formData.append('strikes', scoreData.strikes || 0);
       formData.append('spares', scoreData.spares || 0);
       formData.append('open_frames', scoreData.open_frames || 0);
+      formData.append('game_mode', 'Solo');
       
       console.log('Sending data:', {
         action: 'add_score',
@@ -1735,6 +1687,8 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
         showNotification('An error occurred while saving score', 'error');
       })
       .finally(() => {
+        // Always clean up the ongoing submission
+        ongoingSubmissions.delete(submissionKey);
         saveBtn.innerHTML = originalText;
         saveBtn.disabled = false;
       });
@@ -1864,8 +1818,12 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
       // Send all scores
       const formData = new FormData();
       formData.append('action', 'save_multiple_scores');
-      formData.append('session_id', <?php echo $sessionId ? $sessionId : 'null'; ?>);
+      const sessionId = window.currentSessionId || <?php echo $sessionId ? $sessionId : 'null'; ?>;
+      console.log('Using session_id for saveAllScores:', sessionId);
+      console.log('window.currentSessionId:', window.currentSessionId);
+      formData.append('session_id', sessionId);
       formData.append('scores', JSON.stringify(scoresToSave));
+      formData.append('game_mode', 'Solo');
       
       fetch('ajax/session-management.php', {
         method: 'POST',
@@ -1911,38 +1869,94 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
       });
     }
 
-    // Auto-save individual scores on Enter key
-    document.addEventListener('DOMContentLoaded', function() {
-      // Load most recent data on page load
-      console.log('Page loaded, loading most recent data...');
-      const dateFilter = document.getElementById('dateFilter');
-      const selectedDate = dateFilter ? dateFilter.value : 'today';
+    // Date filter functionality
+    // Date filter change handler
+    document.getElementById('dateFilter').addEventListener('change', function() {
+      const selectedDate = this.value;
+      console.log('Date filter changed to:', selectedDate);
+      showNotification('Loading data for ' + selectedDate + '...', 'info');
       loadDataForDateFilter(selectedDate);
-      
-      document.addEventListener('keypress', function(e) {
-        if (e.target.classList.contains('score-input') && e.key === 'Enter') {
-          const input = e.target;
-          const userId = input.getAttribute('data-user-id');
-          const gameNumber = input.getAttribute('data-game');
-          const field = input.getAttribute('data-field');
-          const value = input.value.trim();
-          
-          if (value && field === 'score' && (value < 0 || value > 300)) {
-            input.classList.add('is-invalid');
-            showNotification('Score must be between 0-300', 'error');
-            return;
-          }
-          
-          input.classList.remove('is-invalid');
-          
-          // Move to next input
-          const nextInput = input.parentElement.nextElementSibling?.querySelector('.score-input');
-          if (nextInput) {
-            nextInput.focus();
-          }
+    });
+
+
+    // Refresh table functionality - removed duplicate function
+
+    // Tab switching with data loading simulation
+    document.querySelectorAll('[data-bs-toggle="tab"]').forEach(tab => {
+      tab.addEventListener('shown.bs.tab', function(e) {
+        const targetId = e.target.getAttribute('data-bs-target');
+        console.log('Switched to admin tab:', targetId);
+        
+        // Simulate loading data for specific game
+        if (targetId !== '#overall') {
+          const gameNumber = targetId.replace('#game', '');
+          showNotification('Loading Game ' + gameNumber + ' admin data...', 'info');
         }
       });
     });
+
+    // Notification function
+    function showNotification(message, type = 'info') {
+      const notification = document.createElement('div');
+      notification.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+      notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+      notification.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      `;
+      
+      document.body.appendChild(notification);
+      
+      setTimeout(() => {
+        if (notification.parentNode) {
+          notification.remove();
+        }
+      }, 3000);
+    }
+
+    // Auto-refresh table every 30 seconds
+    setInterval(() => {
+      if (!document.hidden) {
+        console.log('Auto-refreshing admin table...');
+      }
+    }, 30000);
+  </script>
+  
+  <!-- Countdown Timer Script -->
+  <script>
+    // Set the target date for the tournament (you can change this)
+    const targetDate = new Date('2025-03-15T18:00:00').getTime();
+    
+    function updateCountdown() {
+      const now = new Date().getTime();
+      const distance = targetDate - now;
+      
+      if (distance < 0) {
+        // Event has passed
+        document.getElementById('days').innerHTML = '00';
+        document.getElementById('hours').innerHTML = '00';
+        document.getElementById('minutes').innerHTML = '00';
+        document.getElementById('seconds').innerHTML = '00';
+        return;
+      }
+      
+      const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+      
+      document.getElementById('days').innerHTML = days.toString().padStart(2, '0');
+      document.getElementById('hours').innerHTML = hours.toString().padStart(2, '0');
+      document.getElementById('minutes').innerHTML = minutes.toString().padStart(2, '0');
+      document.getElementById('seconds').innerHTML = seconds.toString().padStart(2, '0');
+    }
+    
+    // Update countdown every second
+    setInterval(updateCountdown, 1000);
+    
+    // Initial call
+    updateCountdown();
+
 
     function refreshScores() {
       location.reload();
@@ -1959,7 +1973,12 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
     function loadDataForDateFilter(selectedDate) {
       // Check cache first
       if (dataCache[selectedDate]) {
-        updateTablesWithData(dataCache[selectedDate]);
+        updateTablesWithData(dataCache[selectedDate].players);
+        // Make sure session_id is set from cache
+        if (dataCache[selectedDate].session_id) {
+          window.currentSessionId = dataCache[selectedDate].session_id;
+          console.log('Session ID from cache for date', selectedDate, ':', dataCache[selectedDate].session_id);
+        }
         return;
       }
       
@@ -1980,7 +1999,10 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
             try {
               const data = JSON.parse(xhr.responseText);
               if (data.success) {
-                dataCache[selectedDate] = data.players;
+                dataCache[selectedDate] = {
+                  players: data.players,
+                  session_id: data.session_id
+                };
                 // Store the session_id for this date
                 if (data.session_id) {
                   window.currentSessionId = data.session_id;
@@ -2005,7 +2027,7 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
         }
       };
       
-      xhr.send('action=get_players_data&selected_date=' + encodeURIComponent(selectedDate) + '&t=' + Date.now());
+      xhr.send('action=get_players_data&selected_date=' + encodeURIComponent(selectedDate) + '&session_type=Solo&t=' + Date.now());
     }
     
     function updateTablesWithData(players) {
@@ -2040,10 +2062,10 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 <img src="assets/images/profile/user-${(player.user_id % 8) + 1}.jpg" alt="Player" class="rounded-circle me-2" width="32">
                 <div>
                   <h6 class="mb-0">${player.first_name} ${player.last_name}</h6>
+                  <small class="text-muted">${player.user_role}</small>
                 </div>
               </div>
             </td>
-            <td><span class="badge bg-info">${player.team_name || 'No Team'}</span></td>
             <td><span class="fw-bold text-success">${totalScore}</span></td>
             <td><span class="fw-bold text-primary">${avgScore}</span></td>
             <td>${gamesPlayed}</td>
@@ -2069,7 +2091,7 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
         `;
       });
       
-      tbody.innerHTML = html || '<tr><td colspan="11" class="text-center text-muted py-4">No data available for selected date range</td></tr>';
+      tbody.innerHTML = html || '<tr><td colspan="10" class="text-center text-muted py-4">No Speedsters data available for selected date range</td></tr>';
     }
     
     function updateGameTable(gameNumber, players) {
@@ -2093,11 +2115,9 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 <img src="assets/images/profile/user-${(player.user_id % 8) + 1}.jpg" alt="Player" class="rounded-circle me-2" width="32">
                 <div>
                   <strong>${player.first_name} ${player.last_name}</strong>
+                  <br><small class="text-muted">${player.user_role}</small>
                 </div>
               </div>
-            </td>
-            <td class="text-center">
-              <span class="badge bg-info">${player.team_name || 'No Team'}</span>
             </td>
             <td>
               <input type="number" class="form-control form-control-sm score-input" 
@@ -2134,12 +2154,27 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
         `;
       });
       
-      tbody.innerHTML = html || '<tr><td colspan="8" class="text-center text-muted py-4">No data available for selected date range</td></tr>';
+      tbody.innerHTML = html || '<tr><td colspan="7" class="text-center text-muted py-4">No Speedsters data available for selected date range</td></tr>';
     }
     
     function refreshTable() {
+      const refreshBtn = document.querySelector('button[onclick="refreshTable()"]');
+      const icon = refreshBtn ? refreshBtn.querySelector('i') : null;
+      
+      if (icon) {
+        icon.classList.add('ti-spin');
+      }
+      
       const dateFilter = document.getElementById('dateFilter');
       loadDataForDateFilter(dateFilter.value);
+      
+      // Remove spinning after data loads
+      setTimeout(() => {
+        if (icon) {
+          icon.classList.remove('ti-spin');
+        }
+        showNotification('Solo table refreshed successfully!', 'success');
+      }, 1500);
     }
     
     // Export to CSV function

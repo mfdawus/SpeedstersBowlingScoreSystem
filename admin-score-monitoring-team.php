@@ -1,10 +1,10 @@
 <?php
 require_once 'includes/auth.php';
+require_once 'includes/session-management.php';
 requireAdmin(); // Ensure only admins can access this page
 
-// Check maintenance bypass for admin users
-require_once 'includes/maintenance-bypass.php';
-requireMaintenanceBypass('team-admin', 'Team Score Monitoring (Admin)');
+// Get current user info
+$currentUser = getCurrentUser();
 ?>
 <!doctype html>
 <html lang="en">
@@ -49,27 +49,31 @@ requireMaintenanceBypass('team-admin', 'Team Score Monitoring (Admin)');
     }
     .team-avatars {
       display: flex;
-      align-items: center;
+      margin-right: 10px;
     }
     .team-avatars img {
-      margin-right: -8px;
+      margin-left: -5px;
       border: 2px solid white;
     }
-    .score-highlight {
-      font-weight: bold;
-      font-size: 1.1rem;
+    .team-avatars img:first-child {
+      margin-left: 0;
     }
-    .score-excellent { color: #28a745; }
-    .score-good { color: #17a2b8; }
-    .score-average { color: #ffc107; }
-    .score-below { color: #dc3545; }
     .admin-actions {
       display: flex;
       gap: 5px;
     }
-    .admin-badge {
-      background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
-      color: #333;
+    .loading-spinner {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #3498db;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
     }
   </style>
 </head>
@@ -104,74 +108,6 @@ requireMaintenanceBypass('team-admin', 'Team Score Monitoring (Admin)');
             </div>
           </div>
 
-          <!-- Admin Statistics Overview -->
-          <div class="row mb-4">
-            <div class="col-lg-3 col-md-6 mb-4">
-              <div class="card admin-card">
-                <div class="card-body">
-                  <div class="d-flex align-items-center">
-                    <div class="flex-grow-1">
-                      <h6 class="card-title text-muted mb-1">Total Teams</h6>
-                      <h3 class="mb-0 text-primary">23</h3>
-                      <small class="text-muted">+2 new this week</small>
-                    </div>
-                    <div class="ms-3">
-                      <i class="ti ti-users-group fs-1 text-muted"></i>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div class="col-lg-3 col-md-6 mb-4">
-              <div class="card admin-card">
-                <div class="card-body">
-                  <div class="d-flex align-items-center">
-                    <div class="flex-grow-1">
-                      <h6 class="card-title text-muted mb-1">Active Today</h6>
-                      <h3 class="mb-0 text-success">12</h3>
-                      <small class="text-muted">+3 vs yesterday</small>
-                    </div>
-                    <div class="ms-3">
-                      <i class="ti ti-users-check fs-1 text-success"></i>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div class="col-lg-3 col-md-6 mb-4">
-              <div class="card admin-card">
-                <div class="card-body">
-                  <div class="d-flex align-items-center">
-                    <div class="flex-grow-1">
-                      <h6 class="card-title text-muted mb-1">Avg Team Score</h6>
-                      <h3 class="mb-0 text-warning">1,156.4</h3>
-                      <small class="text-muted">+18.7 vs last week</small>
-                    </div>
-                    <div class="ms-3">
-                      <i class="ti ti-target fs-1 text-warning"></i>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div class="col-lg-3 col-md-6 mb-4">
-              <div class="card admin-card">
-                <div class="card-body">
-                  <div class="d-flex align-items-center">
-                    <div class="flex-grow-1">
-                      <h6 class="card-title text-muted mb-1">Games Today</h6>
-                      <h3 class="mb-0 text-info">36</h3>
-                      <small class="text-muted">+8% vs yesterday</small>
-                    </div>
-                    <div class="ms-3">
-                      <i class="ti ti-bowling fs-1 text-info"></i>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
           <!-- Page Content -->
           <div class="row">
             <div class="col-12">
@@ -179,38 +115,105 @@ requireMaintenanceBypass('team-admin', 'Team Score Monitoring (Admin)');
                 <div class="card-body">
                   <div class="d-flex align-items-center justify-content-between mb-4">
                     <div>
-                      <h5 class="card-title fw-semibold mb-1">
-                        <i class="ti ti-users me-2 text-primary"></i>
-                        Team Score Monitoring
-                      </h5>
+                      <h5 class="card-title fw-semibold mb-1">Team Score Monitoring</h5>
                       <span class="fw-normal text-muted">Admin view with enhanced team management features</span>
                     </div>
                     <div class="d-flex gap-2">
-                      <button class="btn btn-success btn-sm" onclick="exportData()">
-                        <i class="ti ti-download me-1"></i>
+                      <button class="btn btn-success btn-sm" onclick="exportTeamData()">
+                        <i class="ti ti-file-excel me-1"></i>
                         Export
                       </button>
-                      <button class="btn btn-warning btn-sm" onclick="bulkEdit()">
+                      <button class="btn btn-warning btn-sm" onclick="bulkEditTeams()">
                         <i class="ti ti-edit me-1"></i>
                         Bulk Edit
                       </button>
-                      <button class="btn btn-info btn-sm" onclick="manageTeams()">
-                        <i class="ti ti-users-plus me-1"></i>
-                        Manage Teams
-                      </button>
-                      <button class="btn btn-secondary btn-sm" onclick="teamAnalytics()">
+                      <button class="btn btn-primary btn-sm" onclick="teamAnalytics()">
                         <i class="ti ti-chart-line me-1"></i>
                         Analytics
                       </button>
                       <select class="form-select form-select-sm" id="dateFilter" style="width: auto;">
-                        <option value="today">Today</option>
-                        <option value="yesterday">Yesterday</option>
-                        <option value="week">This Week</option>
-                        <option value="month">This Month</option>
-                        <option value="all">All Time</option>
-                        <option value="custom">Custom Date</option>
+                        <?php 
+                        // Get available session dates
+                        try {
+                          $pdo = getDBConnection();
+                          
+                          // Get session dates with score counts (Team sessions only)
+                          $stmt = $pdo->prepare("
+                            SELECT 
+                              DATE(gs.session_date) as match_date,
+                              COUNT(DISTINCT gs.session_id) as session_count,
+                              COUNT(gc.score_id) as score_count
+                            FROM game_sessions gs
+                            LEFT JOIN game_scores gc ON gs.session_id = gc.session_id AND gc.status = 'Completed'
+                            WHERE (gs.status = 'Active' OR gs.status = 'Completed') AND gs.game_mode = 'Team'
+                            GROUP BY DATE(gs.session_date)
+                            ORDER BY gs.session_date DESC
+                            LIMIT 20
+                          ");
+                          $stmt->execute();
+                          $sessionDates = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                          
+                          // Check for active session first
+                          $activeSessionDate = null;
+                          $stmt = $pdo->prepare("
+                            SELECT DATE(session_date) as match_date
+                            FROM game_sessions 
+                            WHERE DATE(session_date) = CURDATE() AND status = 'Active' AND game_mode = 'Team'
+                            ORDER BY started_at DESC
+                            LIMIT 1
+                          ");
+                          $stmt->execute();
+                          $activeSession = $stmt->fetch(PDO::FETCH_ASSOC);
+                          
+                          $selectedDate = null;
+                          $selectedDateInfo = null;
+                          
+                          if ($activeSession) {
+                            $activeSessionDate = $activeSession['match_date'];
+                            // Find the active session in our dates list
+                            foreach ($sessionDates as $date) {
+                              if ($date['match_date'] === $activeSessionDate) {
+                                $selectedDateInfo = $date;
+                                $selectedDate = $date['match_date'];
+                                break;
+                              }
+                            }
+                          }
+                          
+                          // If no active session found, select the most recent date
+                          if (!$selectedDateInfo && !empty($sessionDates)) {
+                            $selectedDateInfo = $sessionDates[0];
+                            $selectedDate = $sessionDates[0]['match_date'];
+                          }
+                          
+                          // Display selected date first
+                          if ($selectedDateInfo) {
+                            $formattedDate = date('M j, Y', strtotime($selectedDateInfo['match_date']));
+                            $scoreInfo = $selectedDateInfo['score_count'] > 0 ? " ({$selectedDateInfo['score_count']} scores)" : " (no scores)";
+                            echo '<option value="' . $selectedDateInfo['match_date'] . '" selected>' . $formattedDate . $scoreInfo . '</option>';
+                          } else {
+                            echo '<option value="today" selected>Today</option>';
+                          }
+                          
+                          // Add other dates (excluding the selected date)
+                          foreach ($sessionDates as $date) {
+                            if ($date['match_date'] !== $selectedDate) {
+                              $formattedDate = date('M j, Y', strtotime($date['match_date']));
+                              $scoreInfo = $date['score_count'] > 0 ? " ({$date['score_count']} scores)" : " (no scores)";
+                              echo '<option value="' . $date['match_date'] . '">' . $formattedDate . $scoreInfo . '</option>';
+                            }
+                          }
+                          
+                          // Add All Time option
+                          echo '<option value="all">All Time</option>';
+                          
+                        } catch (Exception $e) {
+                          // Fallback options if database query fails
+                          echo '<option value="today" selected>Today</option>';
+                          echo '<option value="all">All Time</option>';
+                        }
+                        ?>
                       </select>
-                      <input type="date" class="form-control form-control-sm" id="customDate" style="width: auto; display: none;">
                       <button class="btn btn-primary btn-sm" onclick="refreshTable()">
                         <i class="ti ti-refresh"></i>
                       </button>
@@ -271,365 +274,215 @@ requireMaintenanceBypass('team-admin', 'Team Score Monitoring (Admin)');
                               <th scope="col">Admin Actions</th>
                             </tr>
                           </thead>
-                          <tbody>
+                          <tbody id="overallTableBody">
                             <tr>
-                              <td><span class="badge bg-primary">1</span></td>
-                              <td>
-                                <div class="d-flex align-items-center">
-                                  <div class="d-flex me-2">
-                                    <img src="assets/images/profile/user-5.jpg" alt="Player 1" class="player-avatar">
-                                    <img src="assets/images/profile/user-6.jpg" alt="Player 2" class="player-avatar">
-                                    <img src="assets/images/profile/user-7.jpg" alt="Player 3" class="player-avatar">
-                                    <img src="assets/images/profile/user-8.jpg" alt="Player 4" class="player-avatar">
-                                  </div>
-                                  <div>
-                                    <h6 class="mb-0">Lane Masters</h6>
-                                    <small class="text-muted">Elite Team</small>
-                                  </div>
-                                </div>
-                              </td>
-                              <td>Tom, Emma, Alex, Maria</td>
-                              <td><span class="fw-bold text-success">2,178</span></td>
-                              <td>217.8</td>
-                              <td>4</td>
-                              <td><span class="text-warning">498</span></td>
-                              <td>75</td>
-                              <td><span class="badge bg-success">Active</span></td>
-                              <td><small class="text-muted">2 hours ago</small></td>
-                              <td>
-                                <div class="admin-actions">
-                                  <button class="btn btn-sm btn-outline-primary" onclick="viewTeamDetails('team1')" title="View Details">
-                                    <i class="ti ti-eye"></i>
-                                  </button>
-                                  <button class="btn btn-sm btn-outline-warning" onclick="editTeamScore('team1')" title="Edit Score">
-                                    <i class="ti ti-edit"></i>
-                                  </button>
-                                  <button class="btn btn-sm btn-outline-info" onclick="viewTeamHistory('team1')" title="View History">
-                                    <i class="ti ti-history"></i>
-                                  </button>
-                                  <button class="btn btn-sm btn-outline-secondary" onclick="manageTeamMembers('team1')" title="Manage Team">
-                                    <i class="ti ti-users"></i>
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                            <tr>
-                              <td><span class="badge bg-secondary">2</span></td>
-                              <td>
-                                <div class="d-flex align-items-center">
-                                  <div class="d-flex me-2">
-                                    <img src="assets/images/profile/user-1.jpg" alt="Player 1" class="player-avatar">
-                                    <img src="assets/images/profile/user-2.jpg" alt="Player 2" class="player-avatar">
-                                    <img src="assets/images/profile/user-3.jpg" alt="Player 3" class="player-avatar">
-                                    <img src="assets/images/profile/user-4.jpg" alt="Player 4" class="player-avatar">
-                                    <img src="assets/images/profile/user-5.jpg" alt="Player 5" class="player-avatar">
-                                  </div>
-                                  <div>
-                                    <h6 class="mb-0">Pin Crushers</h6>
-                                    <small class="text-muted">Pro Team</small>
-                                  </div>
-                                </div>
-                              </td>
-                              <td>David, Lisa, James, Anna, Mark</td>
-                              <td><span class="fw-bold text-success">2,145</span></td>
-                              <td>214.5</td>
-                              <td>4</td>
-                              <td><span class="text-warning">485</span></td>
-                              <td>72</td>
-                              <td><span class="badge bg-success">Active</span></td>
-                              <td><small class="text-muted">1 hour ago</small></td>
-                              <td>
-                                <div class="admin-actions">
-                                  <button class="btn btn-sm btn-outline-primary" onclick="viewTeamDetails('team2')" title="View Details">
-                                    <i class="ti ti-eye"></i>
-                                  </button>
-                                  <button class="btn btn-sm btn-outline-warning" onclick="editTeamScore('team2')" title="Edit Score">
-                                    <i class="ti ti-edit"></i>
-                                  </button>
-                                  <button class="btn btn-sm btn-outline-info" onclick="viewTeamHistory('team2')" title="View History">
-                                    <i class="ti ti-history"></i>
-                                  </button>
-                                  <button class="btn btn-sm btn-outline-secondary" onclick="manageTeamMembers('team2')" title="Manage Team">
-                                    <i class="ti ti-users"></i>
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                            <tr>
-                              <td><span class="badge bg-warning">3</span></td>
-                              <td>
-                                <div class="d-flex align-items-center">
-                                  <div class="d-flex me-2">
-                                    <img src="assets/images/profile/user-6.jpg" alt="Player 1" class="player-avatar">
-                                    <img src="assets/images/profile/user-7.jpg" alt="Player 2" class="player-avatar">
-                                    <img src="assets/images/profile/user-8.jpg" alt="Player 3" class="player-avatar">
-                                    <img src="assets/images/profile/user-1.jpg" alt="Player 4" class="player-avatar">
-                                    <img src="assets/images/profile/user-2.jpg" alt="Player 5" class="player-avatar">
-                                    <img src="assets/images/profile/user-3.jpg" alt="Player 6" class="player-avatar">
-                                  </div>
-                                  <div>
-                                    <h6 class="mb-0">Strike Force</h6>
-                                    <small class="text-muted">Advanced Team</small>
-                                  </div>
-                                </div>
-                              </td>
-                              <td>Chris, Sarah, Mike, Lisa, Tom, Emma</td>
-                              <td><span class="fw-bold text-success">2,089</span></td>
-                              <td>208.9</td>
-                              <td>4</td>
-                              <td><span class="text-warning">472</span></td>
-                              <td>68</td>
-                              <td><span class="badge bg-warning">Pending</span></td>
-                              <td><small class="text-muted">30 min ago</small></td>
-                              <td>
-                                <div class="admin-actions">
-                                  <button class="btn btn-sm btn-outline-primary" onclick="viewTeamDetails('team3')" title="View Details">
-                                    <i class="ti ti-eye"></i>
-                                  </button>
-                                  <button class="btn btn-sm btn-outline-warning" onclick="editTeamScore('team3')" title="Edit Score">
-                                    <i class="ti ti-edit"></i>
-                                  </button>
-                                  <button class="btn btn-sm btn-outline-info" onclick="viewTeamHistory('team3')" title="View History">
-                                    <i class="ti ti-history"></i>
-                                  </button>
-                                  <button class="btn btn-sm btn-outline-secondary" onclick="manageTeamMembers('team3')" title="Manage Team">
-                                    <i class="ti ti-users"></i>
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                            <tr>
-                              <td><span class="badge bg-info">4</span></td>
-                              <td>
-                                <div class="d-flex align-items-center">
-                                  <div class="d-flex me-2">
-                                    <img src="assets/images/profile/user-4.jpg" alt="Player 1" class="player-avatar">
-                                    <img src="assets/images/profile/user-5.jpg" alt="Player 2" class="player-avatar">
-                                    <img src="assets/images/profile/user-6.jpg" alt="Player 3" class="player-avatar">
-                                    <img src="assets/images/profile/user-7.jpg" alt="Player 4" class="player-avatar">
-                                  </div>
-                                  <div>
-                                    <h6 class="mb-0">Spare Seekers</h6>
-                                    <small class="text-muted">Intermediate Team</small>
-                                  </div>
-                                </div>
-                              </td>
-                              <td>Alex, Maria, Chris, Wilson</td>
-                              <td><span class="fw-bold text-success">1,956</span></td>
-                              <td>195.6</td>
-                              <td>4</td>
-                              <td><span class="text-warning">445</span></td>
-                              <td>62</td>
-                              <td><span class="badge bg-success">Active</span></td>
-                              <td><small class="text-muted">15 min ago</small></td>
-                              <td>
-                                <div class="admin-actions">
-                                  <button class="btn btn-sm btn-outline-primary" onclick="viewTeamDetails('team4')" title="View Details">
-                                    <i class="ti ti-eye"></i>
-                                  </button>
-                                  <button class="btn btn-sm btn-outline-warning" onclick="editTeamScore('team4')" title="Edit Score">
-                                    <i class="ti ti-edit"></i>
-                                  </button>
-                                  <button class="btn btn-sm btn-outline-info" onclick="viewTeamHistory('team4')" title="View History">
-                                    <i class="ti ti-history"></i>
-                                  </button>
-                                  <button class="btn btn-sm btn-outline-secondary" onclick="manageTeamMembers('team4')" title="Manage Team">
-                                    <i class="ti ti-users"></i>
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                            <tr>
-                              <td><span class="badge bg-dark">5</span></td>
-                              <td>
-                                <div class="d-flex align-items-center">
-                                  <div class="d-flex me-2">
-                                    <img src="assets/images/profile/user-8.jpg" alt="Player 1" class="player-avatar">
-                                    <img src="assets/images/profile/user-1.jpg" alt="Player 2" class="player-avatar">
-                                    <img src="assets/images/profile/user-2.jpg" alt="Player 3" class="player-avatar">
-                                    <img src="assets/images/profile/user-3.jpg" alt="Player 4" class="player-avatar">
-                                    <img src="assets/images/profile/user-4.jpg" alt="Player 5" class="player-avatar">
-                                  </div>
-                                  <div>
-                                    <h6 class="mb-0">Gutter Guards</h6>
-                                    <small class="text-muted">Beginner Team</small>
-                                  </div>
-                                </div>
-                              </td>
-                              <td>David, Anna, Mark, Lisa, James</td>
-                              <td><span class="fw-bold text-success">1,823</span></td>
-                              <td>182.3</td>
-                              <td>4</td>
-                              <td><span class="text-warning">412</span></td>
-                              <td>58</td>
-                              <td><span class="badge bg-danger">Inactive</span></td>
-                              <td><small class="text-muted">5 min ago</small></td>
-                              <td>
-                                <div class="admin-actions">
-                                  <button class="btn btn-sm btn-outline-primary" onclick="viewTeamDetails('team5')" title="View Details">
-                                    <i class="ti ti-eye"></i>
-                                  </button>
-                                  <button class="btn btn-sm btn-outline-warning" onclick="editTeamScore('team5')" title="Edit Score">
-                                    <i class="ti ti-edit"></i>
-                                  </button>
-                                  <button class="btn btn-sm btn-outline-info" onclick="viewTeamHistory('team5')" title="View History">
-                                    <i class="ti ti-history"></i>
-                                  </button>
-                                  <button class="btn btn-sm btn-outline-secondary" onclick="manageTeamMembers('team5')" title="Manage Team">
-                                    <i class="ti ti-users"></i>
-                                  </button>
-                                </div>
+                              <td colspan="11" class="text-center py-4">
+                                <div class="loading-spinner"></div>
+                                <span class="ms-2">Loading team data...</span>
                               </td>
                             </tr>
                           </tbody>
                         </table>
-                      </div>
-                    </div>
+                                  </div>
+                                  </div>
 
                     <!-- Game 1 Tab -->
                     <div class="tab-pane fade" id="game1" role="tabpanel">
+                      <div class="card">
+                        <div class="card-header">
+                          <div class="d-flex align-items-center justify-content-between">
+                            <h5 class="card-title mb-0">Game 1 Score Entry</h5>
+                            <button class="btn btn-success btn-sm" onclick="saveAllScores(1)">
+                              <i class="ti ti-device-floppy me-1"></i>Save All Scores
+                                  </button>
+                                </div>
+                        </div>
+                        <div class="card-body">
+                          <div class="table-responsive">
+                            <table class="table table-bordered" id="game1Table">
+                              <thead class="table-dark">
+                                <tr>
+                                  <th scope="col" style="width: 25%;">Player</th>
+                                  <th scope="col" style="width: 8%;">Team Name</th>
+                                  <th scope="col" style="width: 10%;">Score</th>
+                                  <th scope="col" style="width: 10%;">Strikes</th>
+                                  <th scope="col" style="width: 10%;">Spares</th>
+                                  <th scope="col" style="width: 10%;">Open Frames</th>
+                                  <th scope="col" style="width: 10%;">Status</th>
+                                  <th scope="col" style="width: 17%;">Actions</th>
+                            </tr>
+                              </thead>
+                              <tbody id="game1TableBody">
+                                <tr>
+                                  <td colspan="8" class="text-center py-4">
+                                    <div class="loading-spinner"></div>
+                                    <span class="ms-2">Loading Game 1 data...</span>
+                              </td>
+                            </tr>
+                              </tbody>
+                            </table>
+                                  </div>
+                                  </div>
+                                </div>
+                    </div>
+
+                    <!-- Game 2 Tab -->
+                    <div class="tab-pane fade" id="game2" role="tabpanel">
+                      <div class="card">
+                        <div class="card-header">
+                          <div class="d-flex align-items-center justify-content-between">
+                            <h5 class="card-title mb-0">Game 2 Score Entry</h5>
+                            <button class="btn btn-success btn-sm" onclick="saveAllScores(2)">
+                              <i class="ti ti-device-floppy me-1"></i>Save All Scores
+                                  </button>
+                                </div>
+                        </div>
+                        <div class="card-body">
+                          <div class="table-responsive">
+                            <table class="table table-bordered" id="game2Table">
+                              <thead class="table-dark">
+                                <tr>
+                                  <th scope="col" style="width: 25%;">Player</th>
+                                  <th scope="col" style="width: 8%;">Team Name</th>
+                                  <th scope="col" style="width: 10%;">Score</th>
+                                  <th scope="col" style="width: 10%;">Strikes</th>
+                                  <th scope="col" style="width: 10%;">Spares</th>
+                                  <th scope="col" style="width: 10%;">Open Frames</th>
+                                  <th scope="col" style="width: 10%;">Status</th>
+                                  <th scope="col" style="width: 17%;">Actions</th>
+                            </tr>
+                              </thead>
+                              <tbody id="game2TableBody">
+                                <tr>
+                                  <td colspan="8" class="text-center py-4">
+                                    <div class="loading-spinner"></div>
+                                    <span class="ms-2">Loading Game 2 data...</span>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Game 3 Tab -->
+                    <div class="tab-pane fade" id="game3" role="tabpanel">
+                      <div class="card">
+                        <div class="card-header">
+                          <div class="d-flex align-items-center justify-content-between">
+                            <h5 class="card-title mb-0">Game 3 Score Entry</h5>
+                            <button class="btn btn-success btn-sm" onclick="saveAllScores(3)">
+                              <i class="ti ti-device-floppy me-1"></i>Save All Scores
+                            </button>
+                          </div>
+                        </div>
+                        <div class="card-body">
                       <div class="table-responsive">
-                        <table class="table table-hover">
-                          <thead>
-                            <tr>
-                              <th scope="col">Rank</th>
-                              <th scope="col">Team</th>
-                              <th scope="col">Players</th>
-                              <th scope="col">Score</th>
-                              <th scope="col">Individual Scores</th>
-                              <th scope="col">Combined Strikes</th>
-                              <th scope="col">Time</th>
-                              <th scope="col">Admin Actions</th>
+                            <table class="table table-bordered" id="game3Table">
+                              <thead class="table-dark">
+                                <tr>
+                                  <th scope="col" style="width: 25%;">Player</th>
+                                  <th scope="col" style="width: 8%;">Team Name</th>
+                                  <th scope="col" style="width: 10%;">Score</th>
+                                  <th scope="col" style="width: 10%;">Strikes</th>
+                                  <th scope="col" style="width: 10%;">Spares</th>
+                                  <th scope="col" style="width: 10%;">Open Frames</th>
+                                  <th scope="col" style="width: 10%;">Status</th>
+                                  <th scope="col" style="width: 17%;">Actions</th>
                             </tr>
                           </thead>
-                          <tbody>
-                            <tr>
-                              <td><span class="badge bg-primary">1</span></td>
-                              <td>
-                                <div class="d-flex align-items-center">
-                                  <div class="d-flex me-2">
-                                    <img src="assets/images/profile/user-5.jpg" alt="Player 1" class="player-avatar">
-                                    <img src="assets/images/profile/user-6.jpg" alt="Player 2" class="player-avatar">
-                                    <img src="assets/images/profile/user-7.jpg" alt="Player 3" class="player-avatar">
-                                    <img src="assets/images/profile/user-8.jpg" alt="Player 4" class="player-avatar">
-                                  </div>
-                                  <div>
-                                    <h6 class="mb-0">Lane Masters</h6>
-                                  </div>
-                                </div>
-                              </td>
-                              <td>Tom, Emma, Alex, Maria</td>
-                              <td><span class="fw-bold text-success">498</span></td>
-                              <td>125, 128, 120, 125</td>
-                              <td>15</td>
-                              <td><small class="text-muted">9:30 AM</small></td>
-                              <td>
-                                <div class="admin-actions">
-                                  <button class="btn btn-sm btn-outline-warning" onclick="editGameScore('team1', 1)" title="Edit Score">
-                                    <i class="ti ti-edit"></i>
-                                  </button>
-                                  <button class="btn btn-sm btn-outline-danger" onclick="deleteGameScore('team1', 1)" title="Delete Score">
-                                    <i class="ti ti-trash"></i>
-                                  </button>
-                                </div>
+                              <tbody id="game3TableBody">
+                                <tr>
+                                  <td colspan="8" class="text-center py-4">
+                                    <div class="loading-spinner"></div>
+                                    <span class="ms-2">Loading Game 3 data...</span>
                               </td>
                             </tr>
-                            <tr>
-                              <td><span class="badge bg-secondary">2</span></td>
-                              <td>
-                                <div class="d-flex align-items-center">
-                                  <div class="d-flex me-2">
-                                    <img src="assets/images/profile/user-1.jpg" alt="Player 1" class="player-avatar">
-                                    <img src="assets/images/profile/user-2.jpg" alt="Player 2" class="player-avatar">
-                                    <img src="assets/images/profile/user-3.jpg" alt="Player 3" class="player-avatar">
-                                    <img src="assets/images/profile/user-4.jpg" alt="Player 4" class="player-avatar">
-                                    <img src="assets/images/profile/user-5.jpg" alt="Player 5" class="player-avatar">
+                              </tbody>
+                            </table>
                                   </div>
-                                  <div>
-                                    <h6 class="mb-0">Pin Crushers</h6>
                                   </div>
                                 </div>
-                              </td>
-                              <td>David, Lisa, James, Anna, Mark</td>
-                              <td><span class="fw-bold text-success">485</span></td>
-                              <td>98, 102, 95, 98, 92</td>
-                              <td>14</td>
-                              <td><small class="text-muted">9:45 AM</small></td>
-                              <td>
-                                <div class="admin-actions">
-                                  <button class="btn btn-sm btn-outline-warning" onclick="editGameScore('team2', 1)" title="Edit Score">
-                                    <i class="ti ti-edit"></i>
-                                  </button>
-                                  <button class="btn btn-sm btn-outline-danger" onclick="deleteGameScore('team2', 1)" title="Delete Score">
-                                    <i class="ti ti-trash"></i>
+                    </div>
+
+                    <!-- Game 4 Tab -->
+                    <div class="tab-pane fade" id="game4" role="tabpanel">
+                      <div class="card">
+                        <div class="card-header">
+                          <div class="d-flex align-items-center justify-content-between">
+                            <h5 class="card-title mb-0">Game 4 Score Entry</h5>
+                            <button class="btn btn-success btn-sm" onclick="saveAllScores(4)">
+                              <i class="ti ti-device-floppy me-1"></i>Save All Scores
                                   </button>
                                 </div>
-                              </td>
+                        </div>
+                        <div class="card-body">
+                          <div class="table-responsive">
+                            <table class="table table-bordered" id="game4Table">
+                              <thead class="table-dark">
+                                <tr>
+                                  <th scope="col" style="width: 25%;">Player</th>
+                                  <th scope="col" style="width: 8%;">Team Name</th>
+                                  <th scope="col" style="width: 10%;">Score</th>
+                                  <th scope="col" style="width: 10%;">Strikes</th>
+                                  <th scope="col" style="width: 10%;">Spares</th>
+                                  <th scope="col" style="width: 10%;">Open Frames</th>
+                                  <th scope="col" style="width: 10%;">Status</th>
+                                  <th scope="col" style="width: 17%;">Actions</th>
                             </tr>
-                            <tr>
-                              <td><span class="badge bg-warning">3</span></td>
-                              <td>
-                                <div class="d-flex align-items-center">
-                                  <div class="d-flex me-2">
-                                    <img src="assets/images/profile/user-6.jpg" alt="Player 1" class="player-avatar">
-                                    <img src="assets/images/profile/user-7.jpg" alt="Player 2" class="player-avatar">
-                                    <img src="assets/images/profile/user-8.jpg" alt="Player 3" class="player-avatar">
-                                    <img src="assets/images/profile/user-1.jpg" alt="Player 4" class="player-avatar">
-                                    <img src="assets/images/profile/user-2.jpg" alt="Player 5" class="player-avatar">
-                                    <img src="assets/images/profile/user-3.jpg" alt="Player 6" class="player-avatar">
-                                  </div>
-                                  <div>
-                                    <h6 class="mb-0">Strike Force</h6>
-                                  </div>
-                                </div>
-                              </td>
-                              <td>Chris, Sarah, Mike, Lisa, Tom, Emma</td>
-                              <td><span class="fw-bold text-success">472</span></td>
-                              <td>78, 82, 75, 78, 82, 77</td>
-                              <td>13</td>
-                              <td><small class="text-muted">10:00 AM</small></td>
-                              <td>
-                                <div class="admin-actions">
-                                  <button class="btn btn-sm btn-outline-warning" onclick="editGameScore('team3', 1)" title="Edit Score">
-                                    <i class="ti ti-edit"></i>
-                                  </button>
-                                  <button class="btn btn-sm btn-outline-danger" onclick="deleteGameScore('team3', 1)" title="Delete Score">
-                                    <i class="ti ti-trash"></i>
-                                  </button>
-                                </div>
+                              </thead>
+                              <tbody id="game4TableBody">
+                                <tr>
+                                  <td colspan="8" class="text-center py-4">
+                                    <div class="loading-spinner"></div>
+                                    <span class="ms-2">Loading Game 4 data...</span>
                               </td>
                             </tr>
                           </tbody>
                         </table>
                       </div>
                     </div>
-
-                    <!-- Additional game tabs would follow similar pattern -->
-                    <div class="tab-pane fade" id="game2" role="tabpanel">
-                      <div class="alert alert-info">
-                        <i class="ti ti-info-circle me-2"></i>
-                        Game 2 data would be loaded here with similar admin functionality.
                       </div>
                     </div>
 
-                    <div class="tab-pane fade" id="game3" role="tabpanel">
-                      <div class="alert alert-info">
-                        <i class="ti ti-info-circle me-2"></i>
-                        Game 3 data would be loaded here with similar admin functionality.
-                      </div>
-                    </div>
-
-                    <div class="tab-pane fade" id="game4" role="tabpanel">
-                      <div class="alert alert-info">
-                        <i class="ti ti-info-circle me-2"></i>
-                        Game 4 data would be loaded here with similar admin functionality.
-                      </div>
-                    </div>
-
+                    <!-- Game 5 Tab -->
                     <div class="tab-pane fade" id="game5" role="tabpanel">
-                      <div class="alert alert-info">
-                        <i class="ti ti-info-circle me-2"></i>
-                        Game 5 data would be loaded here with similar admin functionality.
+                      <div class="card">
+                        <div class="card-header">
+                          <div class="d-flex align-items-center justify-content-between">
+                            <h5 class="card-title mb-0">Game 5 Score Entry</h5>
+                            <button class="btn btn-success btn-sm" onclick="saveAllScores(5)">
+                              <i class="ti ti-device-floppy me-1"></i>Save All Scores
+                            </button>
+                      </div>
+                    </div>
+                        <div class="card-body">
+                          <div class="table-responsive">
+                            <table class="table table-bordered" id="game5Table">
+                              <thead class="table-dark">
+                                <tr>
+                                  <th scope="col" style="width: 25%;">Player</th>
+                                  <th scope="col" style="width: 8%;">Team Name</th>
+                                  <th scope="col" style="width: 10%;">Score</th>
+                                  <th scope="col" style="width: 10%;">Strikes</th>
+                                  <th scope="col" style="width: 10%;">Spares</th>
+                                  <th scope="col" style="width: 10%;">Open Frames</th>
+                                  <th scope="col" style="width: 10%;">Status</th>
+                                  <th scope="col" style="width: 17%;">Actions</th>
+                                </tr>
+                              </thead>
+                              <tbody id="game5TableBody">
+                                <tr>
+                                  <td colspan="8" class="text-center py-4">
+                                    <div class="loading-spinner"></div>
+                                    <span class="ms-2">Loading Game 5 data...</span>
+                                  </td>
+                                </tr>
+                              </tbody>
+                            </table>
+                      </div>
+                    </div>
                       </div>
                     </div>
                   </div>
@@ -650,114 +503,54 @@ requireMaintenanceBypass('team-admin', 'Team Score Monitoring (Admin)');
   <script src="https://cdn.jsdelivr.net/npm/iconify-icon@1.0.8/dist/iconify-icon.min.js"></script>
   
   <script>
-    // Admin-specific functions for teams
-    function viewTeamDetails(teamId) {
-      showNotification('Opening detailed view for team: ' + teamId, 'info');
-      // Here you would open a detailed team modal or navigate to team details page
+    // Team Admin Functions
+    function viewTeamDetails(teamName) {
+      showNotification('Opening detailed view for team: ' + teamName, 'info');
     }
 
-    function editTeamScore(teamId) {
-      showNotification('Opening score editor for team: ' + teamId, 'info');
-      // Here you would open the team score editing interface
+    function editTeamScore(teamName) {
+      showNotification('Opening score editor for team: ' + teamName, 'info');
     }
 
-    function viewTeamHistory(teamId) {
-      showNotification('Loading score history for team: ' + teamId, 'info');
-      // Here you would load and display team's complete score history
+    function viewTeamHistory(teamName) {
+      showNotification('Loading score history for team: ' + teamName, 'info');
     }
 
-    function manageTeamMembers(teamId) {
-      showNotification('Opening team member management for: ' + teamId, 'info');
-      // Here you would open team member management interface
+    function manageTeamMembers(teamName) {
+      showNotification('Opening team management for: ' + teamName, 'info');
     }
 
-    function editGameScore(teamId, gameNumber) {
-      showNotification('Editing Game ' + gameNumber + ' score for team: ' + teamId, 'warning');
-      // Here you would open a quick edit modal for the specific game score
-    }
-
-    function deleteGameScore(teamId, gameNumber) {
-      if (confirm('Are you sure you want to delete Game ' + gameNumber + ' score for team: ' + teamId + '?')) {
-        showNotification('Score deleted successfully!', 'success');
-        // Here you would make the actual deletion
-      }
-    }
-
-    function exportData() {
+    function exportTeamData() {
       showNotification('Exporting team data...', 'info');
-      // Here you would generate and download the data export
     }
 
-    function bulkEdit() {
-      showNotification('Opening bulk edit interface for teams...', 'info');
-      // Here you would open a bulk editing interface
-    }
-
-    function manageTeams() {
-      showNotification('Opening team management interface...', 'info');
-      // Here you would open team creation/management interface
+    function bulkEditTeams() {
+      showNotification('Opening bulk edit interface...', 'info');
     }
 
     function teamAnalytics() {
-      showNotification('Opening team analytics dashboard...', 'info');
-      // Here you would open team performance analytics
+      showNotification('Opening team analytics...', 'info');
     }
 
     // Date filter functionality
     document.getElementById('dateFilter').addEventListener('change', function() {
       const selectedDate = this.value;
-      const customDateInput = document.getElementById('customDate');
-      
-      if (selectedDate === 'custom') {
-        customDateInput.style.display = 'inline-block';
-        customDateInput.focus();
-      } else {
-        customDateInput.style.display = 'none';
         console.log('Date filter changed to:', selectedDate);
         showNotification('Loading data for ' + selectedDate + '...', 'info');
-      }
+      loadDataForDateFilter(selectedDate);
     });
 
-    // Custom date input functionality
-    document.getElementById('customDate').addEventListener('change', function() {
-      const selectedDate = this.value;
-      if (selectedDate) {
-        const formattedDate = new Date(selectedDate).toLocaleDateString('en-US', {
-          weekday: 'long',
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric'
-        });
-        console.log('Custom date selected:', selectedDate);
-        showNotification('Loading data for ' + formattedDate + '...', 'info');
-      }
-    });
-
-    // Refresh table functionality
-    function refreshTable() {
-      const refreshBtn = document.querySelector('button[onclick="refreshTable()"]');
-      const icon = refreshBtn.querySelector('i');
-      
-      // Add spinning animation
-      icon.classList.add('ti-spin');
-      
-      // Simulate loading
-      setTimeout(() => {
-        icon.classList.remove('ti-spin');
-        showNotification('Admin team table refreshed successfully!', 'success');
-      }, 1000);
-    }
+    // Refresh table functionality - removed duplicate function
 
     // Tab switching with data loading simulation
     document.querySelectorAll('[data-bs-toggle="tab"]').forEach(tab => {
       tab.addEventListener('shown.bs.tab', function(e) {
         const targetId = e.target.getAttribute('data-bs-target');
-        console.log('Switched to admin team tab:', targetId);
+        console.log('Switched to team tab:', targetId);
         
-        // Simulate loading data for specific game
         if (targetId !== '#overall') {
           const gameNumber = targetId.replace('#game', '');
-          showNotification('Loading Game ' + gameNumber + ' admin team data...', 'info');
+          showNotification('Loading Game ' + gameNumber + ' team data...', 'info');
         }
       });
     });
@@ -781,51 +574,529 @@ requireMaintenanceBypass('team-admin', 'Team Score Monitoring (Admin)');
       }, 3000);
     }
 
-    // Auto-refresh table every 30 seconds
+    // Cache for loaded data
+    const dataCache = {};
+    
+    function loadDataForDateFilter(selectedDate) {
+      console.log('loadDataForDateFilter called with:', selectedDate);
+      // Check cache first
+      if (dataCache[selectedDate]) {
+        console.log('Using cached data for:', selectedDate);
+        updateTablesWithData(dataCache[selectedDate]);
+        return;
+      }
+      console.log('Fetching fresh data for:', selectedDate);
+      
+      // Show loading state
+      const tables = document.querySelectorAll('.table tbody');
+      tables.forEach(table => {
+        table.innerHTML = '<tr><td colspan="9" class="text-center text-muted">Loading...</td></tr>';
+      });
+      
+      // AJAX request to get team data
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', 'ajax/session-management.php', true);
+      xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+      
+      xhr.onreadystatechange = function() {
+        if (xhr.readyState === 4) {
+          console.log('AJAX response received, status:', xhr.status);
+          if (xhr.status === 200) {
+            try {
+              const data = JSON.parse(xhr.responseText);
+              console.log('Parsed response data:', data);
+              if (data.success) {
+                console.log('Data loaded successfully, players count:', data.players ? data.players.length : 0);
+                dataCache[selectedDate] = data.players;
+                // Store the session_id for this date
+                if (data.session_id) {
+                  window.currentSessionId = data.session_id;
+                  console.log('Session ID for date', selectedDate, ':', data.session_id);
+                }
+                updateTablesWithData(data.players);
+              } else {
+                console.log('Server returned error:', data.message);
+                showNotification('Error: ' + data.message, 'error');
+              }
+            } catch (e) {
+              console.log('Error parsing response:', e);
+              console.log('Raw response:', xhr.responseText);
+              showNotification('Error parsing response', 'error');
+            }
+          } else {
+            console.log('HTTP error:', xhr.status);
+            showNotification('Error loading data', 'error');
+          }
+        }
+      };
+      
+      xhr.send('action=get_players_data&selected_date=' + encodeURIComponent(selectedDate) + '&session_type=Team&t=' + Date.now());
+    }
+    
+    function updateTablesWithData(players) {
+      // Update Overall Rankings tab
+      updateOverallRankingsTable(players);
+      
+      // Update Game tabs
+      for (let game = 1; game <= 5; game++) {
+        updateGameTable(game, players);
+      }
+    }
+    
+    function updateOverallRankingsTable(players) {
+      const tbody = document.getElementById('overallTableBody');
+      if (!tbody) return;
+      
+      // Group players by team and calculate team statistics
+      const teamStats = {};
+      players.forEach(player => {
+        const teamName = player.team_name || 'No Team';
+        
+        if (!teamStats[teamName]) {
+          teamStats[teamName] = {
+            teamName: teamName,
+            totalScore: 0,
+            totalGames: 0,
+            players: [],
+            totalStrikes: 0,
+            totalSpares: 0,
+            bestPlayer: null,
+            bestScore: 0,
+            playerNames: [],
+            playerAvatars: ''
+          };
+        }
+        
+        teamStats[teamName].totalScore += player.total_score || 0;
+        teamStats[teamName].totalGames += player.games_played || 0;
+        teamStats[teamName].totalStrikes += player.total_strikes || 0;
+        teamStats[teamName].totalSpares += player.total_spares || 0;
+        teamStats[teamName].players.push(player);
+        teamStats[teamName].playerNames.push(player.first_name + ' ' + player.last_name);
+        
+        // Generate player avatars
+        const avatarNum = (player.user_id % 8) + 1;
+        teamStats[teamName].playerAvatars += `<img src="assets/images/profile/user-${avatarNum}.jpg" alt="Player" class="player-avatar">`;
+        
+        // Track best player
+        if ((player.best_score || 0) > teamStats[teamName].bestScore) {
+          teamStats[teamName].bestScore = player.best_score || 0;
+          teamStats[teamName].bestPlayer = player.first_name + ' ' + player.last_name;
+        }
+      });
+
+      // Convert to array and sort by total score
+      const teamArray = Object.values(teamStats).sort((a, b) => b.totalScore - a.totalScore);
+
+      let html = '';
+      teamArray.forEach((team, index) => {
+        const rank = index + 1;
+        const rankClass = rank === 1 ? 'rank-1' : rank === 2 ? 'rank-2' : rank === 3 ? 'rank-3' : 'rank-other';
+        const avgScore = team.players.length > 0 ? (team.totalScore / team.players.length).toFixed(1) : 0;
+        
+        html += `
+          <tr>
+            <td><span class="rank-badge ${rankClass}">${rank}</span></td>
+            <td>
+              <div class="d-flex align-items-center">
+                <div class="d-flex me-2">${team.playerAvatars}</div>
+                <div>
+                  <h6 class="mb-0">${team.teamName}</h6>
+                  <small class="text-muted">Team</small>
+                </div>
+              </div>
+            </td>
+            <td>${team.playerNames.join(', ')}</td>
+            <td><span class="fw-bold text-success">${team.totalScore}</span></td>
+            <td><span class="fw-bold text-primary">${avgScore}</span></td>
+            <td>${team.totalGames}</td>
+            <td><span class="badge bg-info">${team.bestScore > 0 ? team.bestScore : '-'}</span></td>
+            <td>${team.totalStrikes}</td>
+            <td>${team.totalSpares}</td>
+            <td><span class="badge bg-success">Active</span></td>
+            <td><small class="text-muted">Never</small></td>
+            <td>
+              <div class="admin-actions">
+                <button class="btn btn-sm btn-outline-primary" onclick="viewTeamDetails('${team.teamName}')" title="View Details">
+                  <i class="ti ti-eye"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-warning" onclick="editTeamScore('${team.teamName}')" title="Edit Score">
+                  <i class="ti ti-edit"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-info" onclick="viewTeamHistory('${team.teamName}')" title="View History">
+                  <i class="ti ti-history"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-secondary" onclick="manageTeamMembers('${team.teamName}')" title="Manage Team">
+                  <i class="ti ti-users"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+        `;
+      });
+      
+      tbody.innerHTML = html || '<tr><td colspan="11" class="text-center text-muted py-4">No team data available for selected date range</td></tr>';
+    }
+    
+    function updateGameTable(gameNumber, players) {
+      const tbody = document.getElementById(`game${gameNumber}TableBody`);
+      if (!tbody) return;
+      
+      let html = '';
+      
+      players.forEach((player, index) => {
+        const gameScore = player[`game_${gameNumber}_score`] || null;
+        const score = gameScore ? gameScore.player_score : '';
+        const strikes = gameScore ? gameScore.strikes : '';
+        const spares = gameScore ? gameScore.spares : '';
+        const openFrames = gameScore ? gameScore.open_frames : '';
+        const createdAt = gameScore ? gameScore.created_at : '';
+        
+        html += `
+          <tr>
+            <td>
+              <div class="d-flex align-items-center">
+                <img src="assets/images/profile/user-${(player.user_id % 8) + 1}.jpg" alt="Player" class="rounded-circle me-2" width="32">
+                <div>
+                  <strong>${player.first_name} ${player.last_name}</strong>
+                </div>
+              </div>
+            </td>
+            <td class="text-center">
+              <span class="badge bg-info">${player.team_name || 'No Team'}</span>
+            </td>
+            <td>
+              <input type="number" class="form-control form-control-sm score-input" 
+                     data-user-id="${player.user_id}" data-field="score" data-game="${gameNumber}"
+                     value="${score}" min="0" max="300" placeholder="0-300">
+            </td>
+            <td>
+              <input type="number" class="form-control form-control-sm score-input" 
+                     data-user-id="${player.user_id}" data-field="strikes" data-game="${gameNumber}"
+                     value="${strikes}" min="0" max="12" placeholder="0-12">
+            </td>
+            <td>
+              <input type="number" class="form-control form-control-sm score-input" 
+                     data-user-id="${player.user_id}" data-field="spares" data-game="${gameNumber}"
+                     value="${spares}" min="0" max="12" placeholder="0-12">
+            </td>
+            <td>
+              <input type="number" class="form-control form-control-sm score-input" 
+                     data-user-id="${player.user_id}" data-field="open_frames" data-game="${gameNumber}"
+                     value="${openFrames}" min="0" max="12" placeholder="0-12">
+            </td>
+            <td class="text-center">
+              ${gameScore ? 
+                `<span class="badge bg-success">Completed</span><br><small class="text-muted">${new Date(createdAt).toLocaleTimeString()}</small>` : 
+                '<span class="badge bg-warning">Pending</span>'
+              }
+            </td>
+            <td class="text-center">
+              <button class="btn btn-success btn-sm" onclick="savePlayerScore(${player.user_id}, ${gameNumber}, '${player.first_name} ${player.last_name}')" title="Save Score">
+                <i class="ti ti-device-floppy me-1"></i>Save
+              </button>
+            </td>
+          </tr>
+        `;
+      });
+      
+      tbody.innerHTML = html || '<tr><td colspan="8" class="text-center text-muted py-4">No player data available for selected date range</td></tr>';
+    }
+    
+    function refreshTable() {
+      console.log('refreshTable() called');
+      const refreshBtn = document.querySelector('button[onclick="refreshTable()"]');
+      const icon = refreshBtn ? refreshBtn.querySelector('i') : null;
+      
+      if (icon) {
+        icon.classList.add('ti-spin');
+      }
+      
+      const dateFilter = document.getElementById('dateFilter');
+      const selectedDate = dateFilter ? dateFilter.value : 'today';
+      console.log('Refreshing with date:', selectedDate);
+      
+      loadDataForDateFilter(selectedDate);
+      
+      // Remove spinning after data loads
+      setTimeout(() => {
+        if (icon) {
+          icon.classList.remove('ti-spin');
+        }
+        showNotification('Team table refreshed successfully!', 'success');
+        console.log('Refresh completed');
+      }, 1500);
+    }
+    
+    // Load data on page load
+    document.addEventListener('DOMContentLoaded', function() {
+      const dateFilter = document.getElementById('dateFilter');
+      const selectedDate = dateFilter ? dateFilter.value : 'today';
+      loadDataForDateFilter(selectedDate);
+    });
+
+    // Auto-refresh every 30 seconds
     setInterval(() => {
       if (!document.hidden) {
-        console.log('Auto-refreshing admin team table...');
+        console.log('Auto-refreshing team table...');
       }
     }, 30000);
-  </script>
-  
-  <!-- Countdown Timer Script -->
-  <script>
-    // Set the target date for the tournament (you can change this)
-    const targetDate = new Date('2025-03-15T18:00:00').getTime();
+
+    // Session Management Functions
+    const ongoingSubmissions = new Set();
     
-    function updateCountdown() {
-      const now = new Date().getTime();
-      const distance = targetDate - now;
+    function savePlayerScore(userId, gameNumber, playerName) {
+      console.log('savePlayerScore called:', {userId, gameNumber, playerName});
       
-      if (distance < 0) {
-        // Event has passed
-        document.getElementById('days').innerHTML = '00';
-        document.getElementById('hours').innerHTML = '00';
-        document.getElementById('minutes').innerHTML = '00';
-        document.getElementById('seconds').innerHTML = '00';
+      const submissionKey = `${userId}-${gameNumber}`;
+      
+      if (ongoingSubmissions.has(submissionKey)) {
+        console.log('Submission already in progress for:', submissionKey);
+        showNotification('Score is already being saved, please wait...', 'warning');
         return;
       }
       
-      const days = Math.floor(distance / (1000 * 60 * 60 * 24));
-      const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-      const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-      const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+      ongoingSubmissions.add(submissionKey);
       
-      document.getElementById('days').innerHTML = days.toString().padStart(2, '0');
-      document.getElementById('hours').innerHTML = hours.toString().padStart(2, '0');
-      document.getElementById('minutes').innerHTML = minutes.toString().padStart(2, '0');
-      document.getElementById('seconds').innerHTML = seconds.toString().padStart(2, '0');
+      const tableId = `game${gameNumber}Table`;
+      const table = document.getElementById(tableId);
+      const row = table.querySelector(`tr [data-user-id="${userId}"]`).closest('tr');
+      const inputs = row.querySelectorAll('.score-input');
+      
+      let scoreData = {
+        user_id: userId,
+        game_number: gameNumber,
+        player_score: '',
+        strikes: '',
+        spares: '',
+        open_frames: ''
+      };
+      
+      let hasErrors = false;
+      
+      inputs.forEach(input => {
+        const field = input.getAttribute('data-field');
+        const value = input.value.trim();
+        
+        if (field === 'score' && value && (value < 0 || value > 300)) {
+          input.classList.add('is-invalid');
+          hasErrors = true;
+          return;
+        } else {
+          input.classList.remove('is-invalid');
+        }
+        
+        if (field === 'score') {
+          scoreData.player_score = value;
+        } else if (field === 'strikes') {
+          scoreData.strikes = value;
+        } else if (field === 'spares') {
+          scoreData.spares = value;
+        } else if (field === 'open_frames') {
+          scoreData.open_frames = value;
+        }
+      });
+      
+      if (hasErrors) {
+        showNotification('Please fix invalid score (0-300)', 'error');
+        ongoingSubmissions.delete(submissionKey);
+        return;
+      }
+      
+      if (!scoreData.player_score) {
+        showNotification('Please enter a score for ' + playerName, 'warning');
+        ongoingSubmissions.delete(submissionKey);
+        return;
+      }
+      
+      const saveBtn = row.querySelector(`[onclick*="savePlayerScore(${userId}, ${gameNumber}"]`);
+      
+      if (!saveBtn) {
+        showNotification('Save button not found', 'error');
+        ongoingSubmissions.delete(submissionKey);
+        return;
+      }
+      
+      const originalText = saveBtn.innerHTML;
+      saveBtn.innerHTML = '<i class="ti ti-loader me-1"></i>Saving...';
+      saveBtn.disabled = true;
+      
+      const formData = new FormData();
+      formData.append('action', 'add_score');
+      formData.append('session_id', window.currentSessionId || null);
+      formData.append('user_id', userId);
+      formData.append('game_number', gameNumber);
+      formData.append('player_score', scoreData.player_score);
+      formData.append('strikes', scoreData.strikes || 0);
+      formData.append('spares', scoreData.spares || 0);
+      formData.append('open_frames', scoreData.open_frames || 0);
+      formData.append('game_mode', 'Team');
+      
+      console.log('Sending data:', {
+        action: 'add_score',
+        session_id: window.currentSessionId || null,
+        user_id: userId,
+        game_number: gameNumber,
+        player_score: scoreData.player_score,
+        strikes: scoreData.strikes || 0,
+        spares: scoreData.spares || 0,
+        open_frames: scoreData.open_frames || 0
+      });
+      
+      fetch('ajax/session-management.php', {
+        method: 'POST',
+        body: formData
+      })
+      .then(response => {
+        console.log('Response status:', response.status);
+        console.log('Response headers:', response.headers);
+        return response.text();
+      })
+      .then(text => {
+        console.log('Raw response:', text);
+        try {
+          const data = JSON.parse(text);
+          console.log('Parsed data:', data);
+          if (data.success) {
+            showNotification(`Score saved for ${playerName}: ${scoreData.player_score}`, 'success');
+            updatePlayerStatus(row, scoreData.player_score, scoreData.strikes, scoreData.spares, scoreData.open_frames);
+            // Clear cache to force fresh data fetch
+            const dateFilter = document.getElementById('dateFilter');
+            const selectedDate = dateFilter ? dateFilter.value : 'today';
+            delete dataCache[selectedDate];
+            console.log('Cache cleared for date:', selectedDate);
+            setTimeout(() => {
+              refreshTable();
+            }, 1000);
+          } else {
+            showNotification('Error: ' + data.message, 'error');
+          }
+        } catch (e) {
+          console.error('JSON parse error:', e);
+          showNotification('Server error: ' + text, 'error');
+        }
+      })
+      .catch(error => {
+        console.error('Fetch error:', error);
+        showNotification('An error occurred while saving score', 'error');
+      })
+      .finally(() => {
+        ongoingSubmissions.delete(submissionKey);
+        saveBtn.innerHTML = originalText;
+        saveBtn.disabled = false;
+      });
     }
-    
-    // Update countdown every second
-    setInterval(updateCountdown, 1000);
-    
-    // Initial call
-    updateCountdown();
+
+    function updatePlayerStatus(row, score, strikes, spares, openFrames) {
+      const statusCell = row.querySelector('td:nth-last-child(2)');
+      if (statusCell) {
+        statusCell.innerHTML = `
+          <span class="badge bg-success">Completed</span>
+          <br><small class="text-muted">${new Date().toLocaleTimeString()}</small>
+        `;
+      }
+      
+      const saveBtn = row.querySelector('button[onclick*="savePlayerScore"]');
+      if (saveBtn) {
+        saveBtn.innerHTML = '<i class="ti ti-check me-1"></i>Saved';
+        saveBtn.disabled = true;
+        saveBtn.classList.remove('btn-success');
+        saveBtn.classList.add('btn-outline-success');
+      }
+    }
+
+    function saveAllScores(gameNumber) {
+      const tableId = `game${gameNumber}Table`;
+      const table = document.getElementById(tableId);
+      const rows = table.querySelectorAll('tbody tr');
+      
+      let scoresToSave = [];
+      let hasErrors = false;
+      
+      rows.forEach((row, index) => {
+        const inputs = row.querySelectorAll('.score-input');
+        const userId = inputs[0].getAttribute('data-user-id');
+        
+        let scoreData = {
+          user_id: userId,
+          game_number: gameNumber,
+          player_score: '',
+          strikes: '',
+          spares: '',
+          open_frames: ''
+        };
+        
+        inputs.forEach(input => {
+          const field = input.getAttribute('data-field');
+          const value = input.value.trim();
+          
+          if (field === 'score' && value && (value < 0 || value > 300)) {
+            input.classList.add('is-invalid');
+            hasErrors = true;
+            return;
+          } else {
+            input.classList.remove('is-invalid');
+          }
+          
+          scoreData[field] = value;
+        });
+        
+        if (scoreData.player_score) {
+          scoresToSave.push(scoreData);
+        }
+      });
+      
+      if (hasErrors) {
+        showNotification('Please fix invalid scores (0-300)', 'error');
+        return;
+      }
+      
+      if (scoresToSave.length === 0) {
+        showNotification('No scores to save', 'warning');
+        return;
+      }
+      
+      const saveBtn = document.querySelector(`[onclick="saveAllScores(${gameNumber})"]`);
+      const originalText = saveBtn.innerHTML;
+      saveBtn.innerHTML = '<i class="ti ti-loader me-1"></i>Saving...';
+      saveBtn.disabled = true;
+      
+      const formData = new FormData();
+      formData.append('action', 'save_multiple_scores');
+      formData.append('session_id', window.currentSessionId || null);
+      formData.append('scores', JSON.stringify(scoresToSave));
+      formData.append('game_mode', 'Team');
+      
+      fetch('ajax/session-management.php', {
+        method: 'POST',
+        body: formData
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          showNotification(`Saved ${scoresToSave.length} scores for Game ${gameNumber}`, 'success');
+          // Clear cache to force fresh data fetch
+          const dateFilter = document.getElementById('dateFilter');
+          const selectedDate = dateFilter ? dateFilter.value : 'today';
+          delete dataCache[selectedDate];
+          console.log('Cache cleared for date:', selectedDate);
+          setTimeout(() => {
+            refreshTable();
+          }, 1000);
+        } else {
+          showNotification('Error: ' + data.message, 'error');
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        showNotification('An error occurred while saving scores', 'error');
+      })
+      .finally(() => {
+        saveBtn.innerHTML = originalText;
+        saveBtn.disabled = false;
+      });
+    }
   </script>
-  
-  <?php include 'includes/admin-popup.php'; ?>
 </body>
 
 </html>

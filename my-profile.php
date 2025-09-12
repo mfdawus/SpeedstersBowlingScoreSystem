@@ -275,19 +275,19 @@
                   <p class="text-muted mb-3">Pro Bowler</p>
                   
                   <!-- Profile Picture Upload -->
-                  <div class="profile-upload-area" onclick="document.getElementById('profileImageInput').click()">
-                    <i class="ti ti-camera fs-1 text-primary mb-3"></i>
-                    <h6 class="mb-2">Change Profile Picture</h6>
-                    <p class="text-muted small mb-0">Click to upload or drag & drop</p>
-                    <p class="text-muted small">PNG, JPG up to 2MB</p>
+                  <div class="profile-upload-area" onclick="showMaintenanceNotice()" style="opacity: 0.7; cursor: not-allowed;">
+                    <i class="ti ti-tools fs-1 text-warning mb-3"></i>
+                    <h6 class="mb-2">Profile Picture Update</h6>
+                    <p class="text-muted small mb-0">Under Maintenance</p>
+                    <p class="text-muted small">Available March 2025</p>
                   </div>
                   
                   <input type="file" id="profileImageInput" accept="image/*" style="display: none;" onchange="handleImageUpload(event)">
                   
                   <div class="mt-3">
-                    <button class="btn btn-outline-primary btn-sm" onclick="document.getElementById('profileImageInput').click()">
-                      <i class="ti ti-upload me-1"></i>
-                      Upload New Photo
+                    <button class="btn btn-outline-warning btn-sm" onclick="showMaintenanceNotice()">
+                      <i class="ti ti-tools me-1"></i>
+                      Upload New Photo (Under Maintenance)
                     </button>
                   </div>
                 </div>
@@ -298,6 +298,18 @@
             <div class="col-lg-8">
               <div class="card">
                 <div class="card-body">
+                  <!-- Maintenance Notice Banner -->
+                  <div class="alert alert-warning alert-dismissible fade show mb-4" role="alert">
+                    <div class="d-flex align-items-center">
+                      <i class="ti ti-tools fs-4 me-3"></i>
+                      <div>
+                        <h6 class="alert-heading mb-1">Profile Updates Under Maintenance</h6>
+                        <p class="mb-0 small">We're upgrading our profile management system. Updates will be available in March 2025.</p>
+                      </div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                  </div>
+                  
                   <h5 class="card-title mb-4">
                     <i class="ti ti-user-edit me-2"></i>
                     Profile Information
@@ -307,7 +319,7 @@
                     <div class="row">
                       <div class="col-md-6 mb-3">
                         <label for="nickname" class="form-label">Nickname</label>
-                        <input type="text" class="form-control" id="nickname" name="nickname" value="John Smith" placeholder="Enter your nickname">
+                        <input type="text" class="form-control" id="nickname" name="nickname" value="John Smith" placeholder="Enter your nickname" disabled>
                         <div class="form-text">This is how other players will see you in the system.</div>
                       </div>
                       <div class="col-md-6 mb-3">
@@ -320,7 +332,7 @@
                     <div class="row">
                       <div class="col-md-6 mb-3">
                         <label for="phone" class="form-label">Phone Number</label>
-                        <input type="tel" class="form-control" id="phone" name="phone" value="+1 (555) 123-4567" placeholder="Enter your phone number">
+                        <input type="tel" class="form-control" id="phone" name="phone" value="+1 (555) 123-4567" placeholder="Enter your phone number" disabled>
                       </div>
                       <div class="col-md-6 mb-3">
                         <label class="form-label">Skill Level</label>
@@ -334,7 +346,7 @@
                     <div class="row">
                       <div class="col-md-6 mb-3">
                         <label for="preferredLane" class="form-label">Preferred Lane</label>
-                        <select class="form-select" id="preferredLane" name="preferredLane">
+                        <select class="form-select" id="preferredLane" name="preferredLane" disabled>
                           <option value="">No Preference</option>
                           <option value="1">Lane 1</option>
                           <option value="2">Lane 2</option>
@@ -348,7 +360,7 @@
                       </div>
                       <div class="col-md-6 mb-3">
                         <label for="teamPreference" class="form-label">Team Preference</label>
-                        <select class="form-select" id="teamPreference" name="teamPreference">
+                        <select class="form-select" id="teamPreference" name="teamPreference" disabled>
                           <option value="solo">Solo Games</option>
                           <option value="duo" selected>Duo Teams</option>
                           <option value="trio">Trio Teams</option>
@@ -359,13 +371,13 @@
                     
                     <div class="mb-3">
                       <label for="bio" class="form-label">Bio</label>
-                      <textarea class="form-control" id="bio" name="bio" rows="3" placeholder="Tell us about yourself...">Passionate bowler with 5+ years of experience. Love competing in tournaments and helping new players improve their game.</textarea>
+                      <textarea class="form-control" id="bio" name="bio" rows="3" placeholder="Tell us about yourself..." disabled>Passionate bowler with 5+ years of experience. Love competing in tournaments and helping new players improve their game.</textarea>
                     </div>
                     
                     <div class="d-flex gap-2">
-                      <button type="submit" class="btn btn-primary">
-                        <i class="ti ti-device-floppy me-1"></i>
-                        Save Changes
+                      <button type="submit" class="btn btn-warning">
+                        <i class="ti ti-tools me-1"></i>
+                        Update Profile (Under Maintenance)
                       </button>
                       <button type="button" class="btn btn-outline-secondary" onclick="resetForm()">
                         <i class="ti ti-refresh me-1"></i>
@@ -471,46 +483,16 @@
   <script>
     // Handle profile image upload
     function handleImageUpload(event) {
-      const file = event.target.files[0];
-      if (file) {
-        // Validate file size (2MB max)
-        if (file.size > 2 * 1024 * 1024) {
-          showNotification('File size must be less than 2MB', 'error');
-          return;
-        }
-        
-        // Validate file type
-        if (!file.type.startsWith('image/')) {
-          showNotification('Please select a valid image file', 'error');
-          return;
-        }
-        
-        // Create preview
-        const reader = new FileReader();
-        reader.onload = function(e) {
-          document.getElementById('profilePicture').src = e.target.result;
-          showNotification('Profile picture updated successfully!', 'success');
-        };
-        reader.readAsDataURL(file);
-      }
+      // Show maintenance notice instead of processing upload
+      showMaintenanceNotice();
     }
 
     // Handle form submission
     document.getElementById('profileForm').addEventListener('submit', function(e) {
       e.preventDefault();
       
-      // Get form data
-      const formData = new FormData(this);
-      const nickname = formData.get('nickname');
-      
-      // Update nickname display
-      document.getElementById('userNickname').textContent = nickname;
-      
-      // Show success message
-      showNotification('Profile updated successfully!', 'success');
-      
-      // Here you would typically send the data to a server
-      console.log('Profile data:', Object.fromEntries(formData));
+      // Show maintenance notice
+      showMaintenanceNotice();
     });
 
     // Reset form
@@ -543,6 +525,72 @@
         handleImageUpload(event);
       }
     });
+
+    // Maintenance notice function
+    function showMaintenanceNotice() {
+      const modal = document.createElement('div');
+      modal.className = 'modal fade';
+      modal.innerHTML = `
+        <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+              <h5 class="modal-title">
+                <i class="ti ti-tools me-2"></i>
+                Profile Update Under Maintenance
+              </h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+              <div class="text-center mb-4">
+                <i class="ti ti-settings fs-1 text-warning mb-3"></i>
+                <h6 class="fw-bold">Profile Management System Upgrade</h6>
+              </div>
+              <p class="text-muted mb-3">
+                We're currently upgrading our profile management system to provide you with better features and enhanced security.
+              </p>
+              <div class="alert alert-info">
+                <h6 class="alert-heading">
+                  <i class="ti ti-info-circle me-1"></i>
+                  What's Coming:
+                </h6>
+                <ul class="mb-0 small">
+                  <li>Enhanced profile picture upload with cloud storage</li>
+                  <li>Advanced privacy settings</li>
+                  <li>Social media integration</li>
+                  <li>Profile verification system</li>
+                  <li>Real-time statistics updates</li>
+                </ul>
+              </div>
+              <p class="text-muted small mb-0">
+                <strong>Estimated completion:</strong> March 2025<br>
+                Your current profile information remains safe and accessible.
+              </p>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                <i class="ti ti-arrow-left me-1"></i>
+                Go Back
+              </button>
+              <a href="./dashboard.php" class="btn btn-primary">
+                <i class="ti ti-dashboard me-1"></i>
+                Go to Dashboard
+              </a>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      document.body.appendChild(modal);
+      
+      // Show modal
+      const bsModal = new bootstrap.Modal(modal);
+      bsModal.show();
+      
+      // Remove modal from DOM when hidden
+      modal.addEventListener('hidden.bs.modal', function() {
+        document.body.removeChild(modal);
+      });
+    }
 
     // Notification function
     function showNotification(message, type = 'info') {

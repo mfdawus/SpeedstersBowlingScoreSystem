@@ -51,14 +51,16 @@
                 <i class="ti ti-user fs-6"></i>
                 <p class="mb-0 fs-3">My Profile</p>
               </a>
-              <a href="./dashboard.php" class="d-flex align-items-center gap-2 dropdown-item">
-                <i class="ti ti-eye fs-6"></i>
-                <p class="mb-0 fs-3">Player View</p>
-              </a>
-              <a href="./admin-dashboard.php" class="d-flex align-items-center gap-2 dropdown-item">
-                <i class="ti ti-settings fs-6"></i>
-                <p class="mb-0 fs-3">Admin Panel</p>
-              </a>
+              <?php if (isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'Admin'): ?>
+                <a href="./dashboard.php" class="d-flex align-items-center gap-2 dropdown-item">
+                  <i class="ti ti-eye fs-6"></i>
+                  <p class="mb-0 fs-3">Player View</p>
+                </a>
+                <a href="./admin-dashboard.php" class="d-flex align-items-center gap-2 dropdown-item">
+                  <i class="ti ti-settings fs-6"></i>
+                  <p class="mb-0 fs-3">Admin Panel</p>
+                </a>
+              <?php endif; ?>
               <a href="logout.php" class="btn btn-outline-primary mx-3 mt-2 d-block">Logout</a>
             </div>
           </div>

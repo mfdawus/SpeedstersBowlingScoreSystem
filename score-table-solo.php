@@ -14,7 +14,7 @@ $currentUser = getCurrentUser();
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Temporary Team Table - SPEEDSTERS Bowling System</title>
+  <title>Solo Score Table - SPEEDSTERS Bowling System</title>
   <link rel="shortcut icon" type="image/png" href="./assets/images/logos/speedster main logo.png" />
   <link rel="stylesheet" href="./assets/css/styles.min.css" />
   <style>
@@ -86,7 +86,7 @@ $currentUser = getCurrentUser();
                   <ol class="breadcrumb m-0">
                     <li class="breadcrumb-item"><a href="./dashboard.php">Dashboard</a></li>
                     <li class="breadcrumb-item"><a href="javascript:void(0)">Score Table</a></li>
-                    <li class="breadcrumb-item active">Team Temporary Table</li>
+                    <li class="breadcrumb-item active">Solo Players</li>
                   </ol>
                 </div>
               </div>
@@ -101,7 +101,7 @@ $currentUser = getCurrentUser();
                   <div class="d-flex align-items-center justify-content-between mb-4">
                     <div>
                       <h5 class="card-title fw-semibold mb-1" id="sessionTitle">Loading...</h5>
-                      <span class="fw-normal text-muted">Team Temporary Table</span>
+                      <span class="fw-normal text-muted">Solo Players Score Table</span>
                     </div>
                     <div class="d-flex gap-2">
                       <select class="form-select form-select-sm" id="dateFilter" style="width: auto;">
@@ -110,49 +110,67 @@ $currentUser = getCurrentUser();
                         try {
                           $pdo = getDBConnection();
                           
-                          // Get session dates with score counts
+                          // Get session dates with score counts (Solo sessions only)
                           $stmt = $pdo->prepare("
-                            SELECT DISTINCT DATE(gs.session_date) as match_date,
-                                   COUNT(DISTINCT gc.user_id) as player_count,
-                                   COUNT(gc.score_id) as score_count
+                            SELECT 
+                              DATE(gs.session_date) as match_date,
+                              COUNT(DISTINCT gs.session_id) as session_count,
+                              COUNT(gc.score_id) as score_count
                             FROM game_sessions gs
-                            INNER JOIN game_scores gc ON gs.session_id = gc.session_id
-                            WHERE gc.status = 'Completed'
+                            LEFT JOIN game_scores gc ON gs.session_id = gc.session_id AND gc.status = 'Completed'
+                            WHERE (gs.status = 'Active' OR gs.status = 'Completed') AND gs.game_mode = 'Solo'
                             GROUP BY DATE(gs.session_date)
-                            ORDER BY match_date DESC
+                            ORDER BY gs.session_date DESC
                             LIMIT 20
                           ");
                           $stmt->execute();
                           $sessionDates = $stmt->fetchAll(PDO::FETCH_ASSOC);
                           
-                          // Add today's date if it has scores
-                          $today = date('Y-m-d');
-                          $hasToday = false;
-                          foreach ($sessionDates as $date) {
-                            if ($date['match_date'] === $today) {
-                              $hasToday = true;
-                              break;
-                            }
-                          }
+                          // Check for active session first
+                          $activeSessionDate = null;
+                          $stmt = $pdo->prepare("
+                            SELECT DATE(session_date) as match_date
+                            FROM game_sessions 
+                            WHERE DATE(session_date) = CURDATE() AND status = 'Active' AND game_mode = 'Solo'
+                            ORDER BY started_at DESC
+                            LIMIT 1
+                          ");
+                          $stmt->execute();
+                          $activeSession = $stmt->fetch(PDO::FETCH_ASSOC);
                           
-                          // Add today as default if it has scores
-                          if ($hasToday) {
-                            echo '<option value="' . $today . '" selected>' . date('M j, Y', strtotime($today)) . '</option>';
+                          if ($activeSession) {
+                            $activeSessionDate = $activeSession['match_date'];
+                            // Find the active session in our dates list
+                            $activeDateInfo = null;
+                            foreach ($sessionDates as $date) {
+                              if ($date['match_date'] === $activeSessionDate) {
+                                $activeDateInfo = $date;
+                                break;
+                              }
+                            }
+                            
+                            if ($activeDateInfo) {
+                              $formattedDate = date('M j, Y', strtotime($activeDateInfo['match_date']));
+                              $scoreInfo = $activeDateInfo['score_count'] > 0 ? " ({$activeDateInfo['score_count']} scores)" : " (no scores)";
+                              echo '<option value="' . $activeDateInfo['match_date'] . '" selected>' . $formattedDate . $scoreInfo . '</option>';
+                            }
                           } else {
-                            // Select the most recent date
+                            // No active session, select the most recent date
                             if (!empty($sessionDates)) {
-                              $mostRecent = $sessionDates[0]['match_date'];
-                              echo '<option value="' . $mostRecent . '" selected>' . date('M j, Y', strtotime($mostRecent)) . '</option>';
+                              $mostRecent = $sessionDates[0];
+                              $scoreInfo = $mostRecent['score_count'] > 0 ? " ({$mostRecent['score_count']} scores)" : " (no scores)";
+                              echo '<option value="' . $mostRecent['match_date'] . '" selected>' . date('M j, Y', strtotime($mostRecent['match_date'])) . $scoreInfo . '</option>';
                             } else {
                               echo '<option value="today" selected>Today</option>';
                             }
                           }
                           
-                          // Add other dates
+                          // Add other dates (excluding active session if it was already added)
                           foreach ($sessionDates as $date) {
-                            if ($date['match_date'] !== $today) {
+                            if (!$activeSessionDate || $date['match_date'] !== $activeSessionDate) {
                               $formattedDate = date('M j, Y', strtotime($date['match_date']));
-                              echo '<option value="' . $date['match_date'] . '">' . $formattedDate . '</option>';
+                              $scoreInfo = $date['score_count'] > 0 ? " ({$date['score_count']} scores)" : " (no scores)";
+                              echo '<option value="' . $date['match_date'] . '">' . $formattedDate . $scoreInfo . '</option>';
                             }
                           }
                           
@@ -177,11 +195,6 @@ $currentUser = getCurrentUser();
                     <li class="nav-item" role="presentation">
                       <button class="nav-link active" id="overall-tab" data-bs-toggle="tab" data-bs-target="#overall" type="button" role="tab">
                         Overall
-                      </button>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                      <button class="nav-link" id="overall-team-tab" data-bs-toggle="tab" data-bs-target="#overall-team" type="button" role="tab">
-                        Overall Team
                       </button>
                     </li>
                     <li class="nav-item" role="presentation">
@@ -220,7 +233,6 @@ $currentUser = getCurrentUser();
                             <tr>
                               <th scope="col">Rank</th>
                               <th scope="col">Player</th>
-                              <th scope="col">Team</th>
                               <th scope="col">Total Score</th>
                               <th scope="col">Avg/Game</th>
                               <th scope="col">Games Played</th>
@@ -232,7 +244,7 @@ $currentUser = getCurrentUser();
                           </thead>
                           <tbody id="overallTableBody">
                             <tr>
-                              <td colspan="10" class="text-center py-4">
+                              <td colspan="9" class="text-center py-4">
                                 <div class="loading-spinner"></div>
                                 <span class="ms-2">Loading data...</span>
                               </td>
@@ -242,35 +254,6 @@ $currentUser = getCurrentUser();
                       </div>
                     </div>
 
-                    <!-- Overall Team Tab -->
-                    <div class="tab-pane fade" id="overall-team" role="tabpanel">
-                      <div class="table-responsive">
-                        <table class="table table-hover">
-                          <thead>
-                            <tr>
-                              <th scope="col">Rank</th>
-                              <th scope="col">Team</th>
-                              <th scope="col">Total Score</th>
-                              <th scope="col">Avg/Player</th>
-                              <th scope="col">Players</th>
-                              <th scope="col">Games Played</th>
-                              <th scope="col">Best Player</th>
-                              <th scope="col">Best Score</th>
-                              <th scope="col">Total Strikes</th>
-                              <th scope="col">Total Spares</th>
-                            </tr>
-                          </thead>
-                          <tbody id="overallTeamTableBody">
-                            <tr>
-                              <td colspan="10" class="text-center py-4">
-                                <div class="loading-spinner"></div>
-                                <span class="ms-2">Loading team data...</span>
-                              </td>
-                            </tr>
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
 
                     <!-- Game 1 Tab -->
                     <div class="tab-pane fade" id="game1" role="tabpanel">
@@ -280,7 +263,6 @@ $currentUser = getCurrentUser();
                             <tr>
                               <th scope="col">Rank</th>
                               <th scope="col">Player</th>
-                              <th scope="col">Team</th>
                               <th scope="col">Score</th>
                               <th scope="col">Strikes</th>
                               <th scope="col">Spares</th>
@@ -290,7 +272,7 @@ $currentUser = getCurrentUser();
                           </thead>
                           <tbody id="game1TableBody">
                             <tr>
-                              <td colspan="8" class="text-center py-4">
+                              <td colspan="7" class="text-center py-4">
                                 <div class="loading-spinner"></div>
                                 <span class="ms-2">Loading Game 1 data...</span>
                               </td>
@@ -308,7 +290,6 @@ $currentUser = getCurrentUser();
                             <tr>
                               <th scope="col">Rank</th>
                               <th scope="col">Player</th>
-                              <th scope="col">Team</th>
                               <th scope="col">Score</th>
                               <th scope="col">Strikes</th>
                               <th scope="col">Spares</th>
@@ -318,7 +299,7 @@ $currentUser = getCurrentUser();
                           </thead>
                           <tbody id="game2TableBody">
                             <tr>
-                              <td colspan="8" class="text-center py-4">
+                              <td colspan="7" class="text-center py-4">
                                 <div class="loading-spinner"></div>
                                 <span class="ms-2">Loading Game 2 data...</span>
                               </td>
@@ -336,7 +317,6 @@ $currentUser = getCurrentUser();
                             <tr>
                               <th scope="col">Rank</th>
                               <th scope="col">Player</th>
-                              <th scope="col">Team</th>
                               <th scope="col">Score</th>
                               <th scope="col">Strikes</th>
                               <th scope="col">Spares</th>
@@ -346,7 +326,7 @@ $currentUser = getCurrentUser();
                           </thead>
                           <tbody id="game3TableBody">
                             <tr>
-                              <td colspan="8" class="text-center py-4">
+                              <td colspan="7" class="text-center py-4">
                                 <div class="loading-spinner"></div>
                                 <span class="ms-2">Loading Game 3 data...</span>
                               </td>
@@ -364,7 +344,6 @@ $currentUser = getCurrentUser();
                             <tr>
                               <th scope="col">Rank</th>
                               <th scope="col">Player</th>
-                              <th scope="col">Team</th>
                               <th scope="col">Score</th>
                               <th scope="col">Strikes</th>
                               <th scope="col">Spares</th>
@@ -374,7 +353,7 @@ $currentUser = getCurrentUser();
                           </thead>
                           <tbody id="game4TableBody">
                             <tr>
-                              <td colspan="8" class="text-center py-4">
+                              <td colspan="7" class="text-center py-4">
                                 <div class="loading-spinner"></div>
                                 <span class="ms-2">Loading Game 4 data...</span>
                               </td>
@@ -392,7 +371,6 @@ $currentUser = getCurrentUser();
                             <tr>
                               <th scope="col">Rank</th>
                               <th scope="col">Player</th>
-                              <th scope="col">Team</th>
                               <th scope="col">Score</th>
                               <th scope="col">Strikes</th>
                               <th scope="col">Spares</th>
@@ -402,7 +380,7 @@ $currentUser = getCurrentUser();
                           </thead>
                           <tbody id="game5TableBody">
                             <tr>
-                              <td colspan="8" class="text-center py-4">
+                              <td colspan="7" class="text-center py-4">
                                 <div class="loading-spinner"></div>
                                 <span class="ms-2">Loading Game 5 data...</span>
                               </td>
@@ -478,8 +456,9 @@ $currentUser = getCurrentUser();
         const formData = new FormData();
         formData.append('action', 'get_players_data');
         formData.append('selected_date', dateFilter);
+        formData.append('session_type', 'Solo');
         
-        const response = await fetch('ajax/player-score-data.php', {
+        const response = await fetch('ajax/session-management.php', {
           method: 'POST',
           body: formData
         });
@@ -510,7 +489,7 @@ $currentUser = getCurrentUser();
     function updateOverallTable() {
       const tbody = document.getElementById('overallTableBody');
       if (!currentData || currentData.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="10" class="text-center text-muted py-4">No data available</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted py-4">No data available</td></tr>';
         return;
       }
 
@@ -518,7 +497,6 @@ $currentUser = getCurrentUser();
       currentData.forEach((player, index) => {
         const rank = index + 1;
         const rankClass = rank === 1 ? 'rank-1' : rank === 2 ? 'rank-2' : rank === 3 ? 'rank-3' : 'rank-other';
-        const teamName = player.team_name || 'No Team';
         const totalScore = player.total_score || 0;
         const avgScore = player.avg_score || 0;
         const gamesPlayed = player.games_played || 0;
@@ -539,7 +517,6 @@ $currentUser = getCurrentUser();
                 </div>
               </div>
             </td>
-            <td><span class="badge bg-info">${teamName}</span></td>
             <td><span class="fw-bold text-success">${totalScore}</span></td>
             <td>${avgScore}</td>
             <td>${gamesPlayed}</td>
@@ -558,7 +535,7 @@ $currentUser = getCurrentUser();
     function updateGameTable(gameNumber) {
       const tbody = document.getElementById(`game${gameNumber}TableBody`);
       if (!currentData || currentData.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="8" class="text-center text-muted py-4">No data available for Game ${gameNumber}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-4">No data available for Game ${gameNumber}</td></tr>`;
         return;
       }
 
@@ -569,7 +546,7 @@ $currentUser = getCurrentUser();
       });
 
       if (gamePlayers.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="8" class="text-center text-muted py-4">No scores available for Game ${gameNumber}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-4">No scores available for Game ${gameNumber}</td></tr>`;
         return;
       }
 
@@ -584,7 +561,6 @@ $currentUser = getCurrentUser();
       gamePlayers.forEach((player, index) => {
         const rank = index + 1;
         const rankClass = rank === 1 ? 'rank-1' : rank === 2 ? 'rank-2' : rank === 3 ? 'rank-3' : 'rank-other';
-        const teamName = player.team_name || 'No Team';
         const gameScore = player[`game_${gameNumber}_score`];
         const score = gameScore.player_score;
         const strikes = gameScore.strikes || 0;
@@ -604,7 +580,6 @@ $currentUser = getCurrentUser();
                 </div>
               </div>
             </td>
-            <td><span class="badge bg-info">${teamName}</span></td>
             <td><span class="fw-bold text-success">${score}</span></td>
             <td>${strikes}</td>
             <td>${spares}</td>
@@ -617,77 +592,10 @@ $currentUser = getCurrentUser();
       tbody.innerHTML = html;
     }
 
-    // Update overall team rankings table
-    function updateOverallTeamTable() {
-      const tbody = document.getElementById('overallTeamTableBody');
-      if (!currentData || currentData.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="10" class="text-center text-muted py-4">No team data available</td></tr>';
-        return;
-      }
-
-      // Group players by team
-      const teamStats = {};
-      currentData.forEach(player => {
-        const teamName = player.team_name || 'No Team';
-        
-        if (!teamStats[teamName]) {
-          teamStats[teamName] = {
-            teamName: teamName,
-            totalScore: 0,
-            totalGames: 0,
-            players: [],
-            totalStrikes: 0,
-            totalSpares: 0,
-            bestPlayer: null,
-            bestScore: 0
-          };
-        }
-        
-        teamStats[teamName].totalScore += player.total_score || 0;
-        teamStats[teamName].totalGames += player.games_played || 0;
-        teamStats[teamName].totalStrikes += player.total_strikes || 0;
-        teamStats[teamName].totalSpares += player.total_spares || 0;
-        teamStats[teamName].players.push(player);
-        
-        // Track best player
-        if ((player.best_score || 0) > teamStats[teamName].bestScore) {
-          teamStats[teamName].bestScore = player.best_score || 0;
-          teamStats[teamName].bestPlayer = player.first_name + ' ' + player.last_name;
-        }
-      });
-
-      // Convert to array and sort by total score
-      const teamArray = Object.values(teamStats).sort((a, b) => b.totalScore - a.totalScore);
-
-      let html = '';
-      teamArray.forEach((team, index) => {
-        const rank = index + 1;
-        const rankClass = rank === 1 ? 'rank-1' : rank === 2 ? 'rank-2' : rank === 3 ? 'rank-3' : 'rank-other';
-        const avgPerPlayer = team.players.length > 0 ? (team.totalScore / team.players.length).toFixed(1) : 0;
-
-        html += `
-          <tr>
-            <td><span class="rank-badge ${rankClass}">${rank}</span></td>
-            <td><span class="badge bg-primary fs-6">${team.teamName}</span></td>
-            <td><span class="fw-bold text-success fs-5">${team.totalScore}</span></td>
-            <td><span class="fw-bold text-info">${avgPerPlayer}</span></td>
-            <td><span class="badge bg-secondary">${team.players.length}</span></td>
-            <td>${team.totalGames}</td>
-            <td><span class="text-primary">${team.bestPlayer || 'N/A'}</span></td>
-            <td><span class="text-warning fw-bold">${team.bestScore}</span></td>
-            <td><span class="text-danger">${team.totalStrikes}</span></td>
-            <td><span class="text-info">${team.totalSpares}</span></td>
-          </tr>
-        `;
-      });
-
-      tbody.innerHTML = html;
-    }
 
     // Update all tables
     function updateAllTables() {
       updateOverallTable();
-      updateOverallTeamTable();
       updateGameTable(1);
       updateGameTable(2);
       updateGameTable(3);
@@ -725,8 +633,6 @@ $currentUser = getCurrentUser();
         if (targetId.startsWith('#game')) {
           const gameNumber = targetId.replace('#game', '');
           updateGameTable(gameNumber);
-        } else if (targetId === '#overall-team') {
-          updateOverallTeamTable();
         }
       });
     });

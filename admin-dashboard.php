@@ -61,6 +61,181 @@ $activeSession = getActiveSession();
       background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
       color: #333;
     }
+    
+    /* Enhanced Dashboard Styling */
+    .rank-badge {
+      width: 45px;
+      height: 45px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      color: white;
+      font-size: 1.1rem;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+      transition: all 0.3s ease;
+    }
+    .rank-1 { 
+      background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+      box-shadow: 0 6px 12px rgba(255, 215, 0, 0.4);
+    }
+    .rank-2 { 
+      background: linear-gradient(135deg, #C0C0C0 0%, #A9A9A9 100%);
+      box-shadow: 0 6px 12px rgba(192, 192, 192, 0.4);
+    }
+    .rank-3 { 
+      background: linear-gradient(135deg, #CD7F32 0%, #B8860B 100%);
+      box-shadow: 0 6px 12px rgba(205, 127, 50, 0.4);
+    }
+    .rank-other { 
+      background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+    }
+    
+    .player-avatar-container {
+      position: relative;
+      display: inline-block;
+    }
+    
+    .player-avatar {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 3px solid #fff;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+      transition: all 0.3s ease;
+    }
+    
+    .rank-crown {
+      position: absolute;
+      top: -8px;
+      right: -8px;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      color: white;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+    .rank-crown.rank-1 { background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%); }
+    .rank-crown.rank-2 { background: linear-gradient(135deg, #C0C0C0 0%, #A9A9A9 100%); }
+    .rank-crown.rank-3 { background: linear-gradient(135deg, #CD7F32 0%, #B8860B 100%); }
+    
+    .team-text {
+      color: #28a745;
+      font-weight: 600;
+      font-size: 0.9rem;
+      display: inline-flex;
+      align-items: center;
+    }
+    
+    .score-display, .stat-display, .best-score-display, .strike-rate-display {
+      text-align: center;
+      padding: 8px;
+      border-radius: 8px;
+      background: rgba(248, 249, 250, 0.5);
+      transition: all 0.3s ease;
+    }
+    
+    .score-display:hover, .stat-display:hover, .best-score-display:hover, .strike-rate-display:hover {
+      background: rgba(248, 249, 250, 0.8);
+      transform: translateY(-2px);
+    }
+    
+    .score-highlight {
+      font-weight: bold;
+      font-size: 1.2rem;
+      display: block;
+    }
+    .score-excellent { color: #28a745; }
+    .score-good { color: #17a2b8; }
+    .score-average { color: #ffc107; }
+    .score-below { color: #dc3545; }
+    
+    .best-score-badge {
+      background: linear-gradient(135deg, #17a2b8 0%, #6f42c1 100%);
+      color: white;
+      padding: 4px 8px;
+      border-radius: 12px;
+      font-weight: bold;
+      font-size: 0.9rem;
+    }
+    
+    .status-text {
+      font-size: 0.85rem;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+    }
+    .status-active { 
+      color: #28a745;
+    }
+    .status-inactive { 
+      color: #6c757d;
+    }
+    
+    .action-buttons {
+      display: flex;
+      justify-content: center;
+    }
+    
+    .btn-action {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+      transition: all 0.3s ease;
+      box-shadow: 0 3px 6px rgba(0,0,0,0.15);
+    }
+    
+    .btn-view {
+      background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+      color: white;
+    }
+    .btn-view:hover {
+      background: linear-gradient(135deg, #0056b3 0%, #004085 100%);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0,123,255,0.3);
+    }
+    
+    .btn-edit {
+      background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
+      color: white;
+    }
+    .btn-edit:hover {
+      background: linear-gradient(135deg, #1e7e34 0%, #155724 100%);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(40,167,69,0.3);
+    }
+    
+    /* Table Enhancements */
+    .table tbody tr {
+      transition: all 0.3s ease;
+      border-bottom: 1px solid rgba(0,0,0,0.05);
+    }
+    
+    .table tbody tr:hover {
+      background: rgba(0,123,255,0.05);
+      transform: translateX(5px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    
+    .table thead th {
+      background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+      border-bottom: 2px solid #dee2e6;
+      font-weight: 600;
+      color: #495057;
+      text-transform: uppercase;
+      font-size: 0.85rem;
+      letter-spacing: 0.5px;
+    }
   </style>
 </head>
 
@@ -254,6 +429,7 @@ $activeSession = getActiveSession();
                               $statusClass = match($session['status']) {
                                 'Scheduled' => 'bg-secondary',
                                 'Active' => 'bg-success',
+                                'Paused' => 'bg-warning',
                                 'Completed' => 'bg-info',
                                 'Cancelled' => 'bg-danger',
                                 default => 'bg-secondary'
@@ -267,9 +443,12 @@ $activeSession = getActiveSession();
                                   <i class="ti ti-play me-1"></i>Start
                                 </button>
                               <?php elseif ($session['status'] === 'Active'): ?>
-                                <a href="admin-score-monitoring-solo.php?session=<?php echo $session['session_id']; ?>" class="btn btn-warning btn-sm">
+                                <a href="<?php echo $session['game_mode'] === 'Solo' ? 'admin-score-monitoring-solo.php' : 'admin-score-monitoring-team.php'; ?>?session=<?php echo $session['session_id']; ?>" class="btn btn-warning btn-sm">
                                   <i class="ti ti-edit me-1"></i>Enter Scores
                                 </a>
+                                <button class="btn btn-danger btn-sm" onclick="endSession(<?php echo $session['session_id']; ?>)" style="margin-left: 5px;">
+                                  <i class="ti ti-stop me-1"></i>End Session
+                                </button>
                               <?php else: ?>
                                 <span class="text-muted">-</span>
                               <?php endif; ?>
@@ -387,7 +566,17 @@ $activeSession = getActiveSession();
                               <th scope="col">Actions</th>
                             </tr>
                           </thead>
-                          <tbody>
+                          <tbody id="leaderboardTable">
+                            <tr>
+                              <td colspan="10" class="text-center py-4">
+                                <div class="spinner-border text-primary" role="status">
+                                  <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <p class="mt-2 text-muted">Loading dashboard data...</p>
+                              </td>
+                            </tr>
+                          </tbody>
+                          <tbody id="staticLeaderboardTable" style="display: none;">
                             <?php if (!empty($allPlayersStats) && !isset($allPlayersStats['error'])): ?>
                               <?php 
                               $rank = 1;
@@ -830,6 +1019,138 @@ $activeSession = getActiveSession();
   <script src="https://cdn.jsdelivr.net/npm/iconify-icon@1.0.8/dist/iconify-icon.min.js"></script>
   
   <script>
+    // Session Management Functions - Define globally first
+    function startSession(sessionId) {
+      console.log('Starting session:', sessionId);
+      if (confirm('Are you sure you want to start this session?')) {
+        console.log('User confirmed, sending request...');
+        fetch('ajax/session-management.php', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: 'action=start&session_id=' + sessionId
+        })
+        .then(response => {
+          console.log('Response status:', response.status);
+          return response.json();
+        })
+        .then(data => {
+          console.log('Response data:', data);
+          if (data.success) {
+            console.log('Session started successfully, reloading page...');
+            location.reload();
+          } else {
+            console.error('Start session failed:', data.message);
+            alert('Error: ' + data.message);
+          }
+        })
+        .catch(error => {
+          console.error('Fetch error:', error);
+          alert('An error occurred while starting the session');
+        });
+      }
+    }
+
+    function endSession(sessionId) {
+      if (confirm('Are you sure you want to end this session? This will mark it as completed.')) {
+        fetch('ajax/session-management.php', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: 'action=end&session_id=' + sessionId
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            location.reload();
+          } else {
+            alert('Error: ' + data.message);
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          alert('An error occurred while ending the session');
+        });
+      }
+    }
+
+    function cancelSession(sessionId) {
+      if (confirm('Are you sure you want to cancel this session? This action cannot be undone.')) {
+        fetch('ajax/session-management.php', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: 'action=cancel&session_id=' + sessionId
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            showNotification('Session cancelled successfully!', 'success');
+            location.reload();
+          } else {
+            alert('Error: ' + data.message);
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          alert('An error occurred while cancelling the session');
+        });
+      }
+    }
+
+    function pauseSession(sessionId) {
+      if (confirm('Are you sure you want to pause this session? Players won\'t be able to enter scores until resumed.')) {
+        fetch('ajax/session-management.php', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: 'action=pause&session_id=' + sessionId
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            showNotification('Session paused successfully!', 'success');
+            location.reload();
+          } else {
+            alert('Error: ' + data.message);
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          alert('An error occurred while pausing the session');
+        });
+      }
+    }
+
+    function restartSession(sessionId) {
+      if (confirm('Are you sure you want to restart this session? This will reset it to Scheduled status.')) {
+        fetch('ajax/session-management.php', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: 'action=restart&session_id=' + sessionId
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            showNotification('Session restarted successfully!', 'success');
+            location.reload();
+          } else {
+            alert('Error: ' + data.message);
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          alert('An error occurred while restarting the session');
+        });
+      }
+    }
+
     // Admin Dashboard Functions
     function refreshData() {
       const refreshBtn = document.querySelector('button[onclick="refreshData()"]');
@@ -879,6 +1200,9 @@ $activeSession = getActiveSession();
       })
       .then(data => {
         console.log('Response data:', data);
+        if (data.debug) {
+          console.log('Debug info:', data.debug);
+        }
         if (data.success) {
           updateDashboardData(data.data);
           if (data.data.has_active_session) {
@@ -902,14 +1226,22 @@ $activeSession = getActiveSession();
 
     // Update dashboard data with filtered results
     function updateDashboardData(data) {
+      console.log('updateDashboardData called with:', data);
+      console.log('has_active_session:', data.has_active_session);
+      console.log('leaderboard length:', data.leaderboard ? data.leaderboard.length : 'undefined');
+      console.log('team_stats length:', data.team_stats ? data.team_stats.length : 'undefined');
+      console.log('solo_stats length:', data.solo_stats ? data.solo_stats.length : 'undefined');
+      
       // Check if there's an active session
       if (!data.has_active_session) {
+        console.log('No active session, showing static content');
         showNoActiveSessionMessage();
         return;
       }
       
       // Check if there are any participants in the active session
       if (data.leaderboard.length === 0 && data.team_stats.length === 0 && data.solo_stats.length === 0) {
+        console.log('No participants, showing static content');
         showNoParticipantsMessage();
         return;
       }
@@ -930,8 +1262,22 @@ $activeSession = getActiveSession();
       updateStatisticsCards(data.filtered_stats);
     }
 
+    // Show static content when no dynamic data
+    function showStaticContent() {
+      const tbody = document.querySelector('#leaderboardTable');
+      const staticTbody = document.querySelector('#staticLeaderboardTable');
+      
+      if (tbody) {
+        tbody.style.display = 'none';
+      }
+      if (staticTbody) {
+        staticTbody.style.display = 'table-row-group';
+      }
+    }
+
     // Show message when no active session
     function showNoActiveSessionMessage() {
+      showStaticContent();
       // Update leaderboard
       const tbody = document.querySelector('#leaderboardTable tbody');
       if (tbody) {
@@ -967,6 +1313,7 @@ $activeSession = getActiveSession();
 
     // Show message when no participants in active session
     function showNoParticipantsMessage() {
+      showStaticContent();
       // Update leaderboard
       const tbody = document.querySelector('#leaderboardTable tbody');
       if (tbody) {
@@ -1002,37 +1349,91 @@ $activeSession = getActiveSession();
 
     // Update leaderboard table
     function updateLeaderboard(leaderboard) {
-      const tbody = document.querySelector('#leaderboardTable tbody');
+      const tbody = document.querySelector('#leaderboardTable');
+      const staticTbody = document.querySelector('#staticLeaderboardTable');
       if (!tbody) return;
+      
+      // Hide static content and show dynamic content
+      if (staticTbody) {
+        staticTbody.style.display = 'none';
+      }
+      tbody.style.display = 'table-row-group';
       
       tbody.innerHTML = '';
       
       leaderboard.forEach((player, index) => {
         const row = document.createElement('tr');
+        const rank = index + 1;
+        const rankClass = rank === 1 ? 'rank-1' : rank === 2 ? 'rank-2' : rank === 3 ? 'rank-3' : 'rank-other';
+        const scoreClass = player.total_score >= 200 ? 'score-excellent' : player.total_score >= 150 ? 'score-good' : player.total_score >= 100 ? 'score-average' : 'score-below';
+        const strikeRateClass = player.strike_rate >= 80 ? 'text-success' : player.strike_rate >= 60 ? 'text-warning' : 'text-danger';
+        
         row.innerHTML = `
-          <td><span class="badge bg-primary">${index + 1}</span></td>
+          <td>
+            <div class="rank-badge ${rankClass}">
+              ${rank}
+            </div>
+          </td>
           <td>
             <div class="d-flex align-items-center">
-              <img src="./assets/images/profile/user-${(index % 8) + 1}.jpg" alt="user" class="rounded-circle" width="40" height="40">
-              <div class="ms-2">
-                <h6 class="mb-0">${player.first_name} ${player.last_name}</h6>
-                <small class="text-muted">${player.team_name || 'Solo'}</small>
+              <div class="player-avatar-container me-3">
+                <img src="./assets/images/profile/user-${(index % 8) + 1}.jpg" alt="user" class="player-avatar">
+                ${rank <= 3 ? `<div class="rank-crown rank-${rank}"><i class="ti ti-crown"></i></div>` : ''}
+              </div>
+              <div>
+                <h6 class="mb-1 fw-bold text-dark">${player.first_name} ${player.last_name}</h6>
+                <small class="text-muted d-flex align-items-center">
+                  <i class="ti ti-users me-1"></i>
+                  ${player.team_name || 'Solo Player'}
+                </small>
               </div>
             </div>
           </td>
-          <td><span class="badge bg-success">${player.team_name || 'No Team'}</span></td>
-          <td><span class="text-success fw-bold">${player.total_score}</span></td>
-          <td>${player.avg_score}</td>
-          <td>${player.games_played}</td>
-          <td><span class="badge bg-info">${player.best_score}</span></td>
-          <td><span class="badge bg-warning text-dark">${player.strike_rate || 0}%</span></td>
-          <td><span class="badge bg-success">${player.status}</span></td>
           <td>
-            <div class="d-flex gap-1">
-              <button class="btn btn-sm btn-outline-primary" onclick="viewDetails(${player.user_id})" title="View Details">
-                <i class="ti ti-eye"></i>
-              </button>
-              <button class="btn btn-sm btn-outline-success" onclick="editPlayer(${player.user_id})" title="Edit Player">
+            <span class="team-text">
+              <i class="ti ti-users me-1"></i>
+              ${player.team_name || 'No Team'}
+            </span>
+          </td>
+          <td>
+            <div class="score-display">
+              <span class="score-highlight ${scoreClass}">${player.total_score}</span>
+              <small class="text-muted d-block">Total</small>
+            </div>
+          </td>
+          <td>
+            <div class="stat-display">
+              <span class="fw-bold text-primary">${player.avg_score}</span>
+              <small class="text-muted d-block">Avg/Game</small>
+            </div>
+          </td>
+          <td>
+            <div class="stat-display">
+              <span class="fw-bold text-info">${player.games_played}</span>
+              <small class="text-muted d-block">Games</small>
+            </div>
+          </td>
+          <td>
+            <div class="best-score-display">
+              <span class="best-score-badge">${player.best_score}</span>
+              <small class="text-muted d-block">Best</small>
+            </div>
+          </td>
+          <td>
+            <div class="strike-rate-display">
+              <span class="fw-bold ${strikeRateClass}">${player.strike_rate || 0}%</span>
+              <small class="text-muted d-block">Strikes</small>
+            </div>
+          </td>
+          <td>
+            <span class="status-text status-${player.status.toLowerCase()}">
+              <i class="ti ti-circle-filled me-1"></i>
+              ${player.status}
+            </span>
+          </td>
+          <td>
+            <div class="action-buttons">
+              <button class="btn btn-sm btn-action btn-edit" onclick="goToScoreTable(${player.user_id})" title="Edit Scores">
                 <i class="ti ti-edit"></i>
               </button>
             </div>
@@ -1613,95 +2014,6 @@ $activeSession = getActiveSession();
     });
 
   </script>
-  
-  <!-- Countdown Timer Script -->
-  <script>
-    // Set the target date for the tournament (you can change this)
-    const targetDate = new Date('2025-03-15T18:00:00').getTime();
-    
-    function updateCountdown() {
-      const now = new Date().getTime();
-      const distance = targetDate - now;
-      
-      if (distance < 0) {
-        // Event has passed
-        document.getElementById('days').innerHTML = '00';
-        document.getElementById('hours').innerHTML = '00';
-        document.getElementById('minutes').innerHTML = '00';
-        document.getElementById('seconds').innerHTML = '00';
-        return;
-      }
-      
-      const days = Math.floor(distance / (1000 * 60 * 60 * 24));
-      const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-      const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-      const seconds = Math.floor((distance % (1000 * 60)) / 1000);
-      
-      document.getElementById('days').innerHTML = days.toString().padStart(2, '0');
-      document.getElementById('hours').innerHTML = hours.toString().padStart(2, '0');
-      document.getElementById('minutes').innerHTML = minutes.toString().padStart(2, '0');
-      document.getElementById('seconds').innerHTML = seconds.toString().padStart(2, '0');
-    }
-    
-    // Update countdown every second
-    setInterval(updateCountdown, 1000);
-    
-    // Initial call
-    updateCountdown();
-
-    // Session Management Functions
-    function startSession(sessionId) {
-      if (confirm('Are you sure you want to start this session?')) {
-        fetch('ajax/session-management.php', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
-          body: 'action=start&session_id=' + sessionId
-        })
-        .then(response => response.json())
-        .then(data => {
-          if (data.success) {
-            location.reload();
-          } else {
-            alert('Error: ' + data.message);
-          }
-        })
-        .catch(error => {
-          console.error('Error:', error);
-          alert('An error occurred while starting the session');
-        });
-      }
-    }
-
-    function endSession(sessionId) {
-      if (confirm('Are you sure you want to end this session? This will mark it as completed.')) {
-        fetch('ajax/session-management.php', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
-          body: 'action=end&session_id=' + sessionId
-        })
-        .then(response => response.json())
-        .then(data => {
-          if (data.success) {
-            location.reload();
-          } else {
-            alert('Error: ' + data.message);
-          }
-        })
-        .catch(error => {
-          console.error('Error:', error);
-          alert('An error occurred while ending the session');
-        });
-      }
-    }
-
-    function refreshSessions() {
-      location.reload();
-    }
-  </script>
 
   <!-- Create Session Modal -->
   <div class="modal fade" id="createSessionModal" tabindex="-1" aria-labelledby="createSessionModalLabel" aria-hidden="true">
@@ -1729,12 +2041,24 @@ $activeSession = getActiveSession();
             </div>
             <div class="mb-3">
               <label for="gameMode" class="form-label">Game Mode</label>
-              <select class="form-select" id="gameMode" name="game_mode" required>
+              <select class="form-select" id="gameMode" name="game_mode" required onchange="toggleTeamSelection()">
                 <option value="Solo">Solo</option>
                 <option value="Doubles" disabled>Doubles (Coming Soon)</option>
-                <option value="Team" disabled>Team (Coming Soon)</option>
+                <option value="Team">Team</option>
               </select>
             </div>
+            
+            <!-- Team Selection (hidden by default) -->
+            <div id="teamSelectionSection" class="mb-3" style="display: none;">
+              <label class="form-label">Select Teams</label>
+              <div id="teamCheckboxes" class="border rounded p-3" style="max-height: 200px; overflow-y: auto;">
+                <div class="text-center text-muted">
+                  <i class="ti ti-loader-2 ti-spin"></i> Loading teams...
+                </div>
+              </div>
+              <small class="form-text text-muted">Select which teams will participate in this session</small>
+            </div>
+            
             <div class="mb-3">
               <label for="maxPlayers" class="form-label">Max Players</label>
               <input type="number" class="form-control" id="maxPlayers" name="max_players" value="20" min="1" max="20" required>
@@ -1758,11 +2082,40 @@ $activeSession = getActiveSession();
     document.getElementById('createSessionForm').addEventListener('submit', function(e) {
       e.preventDefault();
       
+      const gameMode = document.getElementById('gameMode').value;
       const formData = new FormData(this);
-      formData.append('action', 'create');
+      
+      if (gameMode === 'Team') {
+        // Get selected teams
+        const selectedTeams = [];
+        const teamCheckboxes = document.querySelectorAll('#teamCheckboxes input[type="checkbox"]:checked');
+        
+        console.log('Team checkboxes found:', teamCheckboxes.length);
+        console.log('All team checkboxes:', document.querySelectorAll('#teamCheckboxes input[type="checkbox"]'));
+        
+        teamCheckboxes.forEach(checkbox => {
+          console.log('Selected team:', checkbox.value);
+          selectedTeams.push(checkbox.value);
+        });
+        
+        console.log('Selected teams array:', selectedTeams);
+        
+        if (selectedTeams.length === 0) {
+          alert('Please select at least one team for the team session');
+          return;
+        }
+        
+        formData.append('action', 'create_team_session');
+        formData.append('selected_teams', JSON.stringify(selectedTeams));
+      } else {
+        formData.append('action', 'create');
+      }
+      
       formData.append('created_by', <?php echo $currentUser['user_id']; ?>);
       
-      fetch('ajax/session-management.php', {
+      const endpoint = 'ajax/session-management.php';
+      
+      fetch(endpoint, {
         method: 'POST',
         body: formData
       })
@@ -1790,6 +2143,65 @@ $activeSession = getActiveSession();
     document.getElementById('sessionDate').value = nextSaturday.toISOString().split('T')[0];
     document.getElementById('sessionTime').value = '14:00';
     
+    // Toggle team selection based on game mode
+    function toggleTeamSelection() {
+      const gameMode = document.getElementById('gameMode').value;
+      const teamSection = document.getElementById('teamSelectionSection');
+      
+      if (gameMode === 'Team') {
+        teamSection.style.display = 'block';
+        loadTeams();
+      } else {
+        teamSection.style.display = 'none';
+      }
+    }
+    
+    // Load available teams
+    function loadTeams() {
+      const teamCheckboxes = document.getElementById('teamCheckboxes');
+      teamCheckboxes.innerHTML = '<div class="text-center text-muted"><i class="ti ti-loader-2 ti-spin"></i> Loading teams...</div>';
+      
+      fetch('ajax/session-management.php', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: 'action=get_teams'
+      })
+      .then(response => response.json())
+      .then(data => {
+        console.log('Teams response:', data);
+        if (data.success) {
+          console.log('Teams loaded:', data.teams);
+          if (data.teams.length === 0) {
+            teamCheckboxes.innerHTML = '<div class="text-center text-muted"><i class="ti ti-users-off"></i> No teams found</div>';
+          } else {
+            let html = '';
+            data.teams.forEach(team => {
+              console.log('Adding team checkbox for:', team);
+              html += `
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" value="${team}" id="team_${team.replace(/\s+/g, '_')}">
+                  <label class="form-check-label" for="team_${team.replace(/\s+/g, '_')}">
+                    ${team}
+                  </label>
+                </div>
+              `;
+            });
+            teamCheckboxes.innerHTML = html;
+            console.log('Team checkboxes HTML:', html);
+          }
+        } else {
+          console.error('Error loading teams:', data.message);
+          teamCheckboxes.innerHTML = '<div class="text-center text-danger"><i class="ti ti-alert-triangle"></i> Error loading teams: ' + data.message + '</div>';
+        }
+      })
+      .catch(error => {
+        console.error('Error loading teams:', error);
+        teamCheckboxes.innerHTML = '<div class="text-center text-danger"><i class="ti ti-alert-triangle"></i> Error loading teams</div>';
+      });
+    }
+    
     // View player details
     function viewDetails(userId) {
       showNotification('Viewing details for player ID: ' + userId, 'info');
@@ -1797,11 +2209,10 @@ $activeSession = getActiveSession();
       // For now, just show a notification
     }
     
-    // Edit player
-    function editPlayer(userId) {
-      showNotification('Editing player ID: ' + userId, 'info');
-      // This would typically open an edit modal or redirect to edit page
-      // For now, just show a notification
+    // Go to score table for editing
+    function goToScoreTable(userId) {
+      // Redirect to the admin score monitoring page
+      window.location.href = 'admin-score-monitoring-solo.php';
     }
     
     // View player scores
