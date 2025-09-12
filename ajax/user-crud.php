@@ -60,8 +60,7 @@ try {
                     'phone' => $_POST['phone'] ?? '',
                     'skill_level' => $_POST['skill_level'] ?? '',
                     'status' => $_POST['status'] ?? '',
-                    'team_name' => $_POST['team_name'] ?? '',
-                    'notes' => $_POST['notes'] ?? ''
+                    'team_name' => $_POST['team_name'] ?? ''
                 ];
                 
                 

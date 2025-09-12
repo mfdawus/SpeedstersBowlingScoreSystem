@@ -357,10 +357,6 @@ $allUsers = getAllUsersData();
                   <p id="detailPlayerJoinDate">2024-01-01</p>
                 </div>
               </div>
-              <div class="mb-3">
-                <label class="form-label fw-bold">Notes</label>
-                <p id="detailPlayerNotes">No notes available</p>
-              </div>
             </div>
           </div>
           
@@ -566,9 +562,8 @@ $allUsers = getAllUsersData();
       document.getElementById('editBestScore').value = user.best_score || 0;
       document.getElementById('editAverageScore').value = user.avg_score ? parseFloat(user.avg_score).toFixed(1) : 0.0;
       
-      // Team and Notes
+      // Team
       document.getElementById('editTeamName').value = user.team_name || '';
-      document.getElementById('editNotes').value = user.notes || '';
     }
 
     function editUserFromView() {

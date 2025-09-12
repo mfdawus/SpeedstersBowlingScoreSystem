@@ -172,10 +172,6 @@
             </select>
           </div>
           
-          <div class="mb-3">
-            <label for="editNotes" class="form-label">Notes</label>
-            <textarea class="form-control" id="editNotes" name="notes" rows="3" placeholder="Additional notes about the player..."></textarea>
-          </div>
           
           <div class="alert alert-info">
             <i class="ti ti-info-circle me-2"></i>
