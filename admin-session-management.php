@@ -54,6 +54,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             }
             exit;
             
+        case 'get_session':
+            $sessionId = $_POST['session_id'] ?? null;
+            if (!$sessionId) {
+                echo json_encode(['success' => false, 'message' => 'Session ID is required']);
+                exit;
+            }
+            
+            $session = getSessionById($sessionId);
+            if ($session) {
+                echo json_encode(['success' => true, 'session' => $session]);
+            } else {
+                echo json_encode(['success' => false, 'message' => 'Session not found']);
+            }
+            exit;
+            
+        case 'update_session':
+            $sessionId = $_POST['session_id'] ?? null;
+            if (!$sessionId) {
+                echo json_encode(['success' => false, 'message' => 'Session ID is required']);
+                exit;
+            }
+            
+            $updateData = [
+                'session_name' => $_POST['session_name'] ?? '',
+                'session_date' => $_POST['session_date'] ?? '',
+                'session_time' => $_POST['session_time'] ?? '',
+                'game_mode' => $_POST['game_mode'] ?? 'Solo',
+                'max_players' => $_POST['max_players'] ?? 20,
+                'status' => $_POST['status'] ?? 'Scheduled',
+                'notes' => $_POST['notes'] ?? ''
+            ];
+            
+            if (updateGameSession($sessionId, $updateData)) {
+                echo json_encode(['success' => true, 'message' => 'Session updated successfully!']);
+            } else {
+                echo json_encode(['success' => false, 'message' => 'Failed to update session']);
+            }
+            exit;
+            
         case 'delete_session':
             $sessionId = $_POST['session_id'] ?? null;
             $deleteType = $_POST['delete_type'] ?? 'soft'; // 'soft' or 'hard'
@@ -92,98 +131,345 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
   <link rel="shortcut icon" type="image/png" href="./assets/images/logos/speedster main logo.png" />
   <link rel="stylesheet" href="./assets/css/styles.min.css" />
   <style>
-    .session-banner {
-      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-      border: 1px solid #10b981;
-      border-radius: 12px;
-      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15);
+    .bg-gradient-primary {
+      background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%);
     }
-    
-    .session-card {
+    .admin-card {
       transition: all 0.3s ease;
-      border-radius: 12px;
-      border: 1px solid #e5e7eb;
+      border-left: 4px solid #0d6efd;
     }
-    
-    .session-card:hover {
+    .admin-card:hover {
       transform: translateY(-2px);
-      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
     }
-    
-    .status-badge {
-      font-size: 0.75rem;
-      font-weight: 600;
-      padding: 0.375rem 0.75rem;
-      border-radius: 6px;
-    }
-    
-    .mode-badge {
-      font-size: 0.75rem;
-      font-weight: 500;
-      padding: 0.25rem 0.5rem;
-      border-radius: 4px;
-    }
-    
-    .action-btn {
-      border-radius: 8px;
-      font-weight: 500;
-      transition: all 0.2s ease;
-    }
-    
-    .action-btn:hover {
-      transform: translateY(-1px);
-    }
-    
     .stats-card {
-      background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-      border: 1px solid #e2e8f0;
-      border-radius: 12px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+    .team-card {
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+      color: white;
+    }
+    .player-card {
+      background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+      color: white;
+    }
+    .admin-badge {
+      background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
+      color: #333;
     }
     
-    .create-session-btn {
-      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-      border: none;
-      border-radius: 10px;
-      font-weight: 600;
-      padding: 0.75rem 1.5rem;
-      transition: all 0.3s ease;
-    }
-    
-    .create-session-btn:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 25px rgba(59, 130, 246, 0.3);
-    }
-    
-    .filter-section {
-      background: #f8fafc;
-      border-radius: 12px;
-      padding: 1.5rem;
-      margin-bottom: 2rem;
-    }
-    
-    .session-table {
-      border-radius: 12px;
-      overflow: hidden;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    /* Mobile Responsiveness */
+    @media (max-width: 768px) {
+      .container-fluid {
+        padding-left: 8px;
+        padding-right: 8px;
+      }
+      
+      .body-wrapper-inner {
+        padding-top: 10px;
+      }
+      
+      /* Page header adjustments */
+      .page-title-box {
+        flex-direction: column;
+        align-items: flex-start !important;
+        gap: 5px;
+        margin-bottom: 0.5rem;
+      }
+      
+      .breadcrumb {
+        margin-bottom: 0 !important;
+        font-size: 0.8rem;
+        padding: 0.25rem 0;
+      }
+      
+      /* Reduce row margins */
+      .row {
+        margin-bottom: 0.75rem !important;
+      }
+      
+      /* Session banner mobile */
+    .session-banner {
+        margin-bottom: 0.75rem !important;
+      }
+      
+      .session-banner .card-body {
+        padding: 0.75rem !important;
+      }
+      
+      .session-banner .d-flex {
+        flex-direction: column;
+        gap: 10px;
+        text-align: center;
+      }
+      
+      .session-banner .btn-group {
+        width: 100%;
+        justify-content: center;
+      }
+      
+      .session-banner h4 {
+        font-size: 1.1rem;
+        margin-bottom: 0.25rem;
+      }
+      
+      /* Stats cards mobile */
+      .col-lg-3.col-md-6 {
+        margin-bottom: 0.5rem !important;
+      }
+      
+      .stats-card .card-body,
+      .team-card .card-body,
+      .player-card .card-body {
+        padding: 0.75rem;
+        text-align: center;
+      }
+      
+      .stats-card h3,
+      .team-card h3,
+      .player-card h3 {
+        font-size: 1.25rem;
+        margin-bottom: 0.25rem;
+      }
+      
+      .stats-card h6,
+      .team-card h6,
+      .player-card h6 {
+        font-size: 0.8rem;
+        margin-bottom: 0.25rem;
+      }
+      
+      .stats-card small,
+      .team-card small,
+      .player-card small {
+        font-size: 0.7rem;
+      }
+      
+      /* Main card header mobile */
+      .card-title {
+        font-size: 1rem;
+        margin-bottom: 0.25rem;
+      }
+      
+      .card .d-flex.justify-content-between {
+        flex-direction: column;
+        gap: 10px;
+        text-align: center;
+      }
+      
+      .card-body {
+        padding: 0.75rem;
+      }
+      
+      /* Button groups mobile */
+      .btn-group {
+        width: 100%;
+        flex-wrap: wrap;
+        gap: 5px;
+      }
+      
+      .btn-group .btn {
+        flex: 1;
+        min-width: auto;
+        font-size: 0.875rem;
+        padding: 0.5rem 0.75rem;
+        margin: 0;
+      }
+      
+      /* Table mobile improvements */
+      .table-responsive {
+        border: 1px solid #dee2e6;
+        border-radius: 0.375rem;
+        margin: 0 -10px;
+        padding: 0 10px;
+      }
+      
+      .table {
+        margin-bottom: 0;
+        font-size: 0.875rem;
     }
     
     .table th {
-      background: #f8fafc;
-      border-bottom: 2px solid #e5e7eb;
-      font-weight: 600;
-      color: #374151;
-    }
-    
-    .no-sessions {
+        border-top: none;
+        font-size: 0.8rem;
+        padding: 0.75rem 0.5rem;
+        white-space: nowrap;
+        text-align: center;
+      }
+      
+      .table td {
+        padding: 0.75rem 0.5rem;
+        vertical-align: middle;
       text-align: center;
-      padding: 4rem 2rem;
-      color: #6b7280;
+      }
+      
+      /* Action buttons in table */
+      .table .btn {
+        padding: 0.375rem 0.5rem;
+        font-size: 0.8rem;
+        margin: 0.1rem;
+      }
+      
+      .table .d-flex.gap-1 {
+        gap: 0.25rem !important;
+        flex-wrap: wrap;
+        justify-content: center;
+        align-items: center;
+      }
+      
+      /* Badge adjustments */
+      .badge {
+        font-size: 0.75rem;
+        padding: 0.25em 0.5em;
+      }
+      
+      /* Modal mobile */
+      .modal-dialog {
+        margin: 0.5rem;
+        max-width: calc(100% - 1rem);
+      }
+      
+      .modal-body .row {
+        margin: 0;
+      }
+      
+      .modal-body .col-md-6 {
+        padding: 0 0.5rem;
+      margin-bottom: 1rem;
+      }
+      
+      /* Form controls mobile */
+      .form-control,
+      .form-select {
+        font-size: 1rem;
+        padding: 0.75rem;
+      }
+      
+      .form-label {
+        font-size: 0.9rem;
+        margin-bottom: 0.5rem;
+        font-weight: 600;
+      }
+      
+      /* Alert mobile */
+      .alert {
+        padding: 0.75rem;
+        font-size: 0.875rem;
+        margin: 0 -8px 0.75rem -8px;
+      }
+      
+      /* Reduce overall spacing */
+      .mb-4 {
+        margin-bottom: 0.75rem !important;
+      }
+      
+      .p-4 {
+        padding: 0.75rem !important;
+      }
+      
+      /* Compact table */
+      .table-responsive {
+        margin-top: 0.5rem;
+      }
     }
     
-    .no-sessions i {
-      font-size: 4rem;
-      margin-bottom: 1rem;
-      opacity: 0.5;
+    /* Small mobile screens */
+    @media (max-width: 576px) {
+      .container-fluid {
+        padding-left: 5px;
+        padding-right: 5px;
+      }
+      
+      .body-wrapper-inner {
+        padding-top: 5px;
+      }
+      
+      .row {
+        margin-bottom: 0.5rem !important;
+      }
+      
+      .col-lg-3.col-md-6 {
+        margin-bottom: 0.25rem !important;
+      }
+      
+      /* Hide some table columns on very small screens */
+      .table th:nth-child(3), /* Mode column */
+      .table td:nth-child(3) {
+        display: none;
+      }
+      
+      .table th:nth-child(4), /* Players column */
+      .table td:nth-child(4) {
+        font-size: 0.75rem;
+        padding: 0.5rem 0.25rem;
+      }
+      
+      /* Smaller action buttons */
+      .table .btn {
+        padding: 0.25rem 0.4rem;
+        font-size: 0.75rem;
+        min-width: 32px;
+        height: 32px;
+      }
+      
+      .btn .ti {
+        font-size: 1rem;
+      }
+      
+      /* Stats cards smaller text */
+      .stats-card h6,
+      .team-card h6,
+      .player-card h6 {
+        font-size: 0.8rem;
+      }
+      
+      .stats-card small,
+      .team-card small,
+      .player-card small {
+        font-size: 0.7rem;
+      }
+      
+      .stats-card h3,
+      .team-card h3,
+      .player-card h3 {
+        font-size: 1.25rem;
+      }
+      
+      /* Modal adjustments for small screens */
+      .modal-body .col-md-6 {
+        padding: 0 0.25rem;
+        margin-bottom: 0.75rem;
+      }
+      
+      .modal-header .modal-title {
+        font-size: 1rem;
+      }
+      
+      .modal-footer .btn {
+        font-size: 0.875rem;
+        padding: 0.5rem 1rem;
+      }
+    }
+    
+    /* Tablet adjustments */
+    @media (min-width: 769px) and (max-width: 992px) {
+      .table th,
+      .table td {
+        padding: 0.75rem 0.5rem;
+        font-size: 0.9rem;
+      }
+      
+      .btn {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.875rem;
+      }
+      
+      .stats-card .card-body,
+      .team-card .card-body,
+      .player-card .card-body {
+        padding: 1.25rem;
+      }
     }
   </style>
 </head>
@@ -191,171 +477,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 <body>
   <!--  Body Wrapper -->
   <div class="page-wrapper" id="main-wrapper" data-layout="vertical" data-navbarbg="skin6" data-sidebartype="full"
-    data-sidebar-position="fixed" data-header-position="fixed" data-boxed-layout="full">
+    data-sidebar-position="fixed" data-header-position="fixed" style="margin-top: 0; padding-top: 0;">
+   <?php include 'includes/app-topstrip.php'; ?>
 
-    <!-- Sidebar -->
-    <aside class="left-sidebar" data-sidebarbg="skin6">
-      <!-- Sidebar scroll-->
-      <div class="scroll-sidebar">
-        <!-- Sidebar navigation-->
-        <nav class="sidebar-nav">
-          <ul id="sidebarnav">
-            <!-- User Profile-->
-            <li class="sidebar-item text-center p-40 upgrade-btn">
-              <a href="admin-dashboard.php" class="w-100 btn btn-dnger text-white d-flex align-items-center justify-content-center">
-                <img src="./assets/images/logos/speedster main logo.png" alt="logo" width="30" class="me-2">
-                <span class="fw-bold">SPEEDSTERS</span>
-              </a>
-            </li>
-            
-            <!-- Dashboard -->
-            <li class="sidebar-item">
-              <a href="./admin-dashboard.php" class="sidebar-link">
-                <i class="ti ti-dashboard"></i>
-                <span class="hide-menu">Dashboard</span>
-              </a>
-            </li>
-            
-            <!-- Session Management -->
-            <li class="sidebar-item">
-              <a href="./admin-session-management.php" class="sidebar-link active">
-                <i class="ti ti-calendar-event"></i>
-                <span class="hide-menu">Session Management</span>
-              </a>
-            </li>
-            
-            <!-- Score Monitoring -->
-            <li class="sidebar-item has-sub">
-              <a class="sidebar-link" href="javascript:void(0)" aria-expanded="false">
-                <i class="ti ti-chart-line"></i>
-                <span class="hide-menu">Score Monitoring</span>
-              </a>
-              <ul aria-expanded="false" class="collapse first-level submenu">
-                <li class="sidebar-item">
-                  <a href="./admin-score-monitoring-solo.php" class="sidebar-link">
-                    <i class="ti ti-user"></i>
-                    <span class="hide-menu">Solo Players</span>
-                  </a>
-                </li>
-                <li class="sidebar-item">
-                  <a href="./admin-score-monitoring-doubles.php" class="sidebar-link">
-                    <i class="ti ti-users"></i>
-                    <span class="hide-menu">Doubles</span>
-                  </a>
-                </li>
-                <li class="sidebar-item">
-                  <a href="./admin-score-monitoring-team.php" class="sidebar-link">
-                    <i class="ti ti-users-group"></i>
-                    <span class="hide-menu">Team</span>
-                  </a>
-                </li>
-              </ul>
-            </li>
-            
-            <!-- User Management -->
-            <li class="sidebar-item">
-              <a href="./admin-user-management.php" class="sidebar-link">
-                <i class="ti ti-users"></i>
-                <span class="hide-menu">User Management</span>
-              </a>
-            </li>
-            
-            <!-- Events -->
-            <li class="sidebar-item">
-              <a href="./admin-events.php" class="sidebar-link">
-                <i class="ti ti-calendar"></i>
-                <span class="hide-menu">Events</span>
-              </a>
-            </li>
-          </ul>
-        </nav>
-        <!-- End Sidebar navigation -->
-      </div>
-      <!-- End Sidebar scroll-->
-    </aside>
-    <!--  Sidebar End -->
+    <?php include 'includes/sidebar.php'; ?>
 
     <!--  Main wrapper -->
     <div class="body-wrapper">
-      <!--  Header Start -->
-      <header class="app-header">
-        <nav class="navbar navbar-expand-lg navbar-light">
-          <ul class="navbar-nav">
-            <li class="nav-item d-block d-xl-none">
-              <a class="nav-link sidebartoggler nav-icon-hover" id="headerCollapse" href="javascript:void(0)">
-                <i class="ti ti-menu-2"></i>
-              </a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link nav-icon-hover" href="javascript:void(0)">
-                <i class="ti ti-bell-ringing"></i>
-                <div class="notification bg-primary rounded-circle"></div>
-              </a>
-            </li>
-          </ul>
-          <div class="navbar-collapse justify-content-end px-0" id="navbarNav">
-            <ul class="navbar-nav flex-row ms-auto align-items-center justify-content-end">
-              <li class="nav-item dropdown">
-                <a class="nav-link nav-icon-hover" href="javascript:void(0)" id="drop2" data-bs-toggle="dropdown"
-                  aria-expanded="false">
-                  <img src="./assets/images/profile/user-1.jpg" alt="" width="35" height="35" class="rounded-circle">
-                </a>
-                <div class="dropdown-menu dropdown-menu-end dropdown-menu-animate-up" aria-labelledby="drop2">
-                  <div class="message-body">
-                    <a href="javascript:void(0)" class="d-flex align-items-center gap-2 dropdown-item">
-                      <i class="ti ti-user fs-6"></i>
-                      <p class="mb-0 fs-3">My Profile</p>
-                    </a>
-                    <a href="javascript:void(0)" class="d-flex align-items-center gap-2 dropdown-item">
-                      <i class="ti ti-mail fs-6"></i>
-                      <p class="mb-0 fs-3">My Account</p>
-                    </a>
-                    <a href="javascript:void(0)" class="d-flex align-items-center gap-2 dropdown-item">
-                      <i class="ti ti-list-check fs-6"></i>
-                      <p class="mb-0 fs-3">My Task</p>
-                    </a>
-                    <a href="./authentication-login.php" class="btn btn-outline-primary mx-3 mt-2 d-block">Logout</a>
-                  </div>
-                </div>
-              </li>
-            </ul>
-          </div>
-        </nav>
-      </header>
-      <!--  Header End -->
-
+      <?php include 'includes/header.php'; ?>
+      
+      <div class="body-wrapper-inner">
       <div class="container-fluid">
-        <!-- Breadcrumb -->
+          <!-- Page Header -->
         <div class="row">
           <div class="col-12">
-            <div class="page-title-box d-sm-flex align-items-center justify-content-between">
-              <h4 class="mb-sm-0 font-size-18">Weekly Game Session Management</h4>
+              <div class="page-title-box d-flex align-items-center justify-content-between">
               <div class="page-title-right">
                 <ol class="breadcrumb m-0">
                   <li class="breadcrumb-item"><a href="./index.php">Home</a></li>
-                  <li class="breadcrumb-item"><a href="./admin-dashboard.php">Admin Dashboard</a></li>
                   <li class="breadcrumb-item active">Session Management</li>
                 </ol>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Page Header -->
-        <div class="row mb-4">
-          <div class="col-12">
-            <div class="d-flex align-items-center justify-content-between">
-              <div>
-                <h2 class="fw-bold text-dark mb-1">Weekly Game Session Management</h2>
-                <p class="text-muted mb-0">Manage solo game sessions and score entry with enhanced controls</p>
-              </div>
-              <div class="d-flex gap-2">
-                <button class="btn create-session-btn text-white" data-bs-toggle="modal" data-bs-target="#createSessionModal">
-                  <i class="ti ti-plus me-2"></i>Create New Session
-                </button>
-                <button class="btn btn-outline-primary action-btn" onclick="refreshData()">
-                  <i class="ti ti-refresh"></i>
-                </button>
               </div>
             </div>
           </div>
@@ -422,67 +563,67 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         </div>
         <?php endif; ?>
 
-        <!-- Statistics Cards -->
-        <div class="row mb-4">
-          <div class="col-md-3">
-            <div class="card stats-card">
+          <!-- Session Statistics Overview -->
+          <div class="row">
+            <div class="col-lg-3 col-md-6 mb-4">
+              <div class="card admin-card stats-card">
               <div class="card-body">
                 <div class="d-flex align-items-center">
                   <div class="flex-grow-1">
-                    <h6 class="card-title text-muted mb-1">Total Sessions</h6>
-                    <h3 class="mb-0 text-primary"><?php echo count($allSessions); ?></h3>
-                    <small class="text-muted">All time</small>
+                      <h6 class="card-title text-white-50 mb-1">Total Sessions</h6>
+                      <h3 class="mb-0 text-white"><?php echo count($allSessions); ?></h3>
+                      <small class="text-white-50">All time</small>
                   </div>
                   <div class="ms-3">
-                    <i class="ti ti-calendar-event fs-1 text-primary"></i>
+                      <i class="ti ti-calendar-event fs-1 text-white-50"></i>
                   </div>
                 </div>
               </div>
             </div>
           </div>
-          <div class="col-md-3">
-            <div class="card stats-card">
+            <div class="col-lg-3 col-md-6 mb-4">
+              <div class="card admin-card team-card">
               <div class="card-body">
                 <div class="d-flex align-items-center">
                   <div class="flex-grow-1">
-                    <h6 class="card-title text-muted mb-1">Active Sessions</h6>
-                    <h3 class="mb-0 text-success"><?php echo count(array_filter($allSessions, fn($s) => $s['status'] === 'Active')); ?></h3>
-                    <small class="text-muted">Currently running</small>
+                      <h6 class="card-title text-white-50 mb-1">Active Sessions</h6>
+                      <h3 class="mb-0 text-white"><?php echo count(array_filter($allSessions, fn($s) => $s['status'] === 'Active')); ?></h3>
+                      <small class="text-white-50">Currently running</small>
                   </div>
                   <div class="ms-3">
-                    <i class="ti ti-play-circle fs-1 text-success"></i>
+                      <i class="ti ti-play-circle fs-1 text-white-50"></i>
                   </div>
                 </div>
               </div>
             </div>
           </div>
-          <div class="col-md-3">
-            <div class="card stats-card">
+            <div class="col-lg-3 col-md-6 mb-4">
+              <div class="card admin-card player-card">
               <div class="card-body">
                 <div class="d-flex align-items-center">
                   <div class="flex-grow-1">
-                    <h6 class="card-title text-muted mb-1">Completed Sessions</h6>
-                    <h3 class="mb-0 text-info"><?php echo count(array_filter($allSessions, fn($s) => $s['status'] === 'Completed')); ?></h3>
-                    <small class="text-muted">Finished sessions</small>
+                      <h6 class="card-title text-white-50 mb-1">Completed Sessions</h6>
+                      <h3 class="mb-0 text-white"><?php echo count(array_filter($allSessions, fn($s) => $s['status'] === 'Completed')); ?></h3>
+                      <small class="text-white-50">Finished sessions</small>
                   </div>
                   <div class="ms-3">
-                    <i class="ti ti-check-circle fs-1 text-info"></i>
+                      <i class="ti ti-check-circle fs-1 text-white-50"></i>
                   </div>
                 </div>
               </div>
             </div>
           </div>
-          <div class="col-md-3">
-            <div class="card stats-card">
+            <div class="col-lg-3 col-md-6 mb-4">
+              <div class="card admin-card player-card">
               <div class="card-body">
                 <div class="d-flex align-items-center">
                   <div class="flex-grow-1">
-                    <h6 class="card-title text-muted mb-1">Total Players</h6>
-                    <h3 class="mb-0 text-warning"><?php echo array_sum(array_column($allSessions, 'participant_count')); ?></h3>
-                    <small class="text-muted">All participants</small>
+                      <h6 class="card-title text-white-50 mb-1">Total Participants</h6>
+                      <h3 class="mb-0 text-white"><?php echo array_sum(array_column($allSessions, 'participant_count')); ?></h3>
+                      <small class="text-white-50">All participants</small>
                   </div>
                   <div class="ms-3">
-                    <i class="ti ti-users fs-1 text-warning"></i>
+                      <i class="ti ti-users fs-1 text-white-50"></i>
                   </div>
                 </div>
               </div>
@@ -490,151 +631,139 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
           </div>
         </div>
 
-        <!-- Filter Section -->
-        <div class="row mb-4">
-          <div class="col-12">
-            <div class="filter-section">
-              <div class="row align-items-center">
-                <div class="col-md-3">
-                  <label class="form-label fw-semibold">Filter by Status</label>
-                  <select class="form-select" id="statusFilter">
-                    <option value="all">All Status</option>
-                    <option value="Active">Active</option>
-                    <option value="Completed">Completed</option>
-                    <option value="Scheduled">Scheduled</option>
-                  </select>
+          <!-- Main Content Row -->
+          <div class="row">
+            <!-- Session Management -->
+            <div class="col-lg-12">
+              <div class="card admin-card">
+                <div class="card-body">
+                  <div class="d-flex align-items-center justify-content-between mb-4">
+                    <div>
+                      <h5 class="card-title fw-semibold mb-1">Session Management</h5>
+                      <span class="fw-normal text-muted">Create and manage bowling sessions with participant selection</span>
                 </div>
-                <div class="col-md-3">
-                  <label class="form-label fw-semibold">Filter by Mode</label>
-                  <select class="form-select" id="modeFilter">
-                    <option value="all">All Modes</option>
-                    <option value="Solo">Solo</option>
-                    <option value="Doubles">Doubles</option>
-                    <option value="Team">Team</option>
-                  </select>
-                </div>
-                <div class="col-md-3">
-                  <label class="form-label fw-semibold">Sort by</label>
-                  <select class="form-select" id="sortFilter">
-                    <option value="date_desc">Date (Newest First)</option>
-                    <option value="date_asc">Date (Oldest First)</option>
-                    <option value="name_asc">Name (A-Z)</option>
-                    <option value="name_desc">Name (Z-A)</option>
-                    <option value="players_desc">Players (Most First)</option>
-                    <option value="players_asc">Players (Least First)</option>
-                  </select>
-                </div>
-                <div class="col-md-3">
-                  <label class="form-label fw-semibold">&nbsp;</label>
                   <div class="d-flex gap-2">
-                    <button class="btn btn-primary action-btn" onclick="applyFilters()">
-                      <i class="ti ti-filter me-2"></i>Apply Filters
+                      <button class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#createSessionModal">
+                        <i class="ti ti-plus me-1"></i>Create New Session
                     </button>
-                    <button class="btn btn-outline-secondary action-btn" onclick="clearFilters()">
-                      <i class="ti ti-x me-2"></i>Clear
+                      <button class="btn btn-primary btn-sm" onclick="refreshData()">
+                        <i class="ti ti-refresh"></i>
                     </button>
                   </div>
                 </div>
+                  
+                  <?php if ($activeSession): ?>
+                    <!-- Active Session -->
+                    <div class="alert alert-success d-flex align-items-center mb-4">
+                      <i class="ti ti-play-circle me-2 fs-4"></i>
+                      <div class="flex-grow-1">
+                        <strong>Active Session:</strong> <?php echo htmlspecialchars($activeSession['session_name']); ?>
+                        <br>
+                        <small>
+                          📅 <?php echo date('l, M j, Y', strtotime($activeSession['session_date'])); ?> 
+                          ⏰ <?php echo date('g:i A', strtotime($activeSession['session_time'])); ?> 
+                          🎳 <?php echo $activeSession['game_mode']; ?> 
+                          👥 <?php echo $activeSession['participant_count']; ?>/<?php echo $activeSession['max_players']; ?> registered
+                          🏆 <?php echo $activeSession['players_played']; ?> played today
+                        </small>
               </div>
+                      <div class="ms-3">
+                        <a href="admin-score-monitoring-solo.php?session=<?php echo $activeSession['session_id']; ?>" class="btn btn-warning btn-sm me-2">
+                          <i class="ti ti-edit me-1"></i>Enter Scores
+                        </a>
+                        <button class="btn btn-danger btn-sm" onclick="endSession(<?php echo $activeSession['session_id']; ?>)">
+                          <i class="ti ti-stop me-1"></i>End Session
+                        </button>
             </div>
           </div>
+                  <?php else: ?>
+                    <!-- No Active Session -->
+                    <div class="alert alert-info d-flex align-items-center mb-4">
+                      <i class="ti ti-info-circle me-2 fs-4"></i>
+                      <div class="flex-grow-1">
+                        <strong>No Active Session</strong>
+                        <br>
+                        <small>Create a new session to start managing solo games</small>
         </div>
-
-        <!-- Sessions Table -->
-        <div class="row">
-          <div class="col-12">
-            <div class="card session-table">
-              <div class="card-header">
-                <h5 class="card-title fw-semibold mb-0">Game Sessions</h5>
               </div>
-              <div class="card-body p-0">
-                <?php if (!empty($allSessions)): ?>
+                  <?php endif; ?>
+
+                  <!-- Recent Sessions -->
                 <div class="table-responsive">
-                  <table class="table table-hover mb-0" id="sessionsTable">
+                    <table class="table table-hover" id="sessionsTable">
                     <thead>
                       <tr>
-                        <th scope="col">Session Name</th>
-                        <th scope="col">Date & Time</th>
-                        <th scope="col">Mode</th>
-                        <th scope="col">Players</th>
-                        <th scope="col">Status</th>
-                        <th scope="col">Actions</th>
+                          <th style="min-width: 120px;">Session Name</th>
+                          <th style="min-width: 100px;">Date & Time</th>
+                          <th style="min-width: 70px;">Mode</th>
+                          <th style="min-width: 80px;">Players</th>
+                          <th style="min-width: 80px;">Status</th>
+                          <th style="min-width: 120px;">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
-                      <?php foreach ($allSessions as $session): ?>
-                      <tr data-session-id="<?php echo $session['session_id']; ?>" 
-                          data-status="<?php echo $session['status']; ?>" 
-                          data-mode="<?php echo $session['game_mode']; ?>">
-                        <td>
-                          <div class="d-flex align-items-center">
-                            <div class="me-3">
-                              <i class="ti ti-calendar-event text-primary"></i>
-                            </div>
-                            <div>
-                              <h6 class="mb-0 fw-semibold"><?php echo htmlspecialchars($session['session_name']); ?></h6>
-                              <small class="text-muted">Created by <?php echo htmlspecialchars($session['created_by_name'] ?? 'Admin'); ?></small>
-                            </div>
-                          </div>
+                        <?php foreach (array_slice($allSessions, 0, 10) as $session): ?>
+                          <tr>
+                            <td>
+                              <strong><?php echo htmlspecialchars($session['session_name']); ?></strong>
+                              <?php if ($session['notes']): ?>
+                                <br><small class="text-muted"><?php echo htmlspecialchars($session['notes']); ?></small>
+                              <?php endif; ?>
                         </td>
                         <td>
-                          <div>
-                            <div class="fw-semibold"><?php echo date('M j, Y', strtotime($session['session_date'])); ?></div>
+                              <?php echo date('M j, Y', strtotime($session['session_date'])); ?><br>
                             <small class="text-muted"><?php echo date('g:i A', strtotime($session['session_time'])); ?></small>
-                          </div>
                         </td>
-                        <td>
-                          <span class="mode-badge bg-info text-white"><?php echo ucfirst($session['game_mode']); ?></span>
-                        </td>
-                        <td>
-                          <div>
-                            <div class="fw-semibold"><?php echo $session['participant_count']; ?>/<?php echo $session['max_players']; ?> registered</div>
-                            <?php if ($session['players_played'] > 0): ?>
-                            <small class="text-success fw-semibold"><?php echo $session['players_played']; ?> played</small>
-                            <?php else: ?>
-                            <small class="text-muted">No games played</small>
-                            <?php endif; ?>
-                          </div>
+                            <td><span class="badge bg-primary"><?php echo $session['game_mode']; ?></span></td>
+                            <td>
+                              <?php echo $session['participant_count']; ?>/<?php echo $session['max_players']; ?> registered
+                              <br><small class="text-success"><?php echo $session['players_played'] ?? 0; ?> played</small>
                         </td>
                         <td>
                           <?php
                           $statusClass = match($session['status']) {
+                                'Scheduled' => 'bg-secondary',
                               'Active' => 'bg-success',
+                                'Paused' => 'bg-warning',
                               'Completed' => 'bg-info',
-                              'Scheduled' => 'bg-warning',
+                                'Cancelled' => 'bg-danger',
                               default => 'bg-secondary'
                           };
                           ?>
-                          <span class="status-badge <?php echo $statusClass; ?> text-white"><?php echo ucfirst($session['status']); ?></span>
+                              <span class="badge <?php echo $statusClass; ?>"><?php echo $session['status']; ?></span>
                         </td>
                         <td>
                           <div class="d-flex gap-1">
                             <?php if ($session['status'] === 'Scheduled'): ?>
-                            <button class="btn btn-success btn-sm action-btn" onclick="startSession(<?php echo $session['session_id']; ?>)">
-                              <i class="ti ti-play"></i>
+                                  <a href="select-participants.php?session_id=<?php echo $session['session_id']; ?>" class="btn btn-primary btn-sm" title="Select Participants">
+                                    <i class="ti ti-users"></i>
+                                  </a>
+                                  <button class="btn btn-success btn-sm" onclick="startSession(<?php echo $session['session_id']; ?>)" title="Start Session">
+                                    <i class="ti ti-player-play"></i>
                             </button>
-                            <?php endif; ?>
-                            
-                            <?php if ($session['status'] === 'Active'): ?>
-                            <a href="admin-score-monitoring-solo.php" class="btn btn-warning btn-sm action-btn">
+                                  <button class="btn btn-info btn-sm" onclick="editSession(<?php echo $session['session_id']; ?>)" title="Edit Session">
+                                    <i class="ti ti-edit"></i>
+                                  </button>
+                                <?php elseif ($session['status'] === 'Active'): ?>
+                                  <a href="<?php echo $session['game_mode'] === 'Solo' ? 'admin-score-monitoring-solo.php' : 'admin-score-monitoring-team.php'; ?>?session=<?php echo $session['session_id']; ?>" class="btn btn-warning btn-sm" title="Enter Scores">
                               <i class="ti ti-edit"></i>
                             </a>
-                            <button class="btn btn-danger btn-sm action-btn" onclick="endSession(<?php echo $session['session_id']; ?>)">
-                              <i class="ti ti-square"></i>
+                                  <a href="select-participants.php?session_id=<?php echo $session['session_id']; ?>" class="btn btn-primary btn-sm" title="Manage Participants">
+                                    <i class="ti ti-users"></i>
+                                  </a>
+                                  <button class="btn btn-danger btn-sm" onclick="endSession(<?php echo $session['session_id']; ?>)" title="End Session">
+                                    <i class="ti ti-player-stop"></i>
                             </button>
-                            <?php endif; ?>
-                            
-                            <?php if ($session['status'] === 'Completed'): ?>
-                            <a href="admin-score-monitoring-solo.php" class="btn btn-primary btn-sm action-btn" title="View Scores">
+                                <?php elseif ($session['status'] === 'Completed'): ?>
+                                  <a href="<?php echo $session['game_mode'] === 'Solo' ? 'admin-score-monitoring-solo.php' : 'admin-score-monitoring-team.php'; ?>?session=<?php echo $session['session_id']; ?>" class="btn btn-info btn-sm" title="View Scores">
                               <i class="ti ti-chart-bar"></i>
                             </a>
+                                  <button class="btn btn-secondary btn-sm" onclick="editSession(<?php echo $session['session_id']; ?>)" title="Edit Session">
+                                    <i class="ti ti-edit"></i>
+                                  </button>
                             <?php endif; ?>
                             
-                            <button class="btn btn-info btn-sm action-btn" onclick="viewSessionDetails(<?php echo $session['session_id']; ?>)">
-                              <i class="ti ti-eye"></i>
-                            </button>
-                            
-                            <button class="btn btn-outline-danger btn-sm action-btn" onclick="deleteSession(<?php echo $session['session_id']; ?>, '<?php echo $session['session_name']; ?>')">
+                                <button class="btn btn-outline-danger btn-sm" onclick="deleteSession(<?php echo $session['session_id']; ?>, '<?php echo htmlspecialchars($session['session_name']); ?>')" title="Delete Session">
                               <i class="ti ti-trash"></i>
                             </button>
                           </div>
@@ -644,16 +773,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     </tbody>
                   </table>
                 </div>
-                <?php else: ?>
-                <div class="no-sessions">
-                  <i class="ti ti-calendar-off"></i>
-                  <h4 class="mb-2">No Sessions Found</h4>
-                  <p class="mb-3">Create your first game session to get started with managing bowling games.</p>
-                  <button class="btn create-session-btn text-white" data-bs-toggle="modal" data-bs-target="#createSessionModal">
-                    <i class="ti ti-plus me-2"></i>Create New Session
-                  </button>
                 </div>
-                <?php endif; ?>
+              </div>
+            </div>
+          </div>
+
               </div>
             </div>
           </div>
@@ -726,9 +850,151 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
           </div>
           <div class="modal-footer">
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-            <button type="submit" class="btn btn-primary">Create Session</button>
+            <button type="submit" class="btn btn-primary">Next: Select Participants →</button>
           </div>
         </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Session Modal -->
+  <div class="modal fade" id="editSessionModal" tabindex="-1" aria-labelledby="editSessionModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="editSessionModalLabel">Edit Session</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <form id="editSessionForm">
+          <input type="hidden" id="editSessionId" name="session_id">
+          <div class="modal-body">
+            <div class="row">
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="editSessionName" class="form-label">Session Name</label>
+                  <input type="text" class="form-control" id="editSessionName" name="session_name" 
+                         placeholder="Enter session name" required>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="editGameMode" class="form-label">Game Mode</label>
+                  <select class="form-select" id="editGameMode" name="game_mode" required>
+                    <option value="Solo">Solo</option>
+                    <option value="Doubles">Doubles</option>
+                    <option value="Team">Team</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="editSessionDate" class="form-label">Session Date</label>
+                  <input type="date" class="form-control" id="editSessionDate" name="session_date" required>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="editSessionTime" class="form-label">Session Time</label>
+                  <input type="time" class="form-control" id="editSessionTime" name="session_time" required>
+                </div>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="editMaxPlayers" class="form-label">Max Players</label>
+                  <input type="number" class="form-control" id="editMaxPlayers" name="max_players" 
+                         min="1" max="50" required>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="editSessionStatus" class="form-label">Session Status</label>
+                  <select class="form-select" id="editSessionStatus" name="status" required>
+                    <option value="Scheduled">Scheduled</option>
+                    <option value="Active">Active</option>
+                    <option value="Paused">Paused</option>
+                    <option value="Completed">Completed</option>
+                    <option value="Cancelled">Cancelled</option>
+                  </select>
+                  <small class="form-text text-muted">
+                    <strong>Tip:</strong> Changing status affects available actions and score entry permissions.
+                  </small>
+                </div>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-md-12">
+                <div class="mb-3">
+                  <label for="editSessionNotes" class="form-label">Notes (Optional)</label>
+                  <input type="text" class="form-control" id="editSessionNotes" name="notes" 
+                         placeholder="Additional notes...">
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-success">Update Session</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete Session Modal -->
+  <div class="modal fade" id="deleteSessionModal" tabindex="-1" aria-labelledby="deleteSessionModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="deleteSessionModalLabel">
+            <i class="ti ti-trash me-2 text-danger"></i>
+            Delete Session
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="alert alert-warning">
+            <i class="ti ti-alert-triangle me-2"></i>
+            <strong>Warning!</strong> This action cannot be undone.
+          </div>
+          
+          <p>You are about to delete the session: <strong id="deleteSessionName"></strong></p>
+          
+          <div class="mb-3">
+            <label for="deleteSessionConfirm" class="form-label">
+              Type the session name to confirm deletion:
+            </label>
+            <input type="text" class="form-control" id="deleteSessionConfirm" 
+                   placeholder="Enter session name exactly" 
+                   autocomplete="off" 
+                   spellcheck="false"
+                   style="background-color: white !important; pointer-events: auto !important;">
+                  <small class="form-text text-muted">This helps prevent accidental deletions</small>
+          </div>
+          
+          <div class="mb-3">
+            <label for="deleteType" class="form-label">Deletion Type:</label>
+            <select class="form-select" id="deleteType">
+              <option value="soft">Soft Delete (Mark as deleted, keep data)</option>
+              <option value="hard">Hard Delete (Permanently remove all data)</option>
+            </select>
+            <small class="form-text text-muted">
+              <strong>Soft Delete:</strong> Hides the session but keeps all data for recovery<br>
+              <strong>Hard Delete:</strong> Permanently removes session and all associated scores
+            </small>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+            <i class="ti ti-x me-1"></i>Cancel
+          </button>
+          <button type="button" class="btn btn-danger" id="confirmDeleteBtn" onclick="confirmDeleteSession()" disabled>
+            <i class="ti ti-trash me-1"></i>Delete Session
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -744,11 +1010,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     document.getElementById('createSessionForm').addEventListener('submit', async function(e) {
       e.preventDefault();
       
+      const submitBtn = this.querySelector('button[type="submit"]');
+      const originalText = submitBtn.innerHTML;
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<i class="ti ti-loader"></i> Creating Session...';
+      
       const formData = new FormData(this);
-      formData.append('action', 'create_session');
+      formData.append('action', 'create_session_draft');
       
       try {
-        const response = await fetch('', {
+        const response = await fetch('ajax/session-creation.php', {
           method: 'POST',
           body: formData
         });
@@ -757,14 +1028,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         
         if (result.success) {
           showNotification(result.message, 'success');
+          // Close modal and redirect to participant selection
+          const modal = bootstrap.Modal.getInstance(document.getElementById('createSessionModal'));
+          modal.hide();
+          
           setTimeout(() => {
-            location.reload();
-          }, 1500);
+            window.location.href = result.redirect_url;
+          }, 1000);
         } else {
           showNotification(result.message, 'error');
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = originalText;
         }
       } catch (error) {
         showNotification('An error occurred while creating the session', 'error');
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
       }
     });
 
@@ -832,27 +1111,90 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
       showNotification('Session details feature coming soon!', 'info');
     }
 
-    // Delete Session
+    // Edit Session
+    async function editSession(sessionId) {
+      try {
+        // First, get the session data
+        const response = await fetch('', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: `action=get_session&session_id=${sessionId}`
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          const session = result.session;
+          
+          // Populate the edit form
+          document.getElementById('editSessionId').value = session.session_id;
+          document.getElementById('editSessionName').value = session.session_name;
+          document.getElementById('editGameMode').value = session.game_mode;
+          document.getElementById('editSessionDate').value = session.session_date;
+          document.getElementById('editSessionTime').value = session.session_time;
+          document.getElementById('editMaxPlayers').value = session.max_players;
+          document.getElementById('editSessionStatus').value = session.status;
+          document.getElementById('editSessionNotes').value = session.notes || '';
+          
+          // Show the modal
+          const modal = new bootstrap.Modal(document.getElementById('editSessionModal'));
+          modal.show();
+        } else {
+          showNotification('Error loading session data: ' + result.message, 'error');
+        }
+      } catch (error) {
+        showNotification('An error occurred while loading session data', 'error');
+      }
+    }
+
+    // Delete Session - Open Modal
+    let currentDeleteSessionId = null;
+    let currentDeleteSessionName = null;
+    
     function deleteSession(sessionId, sessionName) {
-      // Show confirmation dialog
-      const confirmed = confirm(`Are you sure you want to delete the session "${sessionName}"?\n\nThis action cannot be undone and will remove all associated scores.`);
+      currentDeleteSessionId = sessionId;
+      currentDeleteSessionName = sessionName;
       
-      if (!confirmed) {
+      // Populate modal
+      document.getElementById('deleteSessionName').textContent = sessionName;
+      document.getElementById('deleteSessionConfirm').value = '';
+      document.getElementById('deleteType').value = 'soft';
+      document.getElementById('confirmDeleteBtn').disabled = true;
+      
+      // Show modal
+      const modal = new bootstrap.Modal(document.getElementById('deleteSessionModal'));
+      modal.show();
+      
+      // Focus on the input field after modal is shown
+      setTimeout(() => {
+        const inputField = document.getElementById('deleteSessionConfirm');
+        
+        inputField.focus();
+        inputField.click();
+        
+      }, 300);
+    }
+    
+    // Confirm Delete Session
+    function confirmDeleteSession() {
+      const confirmInput = document.getElementById('deleteSessionConfirm').value;
+      const deleteType = document.getElementById('deleteType').value;
+      
+      if (confirmInput !== currentDeleteSessionName) {
+        showNotification('Session name does not match. Please type the exact session name.', 'warning');
         return;
       }
       
-      // Show second confirmation for hard delete
-      const hardDelete = confirm(`Choose deletion type:\n\nOK = Hard Delete (permanently removes all data)\nCancel = Soft Delete (marks as deleted but keeps data)`);
-      
-      const deleteType = hardDelete ? 'hard' : 'soft';
-      const actionText = hardDelete ? 'permanently deleting' : 'marking as deleted';
-      
-      showNotification(`${actionText} session...`, 'info');
+      const confirmBtn = document.getElementById('confirmDeleteBtn');
+      confirmBtn.disabled = true;
+      confirmBtn.innerHTML = '<i class="ti ti-loader"></i> Deleting...';
       
       // Send delete request
       const formData = new FormData();
       formData.append('action', 'delete_session');
-      formData.append('session_id', sessionId);
+      formData.append('session_id', currentDeleteSessionId);
       formData.append('delete_type', deleteType);
       
       fetch(window.location.href, {
@@ -863,20 +1205,98 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
       .then(data => {
         if (data.success) {
           showNotification(data.message, 'success');
-          // Remove the row from the table
-          const row = document.querySelector(`tr[data-session-id="${sessionId}"]`);
-          if (row) {
-            row.remove();
-          }
+          // Close modal
+          const modal = bootstrap.Modal.getInstance(document.getElementById('deleteSessionModal'));
+          modal.hide();
+          // Reload page
+          setTimeout(() => {
+            location.reload();
+          }, 1500);
         } else {
           showNotification('Error: ' + data.message, 'error');
+          confirmBtn.disabled = false;
+          confirmBtn.innerHTML = '<i class="ti ti-trash me-1"></i>Delete Session';
         }
       })
       .catch(error => {
         console.error('Error:', error);
         showNotification('An error occurred while deleting session', 'error');
+        confirmBtn.disabled = false;
+        confirmBtn.innerHTML = '<i class="ti ti-trash me-1"></i>Delete Session';
       });
     }
+    
+    // Enable/disable delete button based on input
+    document.addEventListener('DOMContentLoaded', function() {
+      const deleteConfirmInput = document.getElementById('deleteSessionConfirm');
+      const confirmBtn = document.getElementById('confirmDeleteBtn');
+      
+      if (deleteConfirmInput) {
+        deleteConfirmInput.addEventListener('input', function() {
+          const inputValue = this.value.trim();
+          
+          if (inputValue === currentDeleteSessionName) {
+            confirmBtn.disabled = false;
+            confirmBtn.classList.remove('btn-secondary');
+            confirmBtn.classList.add('btn-danger');
+          } else {
+            confirmBtn.disabled = true;
+            confirmBtn.classList.remove('btn-danger');
+            confirmBtn.classList.add('btn-secondary');
+          }
+        });
+        
+        // Also handle keyup and paste events
+        deleteConfirmInput.addEventListener('keyup', function() {
+          this.dispatchEvent(new Event('input'));
+        });
+        
+        deleteConfirmInput.addEventListener('paste', function() {
+          setTimeout(() => {
+            this.dispatchEvent(new Event('input'));
+          }, 10);
+        });
+      }
+    });
+
+    // Edit Session Form Handler
+    document.getElementById('editSessionForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      
+      const submitBtn = this.querySelector('button[type="submit"]');
+      const originalText = submitBtn.innerHTML;
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<i class="ti ti-loader"></i> Updating...';
+      
+      const formData = new FormData(this);
+      formData.append('action', 'update_session');
+      
+      try {
+        const response = await fetch('', {
+          method: 'POST',
+          body: formData
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          showNotification(result.message, 'success');
+          const modal = bootstrap.Modal.getInstance(document.getElementById('editSessionModal'));
+          modal.hide();
+          setTimeout(() => {
+            location.reload();
+          }, 1500);
+        } else {
+          showNotification(result.message, 'error');
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = originalText;
+        }
+      } catch (error) {
+        showNotification('An error occurred while updating the session', 'error');
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+      }
+    });
 
     // Apply Filters
     function applyFilters() {

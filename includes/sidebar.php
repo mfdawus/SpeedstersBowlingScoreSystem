@@ -6,7 +6,7 @@
 $currentPage = basename($_SERVER['PHP_SELF']);
 
 // Check if this is an admin page
-$isAdminPage = strpos($currentPage, 'admin-') === 0;
+$isAdminPage = strpos($currentPage, 'admin-') === 0 || $currentPage === 'select-participants.php';
 ?>
 
 <style>
@@ -59,6 +59,12 @@ $isAdminPage = strpos($currentPage, 'admin-') === 0;
             <a class="sidebar-link <?php echo ($currentPage == 'admin-user-management.php') ? 'active' : ''; ?>" href="./admin-user-management.php" aria-expanded="false">
               <i class="ti ti-users"></i>
               <span class="hide-menu">User Management</span>
+            </a>
+          </li>
+          <li class="sidebar-item">
+            <a class="sidebar-link <?php echo (in_array($currentPage, ['admin-session-management.php', 'select-participants.php'])) ? 'active' : ''; ?>" href="./admin-session-management.php" aria-expanded="false">
+              <i class="ti ti-calendar-plus"></i>
+              <span class="hide-menu">Session Management</span>
             </a>
           </li>
           <li class="sidebar-item">

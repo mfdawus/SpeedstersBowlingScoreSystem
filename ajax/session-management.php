@@ -304,36 +304,142 @@ case 'get_players_data':
         }
     }
     
-    // Get all players first (simple query) - include both Player and Admin roles
+    // Get players based on date filter selection
     $query1Start = microtime(true);
-    $stmt = $pdo->prepare("
-        SELECT user_id, username, first_name, last_name, email, phone, skill_level, user_role, status, team_name, created_at
-        FROM users 
-        WHERE (user_role = 'Player' OR user_role = 'Admin') AND status = 'Active'
-        ORDER BY first_name, last_name
-    ");
-    $stmt->execute();
-    $players = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    if ($selectedDate === 'all') {
+        // For "All Time" - show all players with their game-specific averages
+        $stmt = $pdo->prepare("
+            SELECT 
+                u.user_id, u.username, u.first_name, u.last_name, u.email, u.phone, 
+                u.skill_level, u.user_role, u.status, u.team_name, u.created_at,
+                COALESCE(ROUND(AVG(gs.player_score), 1), 0) as avg_score,
+                COUNT(gs.score_id) as games_played,
+                COALESCE(MAX(gs.player_score), 0) as best_score,
+                COALESCE(SUM(gs.strikes), 0) as total_strikes,
+                COALESCE(SUM(gs.spares), 0) as total_spares,
+                MAX(gs.created_at) as last_updated
+            FROM users u
+            LEFT JOIN game_scores gs ON u.user_id = gs.user_id AND gs.status = 'Completed'
+            WHERE (u.user_role = 'Player' OR u.user_role = 'Admin') AND u.status = 'Active'
+            GROUP BY u.user_id
+            ORDER BY u.first_name, u.last_name
+        ");
+        $stmt->execute();
+        $players = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Get game-specific averages for each player
+        $gameAvgStmt = $pdo->prepare("
+            SELECT 
+                user_id, 
+                game_number,
+                ROUND(AVG(player_score), 1) as game_avg_score,
+                ROUND(AVG(strikes), 1) as game_avg_strikes,
+                ROUND(AVG(spares), 1) as game_avg_spares,
+                COUNT(*) as game_count
+            FROM game_scores 
+            WHERE status = 'Completed' AND user_id = ?
+            GROUP BY user_id, game_number
+            ORDER BY game_number
+        ");
+        
+        // Add game-specific averages to each player
+        foreach ($players as &$player) {
+            $gameAvgStmt->execute([$player['user_id']]);
+            $gameAverages = $gameAvgStmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            // Initialize game averages
+            for ($game = 1; $game <= 5; $game++) {
+                $player["game_{$game}_avg_score"] = 0;
+                $player["game_{$game}_avg_strikes"] = 0;
+                $player["game_{$game}_avg_spares"] = 0;
+                $player["game_{$game}_count"] = 0;
+            }
+            
+            // Set actual averages
+            foreach ($gameAverages as $gameAvg) {
+                $gameNum = $gameAvg['game_number'];
+                if ($gameNum >= 1 && $gameNum <= 5) {
+                    $player["game_{$gameNum}_avg_score"] = $gameAvg['game_avg_score'];
+                    $player["game_{$gameNum}_avg_strikes"] = $gameAvg['game_avg_strikes'];
+                    $player["game_{$gameNum}_avg_spares"] = $gameAvg['game_avg_spares'];
+                    $player["game_{$gameNum}_count"] = $gameAvg['game_count'];
+                }
+            }
+        }
+    } else {
+        // For today or specific date - get session participants
+        if ($selectedDate === 'today') {
+            // Get today's active session
+            $sessionStmt = $pdo->prepare("
+                SELECT session_id 
+                FROM game_sessions 
+                WHERE status = 'Active' AND game_mode = ? 
+                ORDER BY created_at DESC 
+                LIMIT 1
+            ");
+            $sessionStmt->execute([$sessionType]);
+        } else {
+            // Get session for specific date
+            $sessionStmt = $pdo->prepare("
+                SELECT session_id 
+                FROM game_sessions 
+                WHERE DATE(session_date) = ? AND game_mode = ? 
+                ORDER BY created_at DESC 
+                LIMIT 1
+            ");
+            $sessionStmt->execute([$selectedDate, $sessionType]);
+        }
+        
+        $activeSession = $sessionStmt->fetch(PDO::FETCH_ASSOC);
+        
+        if ($activeSession) {
+            // Get session participants (always show participants, even if no scores)
+            $players = getSessionParticipantsForScoring($activeSession['session_id']);
+            // Force clear any score data that might be contaminating
+            foreach ($players as &$player) {
+                $player['avg_score'] = 0;
+                $player['average_score'] = 0;
+                $player['total_score'] = 0;
+                $player['best_score'] = 0;
+                $player['games_played'] = 0;
+                $player['total_strikes'] = 0;
+                $player['total_spares'] = 0;
+            }
+        } else {
+            // No session found, return empty array
+            $players = [];
+        }
+    }
     $query1Time = (microtime(true) - $query1Start) * 1000;
     
-    // Get all scores for the selected session date in one simple query
+    // Get all scores for the selected session date in one simple query (skip for All Time)
     $query2Start = microtime(true);
-    $stmt = $pdo->prepare("
-        SELECT gs.user_id, gs.game_number, gs.player_score, gs.strikes, gs.spares, gs.open_frames, gs.created_at
-        FROM game_scores gs
-        WHERE gs.status = 'Completed' AND gs.game_mode = ? AND ($sessionCondition)
-        ORDER BY gs.user_id, gs.game_number, gs.created_at DESC
-    ");
-    $stmt->execute([$sessionType]);
-    $allScores = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $allScores = [];
+    
+    if ($selectedDate !== 'all') {
+        // Only get scores if we have an active session for the selected date
+        if (isset($activeSession) && $activeSession) {
+            $stmt = $pdo->prepare("
+                SELECT gs.user_id, gs.game_number, gs.player_score, gs.strikes, gs.spares, gs.open_frames, gs.created_at
+                FROM game_scores gs
+                WHERE gs.status = 'Completed' AND gs.session_id = ?
+                ORDER BY gs.user_id, gs.game_number, gs.created_at DESC
+            ");
+            $stmt->execute([$activeSession['session_id']]);
+            $allScores = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        }
+        // If no active session, allScores remains empty array
+    }
     $query2Time = (microtime(true) - $query2Start) * 1000;
     
-    // Process data in PHP (much faster than complex SQL)
+    // Process data in PHP (much faster than complex SQL) - skip for All Time view
     $processStart = microtime(true);
     $scoresByUser = [];
     $statsByUser = [];
     
-    foreach ($allScores as $score) {
+    if ($selectedDate !== 'all') {
+        foreach ($allScores as $score) {
         $userId = $score['user_id'];
         $gameNumber = $score['game_number'];
         
@@ -363,31 +469,46 @@ case 'get_players_data':
         $statsByUser[$userId]['total_spares'] += $score['spares'];
         $statsByUser[$userId]['best_score'] = max($statsByUser[$userId]['best_score'], $score['player_score']);
         $statsByUser[$userId]['last_updated'] = $score['created_at'];
+        }
     }
     
     // Add stats and game scores to players
     foreach ($players as &$player) {
         $userId = $player['user_id'];
-        $stats = $statsByUser[$userId] ?? [
-            'total_score' => 0,
-            'games_played' => 0,
-            'total_strikes' => 0,
-            'total_spares' => 0,
-            'best_score' => 0,
-            'last_updated' => null
-        ];
         
-        $player['total_score'] = $stats['total_score'];
-        $player['avg_score'] = $stats['games_played'] > 0 ? round($stats['total_score'] / $stats['games_played'], 1) : 0;
-        $player['best_score'] = $stats['best_score'];
-        $player['games_played'] = $stats['games_played'];
-        $player['total_strikes'] = $stats['total_strikes'];
-        $player['total_spares'] = $stats['total_spares'];
-        $player['last_updated'] = $stats['last_updated'] ? date('M j, g:i A', strtotime($stats['last_updated'])) : 'Never';
-        
-        // Add individual game scores
-        for ($game = 1; $game <= 5; $game++) {
-            $player["game_{$game}_score"] = $scoresByUser[$userId][$game] ?? null;
+        if ($selectedDate === 'all') {
+            // For All Time view, we already have the aggregate data from SQL
+            // For Overall Rankings, show the average score instead of total
+            $player['total_score'] = $player['avg_score'];
+            $player['last_updated'] = $player['last_updated'] ? date('M j, g:i A', strtotime($player['last_updated'])) : 'Never';
+            
+            // No individual game scores for All Time view
+            for ($game = 1; $game <= 5; $game++) {
+                $player["game_{$game}_score"] = null;
+            }
+        } else {
+            // For session-specific view, use processed stats
+            $stats = $statsByUser[$userId] ?? [
+                'total_score' => 0,
+                'games_played' => 0,
+                'total_strikes' => 0,
+                'total_spares' => 0,
+                'best_score' => 0,
+                'last_updated' => null
+            ];
+            
+            $player['total_score'] = $stats['total_score'];
+            $player['avg_score'] = $stats['games_played'] > 0 ? round($stats['total_score'] / $stats['games_played'], 1) : 0;
+            $player['best_score'] = $stats['best_score'];
+            $player['games_played'] = $stats['games_played'];
+            $player['total_strikes'] = $stats['total_strikes'];
+            $player['total_spares'] = $stats['total_spares'];
+            $player['last_updated'] = $stats['last_updated'] ? date('M j, g:i A', strtotime($stats['last_updated'])) : 'Never';
+            
+            // Add individual game scores
+            for ($game = 1; $game <= 5; $game++) {
+                $player["game_{$game}_score"] = $scoresByUser[$userId][$game] ?? null;
+            }
         }
     }
     

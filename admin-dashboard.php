@@ -2070,7 +2070,7 @@ $activeSession = getActiveSession();
           </div>
           <div class="modal-footer">
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-            <button type="submit" class="btn btn-success">Create Session</button>
+            <button type="submit" class="btn btn-success">Next: Select Participants →</button>
           </div>
         </form>
       </div>
@@ -2082,54 +2082,41 @@ $activeSession = getActiveSession();
     document.getElementById('createSessionForm').addEventListener('submit', function(e) {
       e.preventDefault();
       
-      const gameMode = document.getElementById('gameMode').value;
+      const submitBtn = this.querySelector('button[type="submit"]');
+      const originalText = submitBtn.innerHTML;
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<i class="ti ti-loader"></i> Creating Session...';
+      
       const formData = new FormData(this);
-      
-      if (gameMode === 'Team') {
-        // Get selected teams
-        const selectedTeams = [];
-        const teamCheckboxes = document.querySelectorAll('#teamCheckboxes input[type="checkbox"]:checked');
-        
-        console.log('Team checkboxes found:', teamCheckboxes.length);
-        console.log('All team checkboxes:', document.querySelectorAll('#teamCheckboxes input[type="checkbox"]'));
-        
-        teamCheckboxes.forEach(checkbox => {
-          console.log('Selected team:', checkbox.value);
-          selectedTeams.push(checkbox.value);
-        });
-        
-        console.log('Selected teams array:', selectedTeams);
-        
-        if (selectedTeams.length === 0) {
-          alert('Please select at least one team for the team session');
-          return;
-        }
-        
-        formData.append('action', 'create_team_session');
-        formData.append('selected_teams', JSON.stringify(selectedTeams));
-      } else {
-        formData.append('action', 'create');
-      }
-      
+      formData.append('action', 'create_session_draft');
       formData.append('created_by', <?php echo $currentUser['user_id']; ?>);
       
-      const endpoint = 'ajax/session-management.php';
-      
-      fetch(endpoint, {
+      fetch('ajax/simple-session-creation.php', {
         method: 'POST',
         body: formData
       })
       .then(response => response.json())
       .then(data => {
         if (data.success) {
-          location.reload();
+          showNotification(data.message, 'success');
+          // Close modal and redirect to participant selection
+          const modal = bootstrap.Modal.getInstance(document.getElementById('createSessionModal'));
+          modal.hide();
+          
+          setTimeout(() => {
+            window.location.href = data.redirect_url;
+          }, 1000);
         } else {
-          alert('Error: ' + data.message);
+          showNotification(data.message, 'error');
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = originalText;
         }
       })
       .catch(error => {
         console.error('Error:', error);
-        alert('An error occurred while creating the session');
+        showNotification('An error occurred while creating the session', 'error');
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
       });
     });
 

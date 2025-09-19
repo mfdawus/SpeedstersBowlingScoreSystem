@@ -14,7 +14,7 @@ $sessionScores = [];
 if ($sessionId) {
     $currentSession = getSessionById($sessionId);
     if ($currentSession) {
-        // No need for session participants - all players can join any session
+        // Get scores only for selected participants
         $sessionScores = getSessionScores($sessionId);
     }
 } else {
@@ -23,16 +23,19 @@ if ($sessionId) {
     if ($activeSession) {
         $sessionId = $activeSession['session_id'];
         $currentSession = $activeSession;
-        // No need for session participants - all players can join any session
+        // Get scores only for selected participants
         $sessionScores = getSessionScores($sessionId);
     }
 }
 
-// Get all players for participant selection (include both Player and Admin roles)
-$pdo = getDBConnection();
-$stmt = $pdo->prepare("SELECT user_id, username, first_name, last_name, user_role, team_name FROM users WHERE (user_role = 'Player' OR user_role = 'Admin') AND status = 'Active' ORDER BY first_name, last_name");
-$stmt->execute();
-$allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
+// Get only selected participants for the current session
+$allPlayers = [];
+if ($sessionId) {
+    $allPlayers = getSessionParticipantsForScoring($sessionId);
+} else {
+    // If no session, show empty array (no players)
+    $allPlayers = [];
+}
 ?>
 <!doctype html>
 <html lang="en">
@@ -149,18 +152,8 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
             $todaySession = $stmt->fetch(PDO::FETCH_ASSOC);
             
             if ($todaySession): 
-              // Get session participants count
-              if ($todaySession['game_mode'] === 'Solo') {
-                // For solo games, count Speedsters players (Player + Admin roles)
-                $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM users WHERE team_name = 'Speedsters' AND (user_role = 'Player' OR user_role = 'Admin') AND status = 'Active'");
-                $stmt->execute();
-                $participantCount = $stmt->fetch(PDO::FETCH_ASSOC)['count'];
-              } else {
-                // For team games, count session participants
-              $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM session_participants WHERE session_id = ?");
-              $stmt->execute([$todaySession['session_id']]);
-              $participantCount = $stmt->fetch(PDO::FETCH_ASSOC)['count'];
-              }
+              // Get session participants count - use actual selected participants
+              $participantCount = getSessionParticipantCount($todaySession['session_id']);
               
               // Get session scores count
               $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM game_scores WHERE session_id = ? AND DATE(created_at) = CURDATE()");
@@ -531,24 +524,8 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
                             // Get all players from the database
                             try {
                               $pdo = getDBConnection();
-                              $stmt = $pdo->prepare("
-                                SELECT 
-                                    u.user_id,
-                                    u.username,
-                                    u.first_name,
-                                    u.last_name,
-                                    u.email,
-                                    u.phone,
-                                    u.user_role,
-                                    u.status,
-                                    u.team_name,
-                                    u.created_at
-                                FROM users u 
-                                WHERE (u.user_role = 'Player' OR u.user_role = 'Admin') AND u.status = 'Active' AND u.team_name = 'Speedsters'
-                                ORDER BY u.first_name, u.last_name
-                              ");
-                              $stmt->execute();
-                              $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                              // Get only selected participants for this session
+                              $allPlayers = getSessionParticipantsForScoring($sessionId);
                               
                               if (!empty($allPlayers)): 
                                 // Calculate rankings and stats for each player
@@ -694,24 +671,8 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                 // Get all players from the database
                                 try {
                                   $pdo = getDBConnection();
-                                  $stmt = $pdo->prepare("
-                                    SELECT 
-                                        u.user_id,
-                                        u.username,
-                                        u.first_name,
-                                        u.last_name,
-                                        u.email,
-                                        u.phone,
-                                        u.user_role,
-                                        u.status,
-                                        u.team_name,
-                                        u.created_at
-                                    FROM users u 
-                                    WHERE (u.user_role = 'Player' OR u.user_role = 'Admin') AND u.status = 'Active' AND u.team_name = 'Speedsters'
-                                    ORDER BY u.first_name, u.last_name
-                                  ");
-                                  $stmt->execute();
-                                  $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                                  // Use session participants instead of all Speedsters
+                                  $allPlayers = getSessionParticipantsForScoring($sessionId);
                                   
                                   if (!empty($allPlayers)): 
                                     // Get all Game 1 scores for today in one query (Solo only)
@@ -865,24 +826,8 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                 // Get all players from the database
                                 try {
                                   $pdo = getDBConnection();
-                                  $stmt = $pdo->prepare("
-                                    SELECT 
-                                        u.user_id,
-                                        u.username,
-                                        u.first_name,
-                                        u.last_name,
-                                        u.email,
-                                        u.phone,
-                                        u.user_role,
-                                        u.status,
-                                        u.team_name,
-                                        u.created_at
-                                    FROM users u 
-                                    WHERE (u.user_role = 'Player' OR u.user_role = 'Admin') AND u.status = 'Active' AND u.team_name = 'Speedsters'
-                                    ORDER BY u.first_name, u.last_name
-                                  ");
-                                  $stmt->execute();
-                                  $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                                  // Use session participants instead of all Speedsters
+                                  $allPlayers = getSessionParticipantsForScoring($sessionId);
                                   
                                   if (!empty($allPlayers)): 
                                     foreach ($allPlayers as $player):
@@ -1025,24 +970,8 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                 // Get all players from the database
                                 try {
                                   $pdo = getDBConnection();
-                                  $stmt = $pdo->prepare("
-                                    SELECT 
-                                        u.user_id,
-                                        u.username,
-                                        u.first_name,
-                                        u.last_name,
-                                        u.email,
-                                        u.phone,
-                                        u.user_role,
-                                        u.status,
-                                        u.team_name,
-                                        u.created_at
-                                    FROM users u 
-                                    WHERE (u.user_role = 'Player' OR u.user_role = 'Admin') AND u.status = 'Active' AND u.team_name = 'Speedsters'
-                                    ORDER BY u.first_name, u.last_name
-                                  ");
-                                  $stmt->execute();
-                                  $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                                  // Use session participants instead of all Speedsters
+                                  $allPlayers = getSessionParticipantsForScoring($sessionId);
                                   
                                   if (!empty($allPlayers)): 
                                     foreach ($allPlayers as $player):
@@ -1185,24 +1114,8 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                 // Get all players from the database
                                 try {
                                   $pdo = getDBConnection();
-                                  $stmt = $pdo->prepare("
-                                    SELECT 
-                                        u.user_id,
-                                        u.username,
-                                        u.first_name,
-                                        u.last_name,
-                                        u.email,
-                                        u.phone,
-                                        u.user_role,
-                                        u.status,
-                                        u.team_name,
-                                        u.created_at
-                                    FROM users u 
-                                    WHERE (u.user_role = 'Player' OR u.user_role = 'Admin') AND u.status = 'Active' AND u.team_name = 'Speedsters'
-                                    ORDER BY u.first_name, u.last_name
-                                  ");
-                                  $stmt->execute();
-                                  $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                                  // Use session participants instead of all Speedsters
+                                  $allPlayers = getSessionParticipantsForScoring($sessionId);
                                   
                                   if (!empty($allPlayers)): 
                                     foreach ($allPlayers as $player):
@@ -1345,24 +1258,8 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                 // Get all players from the database
                                 try {
                                   $pdo = getDBConnection();
-                                  $stmt = $pdo->prepare("
-                                    SELECT 
-                                        u.user_id,
-                                        u.username,
-                                        u.first_name,
-                                        u.last_name,
-                                        u.email,
-                                        u.phone,
-                                        u.user_role,
-                                        u.status,
-                                        u.team_name,
-                                        u.created_at
-                                    FROM users u 
-                                    WHERE (u.user_role = 'Player' OR u.user_role = 'Admin') AND u.status = 'Active' AND u.team_name = 'Speedsters'
-                                    ORDER BY u.first_name, u.last_name
-                                  ");
-                                  $stmt->execute();
-                                  $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                                  // Use session participants instead of all Speedsters
+                                  $allPlayers = getSessionParticipantsForScoring($sessionId);
                                   
                                   if (!empty($allPlayers)): 
                                     foreach ($allPlayers as $player):
@@ -1534,14 +1431,12 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
     const ongoingSubmissions = new Set();
     
     function savePlayerScore(userId, gameNumber, playerName) {
-      console.log('savePlayerScore called:', {userId, gameNumber, playerName});
       
       // Create unique submission key
       const submissionKey = `${userId}-${gameNumber}`;
       
       // Prevent duplicate submissions
       if (ongoingSubmissions.has(submissionKey)) {
-        console.log('Submission already in progress for:', submissionKey);
         showNotification('Score is already being saved, please wait...', 'warning');
         return;
       }
@@ -1554,10 +1449,6 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
       const row = table.querySelector(`tr [data-user-id="${userId}"]`).closest('tr');
       const inputs = row.querySelectorAll('.score-input');
       
-      console.log('Table ID:', tableId);
-      console.log('Table found:', table);
-      console.log('Row found:', row);
-      console.log('Inputs found:', inputs.length);
       
       let scoreData = {
         user_id: userId,
@@ -1574,7 +1465,6 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
         const field = input.getAttribute('data-field');
         const value = input.value.trim();
         
-        console.log(`Input field: ${field}, value: "${value}"`);
         
         if (field === 'score' && value && (value < 0 || value > 300)) {
           input.classList.add('is-invalid');
@@ -1596,7 +1486,6 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
         }
       });
       
-      console.log('Score data:', scoreData);
       
       if (hasErrors) {
         showNotification('Please fix invalid score (0-300)', 'error');
@@ -1612,7 +1501,6 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
       
       // Show loading on the specific save button
       const saveBtn = row.querySelector(`[onclick*="savePlayerScore(${userId}, ${gameNumber}"]`);
-      console.log('Save button found:', saveBtn);
       
       if (!saveBtn) {
         showNotification('Save button not found', 'error');
@@ -1621,8 +1509,9 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
       }
       
       const originalText = saveBtn.innerHTML;
-      saveBtn.innerHTML = '<i class="ti ti-loader me-1"></i>Saving...';
+      saveBtn.innerHTML = '<i class="ti ti-loader ti-spin me-1"></i>Saving...';
       saveBtn.disabled = true;
+      saveBtn.classList.add('btn-loading');
       
       // Send single score
       const formData = new FormData();
@@ -1673,7 +1562,7 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
             // Auto-refresh the current tab data after a short delay
             setTimeout(() => {
               refreshCurrentTabData();
-            }, 1000);
+            }, 300);
           } else {
             showNotification('Error: ' + data.message, 'error');
           }
@@ -1691,6 +1580,7 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
         ongoingSubmissions.delete(submissionKey);
         saveBtn.innerHTML = originalText;
         saveBtn.disabled = false;
+        saveBtn.classList.remove('btn-loading');
       });
     }
 
@@ -1854,7 +1744,7 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
           // Auto-refresh the current tab data after a short delay
           setTimeout(() => {
             refreshCurrentTabData();
-          }, 1000);
+          }, 300);
         } else {
           showNotification('Error: ' + data.message, 'error');
         }
@@ -1971,16 +1861,16 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
     const dataCache = {};
     
     function loadDataForDateFilter(selectedDate) {
-      // Check cache first
+      // Set global flag for All Time view
+      window.isAllTimeView = (selectedDate === 'all');
+      
+      // Clear cache to force fresh data load (temporary fix for score contamination)
       if (dataCache[selectedDate]) {
-        updateTablesWithData(dataCache[selectedDate].players);
-        // Make sure session_id is set from cache
-        if (dataCache[selectedDate].session_id) {
-          window.currentSessionId = dataCache[selectedDate].session_id;
-          console.log('Session ID from cache for date', selectedDate, ':', dataCache[selectedDate].session_id);
-        }
-        return;
+        delete dataCache[selectedDate];
       }
+      
+      // Always fetch fresh data for now
+      // TODO: Implement smarter cache invalidation later
       
       // Show simple loading state
       const tables = document.querySelectorAll('.table tbody');
@@ -2008,7 +1898,7 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
                   window.currentSessionId = data.session_id;
                   console.log('Session ID for date', selectedDate, ':', data.session_id);
                 }
-                updateTablesWithData(data.players);
+                updateTablesWithData(data.players, selectedDate);
                 
                 // Show debug info in console
                 if (data.debug) {
@@ -2030,13 +1920,39 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
       xhr.send('action=get_players_data&selected_date=' + encodeURIComponent(selectedDate) + '&session_type=Solo&t=' + Date.now());
     }
     
-    function updateTablesWithData(players) {
+    function updateTablesWithData(players, selectedDate = 'today') {
+      // Set global flag for All Time view
+      window.isAllTimeView = (selectedDate === 'all');
+      
+      // Update table headers based on view type
+      updateTableHeaders(selectedDate);
+      
       // Update Overall Rankings tab
       updateOverallRankingsTable(players);
       
       // Update Game tabs
       for (let game = 1; game <= 5; game++) {
-        updateGameTable(game, players);
+        updateGameTable(game, players, selectedDate);
+      }
+      
+      // Show/hide Save buttons based on view type
+      const saveButtons = document.querySelectorAll('.save-all-btn');
+      saveButtons.forEach(btn => {
+        if (window.isAllTimeView) {
+          btn.style.display = 'none';
+        } else {
+          btn.style.display = 'inline-block';
+        }
+      });
+    }
+    
+    function updateTableHeaders(selectedDate) {
+      const isAllTime = (selectedDate === 'all');
+      
+      // Update Overall Rankings table header
+      const totalScoreHeader = document.querySelector('#overallRankingsTable thead th:nth-child(2)');
+      if (totalScoreHeader) {
+        totalScoreHeader.textContent = isAllTime ? 'Average Score' : 'Total Score';
       }
     }
     
@@ -2047,13 +1963,15 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
       let html = '';
       
       players.forEach(player => {
-        const totalScore = player.total_score || 0;
-        const avgScore = player.avg_score || 0;
-        const gamesPlayed = player.games_played || 0;
-        const bestScore = player.best_score || 0;
-        const totalStrikes = player.total_strikes || 0;
-        const totalSpares = player.total_spares || 0;
-        const lastUpdated = player.last_updated || 'Never';
+        // For dates with no scores, show zeros instead of historical data
+        const hasScores = player.games_played > 0 && !window.isAllTimeView;
+        const totalScore = hasScores ? (player.total_score || 0) : 0;
+        const avgScore = hasScores ? (player.avg_score || 0) : 0;
+        const gamesPlayed = hasScores ? (player.games_played || 0) : 0;
+        const bestScore = hasScores ? (player.best_score || 0) : 0;
+        const totalStrikes = hasScores ? (player.total_strikes || 0) : 0;
+        const totalSpares = hasScores ? (player.total_spares || 0) : 0;
+        const lastUpdated = hasScores ? (player.last_updated || 'Never') : 'No data';
         
         html += `
           <tr>
@@ -2094,10 +2012,11 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
       tbody.innerHTML = html || '<tr><td colspan="10" class="text-center text-muted py-4">No Speedsters data available for selected date range</td></tr>';
     }
     
-    function updateGameTable(gameNumber, players) {
+    function updateGameTable(gameNumber, players, selectedDate = 'today') {
       const tbody = document.querySelector(`#game${gameNumber}Table tbody`);
       if (!tbody) return;
       
+      const isAllTime = (selectedDate === 'all');
       let html = '';
       
       players.forEach(player => {
@@ -2108,6 +2027,11 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
         const openFrames = gameScore ? gameScore.open_frames : '';
         const createdAt = gameScore ? gameScore.created_at : '';
         
+        // Calculate average scores for All Time view
+        const avgScore = player.avg_score || 0;
+        const gamesPlayed = player.games_played || 0;
+        const bestScore = player.best_score || 0;
+        
         html += `
           <tr>
             <td>
@@ -2115,10 +2039,56 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 <img src="assets/images/profile/user-${(player.user_id % 8) + 1}.jpg" alt="Player" class="rounded-circle me-2" width="32">
                 <div>
                   <strong>${player.first_name} ${player.last_name}</strong>
-                  <br><small class="text-muted">${player.user_role}</small>
+                  <br><small class="text-muted">${player.team_name || player.user_role}</small>
                 </div>
               </div>
+            </td>`;
+        
+        if (isAllTime) {
+          // All Time view - show game-specific averages (read-only)
+          const gameAvgScore = player[`game_${gameNumber}_avg_score`] || 0;
+          const gameAvgStrikes = player[`game_${gameNumber}_avg_strikes`] || 0;
+          const gameAvgSpares = player[`game_${gameNumber}_avg_spares`] || 0;
+          const gameCount = player[`game_${gameNumber}_count`] || 0;
+          
+          html += `
+            <td>
+              <div class="text-center p-2 bg-light rounded">
+                <strong class="text-primary fs-5">${gameAvgScore}</strong>
+                <br><small class="text-muted">Game ${gameNumber} Avg</small>
+              </div>
             </td>
+            <td>
+              <div class="text-center p-2 bg-light rounded">
+                <strong class="text-success">${gameAvgStrikes}</strong>
+                <br><small class="text-muted">Avg Strikes</small>
+              </div>
+            </td>
+            <td>
+              <div class="text-center p-2 bg-light rounded">
+                <strong class="text-warning">${gameAvgSpares}</strong>
+                <br><small class="text-muted">Avg Spares</small>
+              </div>
+            </td>
+            <td>
+              <div class="text-center p-2 bg-light rounded">
+                <strong class="text-info">${gameCount}</strong>
+                <br><small class="text-muted">Times Played</small>
+              </div>
+            </td>
+            <td class="text-center">
+              <span class="badge bg-info">Game ${gameNumber} History</span>
+            </td>
+            <td class="text-center">
+              <div class="d-flex gap-1 justify-content-center">
+                <button class="btn btn-sm btn-outline-primary" onclick="viewDetails(${player.user_id})" title="View Player History">
+                  <i class="ti ti-chart-line"></i>
+                </button>
+              </div>
+            </td>`;
+        } else {
+          // Session view - show editable inputs
+          html += `
             <td>
               <input type="number" class="form-control form-control-sm score-input" 
                      data-user-id="${player.user_id}" data-field="score" data-game="${gameNumber}"
@@ -2132,12 +2102,12 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
             <td>
               <input type="number" class="form-control form-control-sm score-input" 
                      data-user-id="${player.user_id}" data-field="spares" data-game="${gameNumber}"
-                     value="${spares}" min="0" max="12" placeholder="0-12">
+                     value="${spares}" min="0" max="10" placeholder="0-10">
             </td>
             <td>
               <input type="number" class="form-control form-control-sm score-input" 
                      data-user-id="${player.user_id}" data-field="open_frames" data-game="${gameNumber}"
-                     value="${openFrames}" min="0" max="12" placeholder="0-12">
+                     value="${openFrames}" min="0" max="10" placeholder="0-10">
             </td>
             <td class="text-center">
               ${gameScore ? 
@@ -2149,12 +2119,13 @@ $allPlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
               <button class="btn btn-success btn-sm" onclick="savePlayerScore(${player.user_id}, ${gameNumber}, '${player.first_name} ${player.last_name}')" title="Save Score">
                 <i class="ti ti-device-floppy me-1"></i>Save
               </button>
-            </td>
-          </tr>
-        `;
+            </td>`;
+        }
+        
+        html += `</tr>`;
       });
       
-      tbody.innerHTML = html || '<tr><td colspan="7" class="text-center text-muted py-4">No Speedsters data available for selected date range</td></tr>';
+      tbody.innerHTML = html || '<tr><td colspan="7" class="text-center text-muted py-4">No data available for selected date range</td></tr>';
     }
     
     function refreshTable() {
