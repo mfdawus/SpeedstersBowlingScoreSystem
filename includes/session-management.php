@@ -138,15 +138,8 @@ function startSession($sessionId) {
             return false;
         }
         
-        // Randomize lane assignments for all participants
-        $randomizeResult = randomizeLaneAssignments($sessionId);
-        if (!$randomizeResult) {
-            $pdo->rollBack();
-            return false;
-        }
-        
         $pdo->commit();
-        error_log("Session started and lanes randomized: " . $sessionId);
+        error_log("Session started: " . $sessionId);
         return true;
         
     } catch(PDOException $e) {

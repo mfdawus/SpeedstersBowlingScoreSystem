@@ -2152,6 +2152,67 @@ $activeSession = getActiveSession();
               <label for="maxPlayers" class="form-label">Max Players</label>
               <input type="number" class="form-control" id="maxPlayers" name="max_players" value="20" min="1" max="20" required>
             </div>
+            
+            <!-- Lane Configuration Section -->
+            <div class="mb-3">
+              <h6 class="fw-bold text-primary mb-3">
+                <i class="ti ti-target me-2"></i>Lane Configuration
+              </h6>
+            </div>
+            <div class="row">
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="lanesCount" class="form-label">Total Lanes</label>
+                  <input type="number" class="form-control" id="lanesCount" name="lanes_count" 
+                         min="1" max="24" value="8" required>
+                  <small class="form-text text-muted">Number of bowling lanes available</small>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="playersPerLane" class="form-label">Players per Lane</label>
+                  <input type="number" class="form-control" id="playersPerLane" name="players_per_lane" 
+                         min="1" max="6" value="4" required>
+                  <small class="form-text text-muted">Maximum players that can be assigned to each lane</small>
+                </div>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-12">
+                <div class="mb-3">
+                  <label for="availableLanes" class="form-label">Specific Lane Numbers (Optional)</label>
+                  <input type="text" class="form-control" id="availableLanes" name="available_lanes" 
+                         placeholder="e.g., 7,8,9 or leave empty for sequential lanes">
+                  <small class="form-text text-muted">
+                    Enter specific lane numbers separated by commas (e.g., 7,8,9 for lanes 7, 8, and 9). 
+                    Leave empty to use sequential lanes starting from 1.
+                  </small>
+                </div>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="laneSelectionOpen" class="form-label">Lane Selection</label>
+                  <select class="form-select" id="laneSelectionOpen" name="lane_selection_open">
+                    <option value="1">Open (players can choose)</option>
+                    <option value="0">Closed (admin assigns only)</option>
+                  </select>
+                  <small class="form-text text-muted">Allow players to select their preferred lane</small>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="assignmentLocked" class="form-label">Assignment Status</label>
+                  <select class="form-select" id="assignmentLocked" name="assignment_locked">
+                    <option value="0">Unlocked (can modify)</option>
+                    <option value="1">Locked (cannot modify)</option>
+                  </select>
+                  <small class="form-text text-muted">Allow modifications to lane assignments</small>
+                </div>
+              </div>
+            </div>
+            
             <div class="mb-3">
               <label for="sessionNotes" class="form-label">Notes (Optional)</label>
               <textarea class="form-control" id="sessionNotes" name="notes" rows="3"></textarea>

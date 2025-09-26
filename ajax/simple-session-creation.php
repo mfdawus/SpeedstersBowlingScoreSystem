@@ -53,8 +53,9 @@ if ($action === 'create_session_draft') {
         $stmt = $pdo->prepare("
             INSERT INTO game_sessions (
                 session_name, session_date, session_time, game_mode, 
-                max_players, created_by, notes
-            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                max_players, created_by, notes, lanes_count, players_per_lane, 
+                lane_selection_open, assignment_locked, available_lanes
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ");
         
         $result = $stmt->execute([
@@ -64,7 +65,12 @@ if ($action === 'create_session_draft') {
             $_POST['game_mode'] ?? 'Solo',
             (int)$_POST['max_players'],
             $currentUserId,
-            trim($_POST['notes'] ?? '')
+            trim($_POST['notes'] ?? ''),
+            $_POST['lanes_count'] ?? 8,
+            $_POST['players_per_lane'] ?? 4,
+            $_POST['lane_selection_open'] ?? 1,
+            $_POST['assignment_locked'] ?? 0,
+            !empty($_POST['available_lanes']) ? json_encode(array_map('intval', explode(',', $_POST['available_lanes']))) : null
         ]);
         
         if ($result) {
