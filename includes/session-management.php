@@ -1,4 +1,5 @@
 <?php
+
 require_once __DIR__ . '/../database.php';
 
 // Create a new game session
@@ -9,8 +10,9 @@ function createGameSession($data) {
         $stmt = $pdo->prepare("
             INSERT INTO game_sessions (
                 session_name, session_date, session_time, game_mode, 
-                max_players, created_by, notes
-            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                max_players, created_by, notes, lanes_count, players_per_lane, 
+                lane_selection_open, assignment_locked, available_lanes
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ");
         
         $result = $stmt->execute([
@@ -20,7 +22,12 @@ function createGameSession($data) {
             $data['game_mode'],
             $data['max_players'],
             $data['created_by'],
-            $data['notes'] ?? ''
+            $data['notes'] ?? '',
+            $data['lanes_count'] ?? 8,
+            $data['players_per_lane'] ?? 4,
+            $data['lane_selection_open'] ?? 1,
+            $data['assignment_locked'] ?? 0,
+            $data['available_lanes'] ?? null
         ]);
         
         return $result ? $pdo->lastInsertId() : false;
@@ -115,6 +122,10 @@ function startSession($sessionId) {
             return false;
         }
         
+        // Start transaction
+        $pdo->beginTransaction();
+        
+        // Update session status to Active
         $stmt = $pdo->prepare("
             UPDATE game_sessions 
             SET status = 'Active', started_at = NOW() 
@@ -122,11 +133,26 @@ function startSession($sessionId) {
         ");
         
         $result = $stmt->execute([$sessionId]);
-        error_log("Update query result: " . ($result ? 'true' : 'false'));
+        if (!$result) {
+            $pdo->rollBack();
+            return false;
+        }
         
-        return $result;
+        // Randomize lane assignments for all participants
+        $randomizeResult = randomizeLaneAssignments($sessionId);
+        if (!$randomizeResult) {
+            $pdo->rollBack();
+            return false;
+        }
+        
+        $pdo->commit();
+        error_log("Session started and lanes randomized: " . $sessionId);
+        return true;
         
     } catch(PDOException $e) {
+        if (isset($pdo) && $pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
         error_log("Start session error: " . $e->getMessage());
         return false;
     }
@@ -1103,7 +1129,8 @@ function updateGameSession($sessionId, $data) {
         $stmt = $pdo->prepare("
             UPDATE game_sessions 
             SET session_name = ?, session_date = ?, session_time = ?, 
-                game_mode = ?, max_players = ?, status = ?, notes = ?
+                game_mode = ?, max_players = ?, status = ?, notes = ?,
+                lanes_count = ?, players_per_lane = ?, lane_selection_open = ?, assignment_locked = ?, available_lanes = ?
             WHERE session_id = ?
         ");
         
@@ -1115,6 +1142,11 @@ function updateGameSession($sessionId, $data) {
             $data['max_players'],
             $data['status'],
             $data['notes'],
+            $data['lanes_count'] ?? 8,
+            $data['players_per_lane'] ?? 4,
+            $data['lane_selection_open'] ?? 1,
+            $data['assignment_locked'] ?? 0,
+            $data['available_lanes'] ?? null,
             $sessionId
         ]);
         
@@ -1123,4 +1155,352 @@ function updateGameSession($sessionId, $data) {
         return false;
     }
 }
+
+// =====================================================
+// LANE CONFIG & ASSIGNMENT HELPERS
+// =====================================================
+
+/**
+ * Get lane configuration for a session with sensible defaults
+ */
+function getLaneConfig($sessionId) {
+    try {
+        $pdo = getDBConnection();
+        $stmt = $pdo->prepare("SELECT lanes_count, players_per_lane, assignment_locked, lane_selection_open, available_lanes FROM game_sessions WHERE session_id = ?");
+        $stmt->execute([$sessionId]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$row) {
+            return [
+                'lanes_count' => 8,
+                'players_per_lane' => 4,
+                'assignment_locked' => 0,
+                'lane_selection_open' => 1,
+                'available_lanes' => null,
+            ];
+        }
+        return [
+            'lanes_count' => (int)($row['lanes_count'] ?? 8),
+            'players_per_lane' => (int)($row['players_per_lane'] ?? 4),
+            'assignment_locked' => (int)($row['assignment_locked'] ?? 0),
+            'lane_selection_open' => (int)($row['lane_selection_open'] ?? 1),
+            'available_lanes' => $row['available_lanes'],
+        ];
+    } catch (PDOException $e) {
+        return ['lanes_count' => 8, 'players_per_lane' => 4, 'assignment_locked' => 0, 'lane_selection_open' => 1];
+    }
+}
+
+/**
+ * Get available lane numbers for a session
+ * Returns array of lane numbers (e.g., [7, 8, 9])
+ */
+function getAvailableLanes($sessionId) {
+    $config = getLaneConfig($sessionId);
+    
+    // If specific lanes are set, use those
+    if (!empty($config['available_lanes'])) {
+        $lanes = json_decode($config['available_lanes'], true);
+        if (is_array($lanes)) {
+            return array_filter($lanes, 'is_numeric'); // Filter out any non-numeric values
+        }
+    }
+    
+    // Fallback to sequential lanes (1 to lanes_count)
+    $lanes = [];
+    for ($i = 1; $i <= $config['lanes_count']; $i++) {
+        $lanes[] = $i;
+    }
+    
+    return $lanes;
+}
+
+/**
+ * Update lane configuration for a session
+ */
+function updateLaneConfig($sessionId, $lanesCount, $playersPerLane, $laneSelectionOpen = null, $assignmentLocked = null) {
+    try {
+        $pdo = getDBConnection();
+        $fields = [
+            'lanes_count' => max(1, (int)$lanesCount),
+            'players_per_lane' => max(1, (int)$playersPerLane),
+        ];
+        if ($laneSelectionOpen !== null) $fields['lane_selection_open'] = (int)!!$laneSelectionOpen;
+        if ($assignmentLocked !== null) $fields['assignment_locked'] = (int)!!$assignmentLocked;
+        $sets = [];
+        $params = [];
+        foreach ($fields as $col => $val) { $sets[] = "$col = ?"; $params[] = $val; }
+        $params[] = $sessionId;
+        $sql = "UPDATE game_sessions SET " . implode(', ', $sets) . " WHERE session_id = ?";
+        $stmt = $pdo->prepare($sql);
+        return $stmt->execute($params);
+    } catch (PDOException $e) {
+        return false;
+    }
+}
+
+/**
+ * Get per-lane occupancy and remaining capacity
+ */
+function getLaneStatus($sessionId) {
+    try {
+        $config = getLaneConfig($sessionId);
+        $availableLanes = getAvailableLanes($sessionId);
+        $pdo = getDBConnection();
+
+        // Get lane assignments with player information
+        $stmt = $pdo->prepare("
+            SELECT 
+                sp.lane_number, 
+                COUNT(*) as cnt,
+                GROUP_CONCAT(
+                    CONCAT(u.first_name, ' ', u.last_name) 
+                    ORDER BY u.first_name, u.last_name
+                    SEPARATOR '|'
+                ) as player_names,
+                GROUP_CONCAT(
+                    u.user_id 
+                    ORDER BY u.first_name, u.last_name
+                    SEPARATOR '|'
+                ) as player_ids
+            FROM session_participants sp
+            JOIN users u ON sp.user_id = u.user_id
+            WHERE sp.session_id = ? AND sp.lane_number IS NOT NULL 
+            GROUP BY sp.lane_number
+        ");
+        $stmt->execute([$sessionId]);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Create lane data structure
+        $laneData = [];
+        foreach ($rows as $row) {
+            $laneData[$row['lane_number']] = [
+                'assigned' => (int)$row['cnt'],
+                'players' => array_map(function($name, $id) {
+                    return [
+                        'user_id' => $id,
+                        'first_name' => explode(' ', $name)[0],
+                        'last_name' => explode(' ', $name)[1] ?? ''
+                    ];
+                }, explode('|', $row['player_names']), explode('|', $row['player_ids']))
+            ];
+        }
+
+        $lanes = [];
+        foreach ($availableLanes as $laneNumber) {
+            $assigned = isset($laneData[$laneNumber]) ? $laneData[$laneNumber]['assigned'] : 0;
+            $players = isset($laneData[$laneNumber]) ? $laneData[$laneNumber]['players'] : [];
+            
+            $lanes[] = [
+                'lane_number' => $laneNumber,
+                'assigned' => $assigned,
+                'capacity' => $config['players_per_lane'],
+                'remaining' => max(0, $config['players_per_lane'] - $assigned),
+                'players' => $players,
+            ];
+        }
+
+        // Count unassigned
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM session_participants WHERE session_id = ? AND lane_number IS NULL");
+        $stmt->execute([$sessionId]);
+        $unassigned = (int)$stmt->fetchColumn();
+
+        return [
+            'lanes' => $lanes,
+            'unassigned' => $unassigned,
+            'lanes_count' => count($availableLanes),
+            'players_per_lane' => $config['players_per_lane'],
+            'assignment_locked' => $config['assignment_locked'],
+            'lane_selection_open' => $config['lane_selection_open'],
+            'available_lanes' => $availableLanes,
+        ];
+    } catch (PDOException $e) {
+        return null;
+    }
+}
+
+/**
+ * Player chooses a lane preference (before session starts)
+ */
+function submitLanePreference($sessionId, $userId, $laneNumber) {
+    try {
+        $config = getLaneConfig($sessionId);
+        
+        // Only allow preferences if session is not started yet
+        $pdo = getDBConnection();
+        $sessionStmt = $pdo->prepare("SELECT status FROM game_sessions WHERE session_id = ?");
+        $sessionStmt->execute([$sessionId]);
+        $session = $sessionStmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$session || $session['status'] !== 'Scheduled') {
+            return ['success' => false, 'message' => 'Lane preferences can only be set before session starts'];
+        }
+        
+        $availableLanes = getAvailableLanes($sessionId);
+        if (!in_array($laneNumber, $availableLanes)) {
+            return ['success' => false, 'message' => 'Invalid lane'];
+        }
+
+        $pdo = getDBConnection();
+        $pdo->beginTransaction();
+
+        // Ensure the user is a participant in this session
+        $stmt = $pdo->prepare("SELECT participant_id FROM session_participants WHERE session_id = ? AND user_id = ? FOR UPDATE");
+        $stmt->execute([$sessionId, $userId]);
+        $participant = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$participant) { 
+            $pdo->rollBack(); 
+            return ['success' => false, 'message' => 'Not a participant']; 
+        }
+
+        // Store lane preference (not final assignment)
+        $stmt = $pdo->prepare("UPDATE session_participants SET lane_number = ? WHERE session_id = ? AND user_id = ?");
+        $ok = $stmt->execute([$laneNumber, $sessionId, $userId]);
+        
+        if (!$ok) { 
+            $pdo->rollBack(); 
+            return ['success' => false, 'message' => 'Failed to save preference']; 
+        }
+
+        $pdo->commit();
+        return ['success' => true, 'message' => 'Lane preference saved'];
+    } catch (PDOException $e) {
+        if (isset($pdo) && $pdo->inTransaction()) $pdo->rollBack();
+        return ['success' => false, 'message' => 'Database error'];
+    }
+}
+
+/**
+ * Randomize lane assignments when session starts (ignores player preferences)
+ */
+function randomizeLaneAssignments($sessionId) {
+    try {
+        $config = getLaneConfig($sessionId);
+        $availableLanes = getAvailableLanes($sessionId);
+        $pdo = getDBConnection();
+        
+        // Get all participants
+        $stmt = $pdo->prepare("SELECT participant_id, user_id FROM session_participants WHERE session_id = ? ORDER BY joined_at ASC");
+        $stmt->execute([$sessionId]);
+        $participants = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        if (empty($participants)) {
+            return true; // No participants to assign
+        }
+        
+        // Shuffle participants for randomization
+        shuffle($participants);
+        
+        // Clear all existing lane assignments
+        $clearStmt = $pdo->prepare("UPDATE session_participants SET lane_number = NULL WHERE session_id = ?");
+        $clearStmt->execute([$sessionId]);
+        
+        // Assign participants to lanes sequentially using available lanes
+        $laneIndex = 0;
+        $playersInCurrentLane = 0;
+        
+        foreach ($participants as $participant) {
+            // Move to next lane if current lane is full
+            if ($playersInCurrentLane >= $config['players_per_lane']) {
+                $laneIndex++;
+                $playersInCurrentLane = 0;
+                
+                // Wrap around to first lane if we've used all lanes
+                if ($laneIndex >= count($availableLanes)) {
+                    $laneIndex = 0; // Wrap around to first lane
+                    $playersInCurrentLane = 0;
+                }
+            }
+            
+            $laneNumber = $availableLanes[$laneIndex];
+            
+            // Assign participant to lane
+            $assignStmt = $pdo->prepare("UPDATE session_participants SET lane_number = ? WHERE participant_id = ?");
+            $assignStmt->execute([$laneNumber, $participant['participant_id']]);
+            
+            $playersInCurrentLane++;
+        }
+        
+        return true;
+        
+    } catch (PDOException $e) {
+        error_log("Error randomizing lane assignments: " . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Admin auto-assign remaining participants randomly
+ */
+function autoAssignRemainingParticipants($sessionId) {
+    try {
+        $config = getLaneConfig($sessionId);
+        $availableLanes = getAvailableLanes($sessionId);
+        if ($config['assignment_locked']) return ['success' => false, 'message' => 'Assignment is locked'];
+
+        $pdo = getDBConnection();
+        $pdo->beginTransaction();
+
+        // Current per-lane counts for available lanes only
+        $laneCounts = [];
+        foreach ($availableLanes as $laneNumber) {
+            $laneCounts[$laneNumber] = 0;
+        }
+        $stmt = $pdo->prepare("SELECT lane_number, COUNT(*) as cnt FROM session_participants WHERE session_id = ? AND lane_number IS NOT NULL GROUP BY lane_number FOR UPDATE");
+        $stmt->execute([$sessionId]);
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $lane = (int)$row['lane_number'];
+            if (in_array($lane, $availableLanes)) {
+                $laneCounts[$lane] = (int)$row['cnt'];
+            }
+        }
+
+        // Fetch unassigned participants
+        $stmt = $pdo->prepare("SELECT participant_id, user_id FROM session_participants WHERE session_id = ? AND lane_number IS NULL ORDER BY joined_at ASC FOR UPDATE");
+        $stmt->execute([$sessionId]);
+        $unassigned = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        if (empty($unassigned)) { $pdo->commit(); return ['success' => true, 'assigned' => 0]; }
+
+        // Shuffle for randomness
+        shuffle($unassigned);
+
+        $assignedCount = 0;
+        $laneIndex = 0; // Track which lane we're currently assigning to
+        
+        foreach ($unassigned as $row) {
+            // Find next lane with capacity from available lanes (round-robin style)
+            $targetLane = null;
+            $attempts = 0;
+            
+            // Try to find a lane with capacity, cycling through available lanes
+            while ($attempts < count($availableLanes)) {
+                $currentLane = $availableLanes[$laneIndex];
+                if ($laneCounts[$currentLane] < $config['players_per_lane']) {
+                    $targetLane = $currentLane;
+                    break;
+                }
+                $laneIndex = ($laneIndex + 1) % count($availableLanes); // Move to next lane
+                $attempts++;
+            }
+            
+            if ($targetLane === null) break; // all lanes full
+
+            $upd = $pdo->prepare("UPDATE session_participants SET lane_number = ? WHERE participant_id = ?");
+            if ($upd->execute([$targetLane, $row['participant_id']])) {
+                $laneCounts[$targetLane] += 1;
+                $assignedCount += 1;
+                // Move to next lane for next assignment
+                $laneIndex = ($laneIndex + 1) % count($availableLanes);
+            }
+        }
+
+        $pdo->commit();
+        return ['success' => true, 'assigned' => $assignedCount];
+    } catch (PDOException $e) {
+        if (isset($pdo) && $pdo->inTransaction()) $pdo->rollBack();
+        return ['success' => false, 'message' => 'Database error'];
+    }
+}
+
 ?>

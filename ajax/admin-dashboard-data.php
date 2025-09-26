@@ -29,7 +29,7 @@ try {
     $soloStats = [];
     $recentActivities = [];
     
-    // Get all players with scores for the selected date (including admins) - NO SESSION PARTICIPANTS NEEDED
+    // Get all players with scores for the selected date (including admins) - WITH LANE ASSIGNMENTS
     $stmt = $pdo->prepare("
         SELECT 
             u.user_id,
@@ -48,12 +48,14 @@ try {
             CASE 
                 WHEN COUNT(gs.score_id) > 0 THEN ROUND((SUM(gs.strikes) / (COUNT(gs.score_id) * 10)) * 100, 1)
                 ELSE 0 
-            END as strike_rate
+            END as strike_rate,
+            sp.lane_number
         FROM users u
         LEFT JOIN game_scores gs ON u.user_id = gs.user_id AND gs.status = 'Completed'
         LEFT JOIN game_sessions sess ON gs.session_id = sess.session_id
+        LEFT JOIN session_participants sp ON u.user_id = sp.user_id AND sess.session_id = sp.session_id
         WHERE (u.user_role = 'Player' OR u.user_role = 'Admin') AND u.status = 'Active' AND ($dateCondition)
-        GROUP BY u.user_id
+        GROUP BY u.user_id, sp.lane_number
         ORDER BY total_score DESC, u.first_name, u.last_name
         LIMIT 20
     ");

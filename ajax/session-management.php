@@ -30,7 +30,8 @@ try {
     // Define actions that require admin access
     $adminActions = [
         'create_session', 'start_session', 'end_session', 'cancel_session', 'pause_session', 'restart_session',
-        'add_score', 'save_multiple_scores', 'get_team_data', 'get_teams', 'create_team_session'
+        'add_score', 'save_multiple_scores', 'get_team_data', 'get_teams', 'create_team_session',
+        'auto_assign_remaining', 'lock_assignment', 'update_lane_config'
     ];
     
     // Check if user is admin for admin-only actions
@@ -318,11 +319,13 @@ case 'get_players_data':
                 COALESCE(MAX(gs.player_score), 0) as best_score,
                 COALESCE(SUM(gs.strikes), 0) as total_strikes,
                 COALESCE(SUM(gs.spares), 0) as total_spares,
-                MAX(gs.created_at) as last_updated
+                MAX(gs.created_at) as last_updated,
+                sp.lane_number
             FROM users u
             LEFT JOIN game_scores gs ON u.user_id = gs.user_id AND gs.status = 'Completed'
+            LEFT JOIN session_participants sp ON u.user_id = sp.user_id AND sp.session_id = gs.session_id
             WHERE (u.user_role = 'Player' OR u.user_role = 'Admin') AND u.status = 'Active'
-            GROUP BY u.user_id
+            GROUP BY u.user_id, sp.lane_number
             ORDER BY u.first_name, u.last_name
         ");
         $stmt->execute();
@@ -615,6 +618,124 @@ case 'get_players_data':
             } else {
                 $response['message'] = 'Failed to save any scores. Errors: ' . implode(', ', $errors);
             }
+            break;
+
+        // ===============================
+        // Lane selection & assignment
+        // ===============================
+
+        case 'lane_status':
+            $sessionId = $_POST['session_id'] ?? $_GET['session_id'] ?? null;
+            if (!$sessionId) { $response['message'] = 'Missing session_id'; break; }
+            $status = getLaneStatus($sessionId);
+            if (!$status) { $response['message'] = 'Failed to load lane status'; break; }
+
+            // Include current user's lane if participating
+            $userLane = null;
+            try {
+                $stmt = $pdo->prepare("SELECT lane_number FROM session_participants WHERE session_id = ? AND user_id = ?");
+                $stmt->execute([$sessionId, $_SESSION['user_id']]);
+                $row = $stmt->fetch(PDO::FETCH_ASSOC);
+                if ($row) { $userLane = $row['lane_number']; }
+            } catch (Exception $e) {}
+
+            $response = [
+                'success' => true,
+                'status' => $status,
+                'user_lane' => $userLane,
+            ];
+            break;
+
+        case 'draw_random_lane':
+            $sessionId = $_POST['session_id'] ?? null;
+            if (!$sessionId) { $response['message'] = 'Missing session_id'; break; }
+            
+            try {
+                $pdo = getDBConnection();
+                
+                // Check if user already has a lane assigned
+                $checkStmt = $pdo->prepare("SELECT lane_number FROM session_participants WHERE session_id = ? AND user_id = ?");
+                $checkStmt->execute([$sessionId, $_SESSION['user_id']]);
+                $existingLane = $checkStmt->fetch(PDO::FETCH_ASSOC);
+                
+                if ($existingLane && $existingLane['lane_number']) {
+                    $response['message'] = 'You already have a lane assigned';
+                    break;
+                }
+                
+                // Get session lane configuration
+                $config = getLaneConfig($sessionId);
+                $availableLanes = getAvailableLanes($sessionId);
+                
+                // Get available lanes (not full)
+                $stmt = $pdo->prepare("
+                    SELECT lane_number, COUNT(*) as player_count 
+                    FROM session_participants 
+                    WHERE session_id = ? AND lane_number IS NOT NULL 
+                    GROUP BY lane_number
+                ");
+                $stmt->execute([$sessionId]);
+                $laneCounts = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
+                
+                // Find available lanes from the specific lane list
+                $availableLanesForAssignment = [];
+                foreach ($availableLanes as $laneNumber) {
+                    $currentCount = isset($laneCounts[$laneNumber]) ? $laneCounts[$laneNumber] : 0;
+                    if ($currentCount < $config['players_per_lane']) {
+                        $availableLanesForAssignment[] = $laneNumber;
+                    }
+                }
+                
+                if (empty($availableLanesForAssignment)) {
+                    $response['message'] = 'No lanes available';
+                    break;
+                }
+                
+                // Randomly select a lane from available lanes
+                $randomLane = $availableLanesForAssignment[array_rand($availableLanesForAssignment)];
+                
+                // Assign user to the random lane
+                $assignStmt = $pdo->prepare("UPDATE session_participants SET lane_number = ? WHERE session_id = ? AND user_id = ?");
+                $result = $assignStmt->execute([$randomLane, $sessionId, $_SESSION['user_id']]);
+                
+                if ($result) {
+                    $response = ['success' => true, 'lane_number' => $randomLane, 'message' => 'Lane assigned successfully'];
+                } else {
+                    $response['message'] = 'Failed to assign lane';
+                }
+            } catch (Exception $e) {
+                $response['message'] = 'Database error: ' . $e->getMessage();
+            }
+            break;
+
+        case 'auto_assign_remaining':
+            $sessionId = $_POST['session_id'] ?? null;
+            if (!$sessionId) { $response['message'] = 'Missing session_id'; break; }
+            $result = autoAssignRemainingParticipants($sessionId);
+            $response = array_merge(['success' => $result['success'] ?? false], $result);
+            break;
+
+        case 'lock_assignment':
+            $sessionId = $_POST['session_id'] ?? null;
+            $lock = isset($_POST['lock']) ? (int)$_POST['lock'] : 1;
+            if (!$sessionId) { $response['message'] = 'Missing session_id'; break; }
+            $ok = updateLaneConfig($sessionId, 
+                getLaneConfig($sessionId)['lanes_count'], 
+                getLaneConfig($sessionId)['players_per_lane'], 
+                $lock ? 0 : 1, 
+                $lock
+            );
+            $response = $ok ? ['success' => true, 'message' => ($lock ? 'Assignment locked' : 'Assignment unlocked')] : ['success' => false, 'message' => 'Failed to update lock'];
+            break;
+
+        case 'update_lane_config':
+            $sessionId = $_POST['session_id'] ?? null;
+            $lanesCount = isset($_POST['lanes_count']) ? (int)$_POST['lanes_count'] : null;
+            $playersPerLane = isset($_POST['players_per_lane']) ? (int)$_POST['players_per_lane'] : null;
+            $laneSelectionOpen = isset($_POST['lane_selection_open']) ? (int)$_POST['lane_selection_open'] : null;
+            if (!$sessionId || !$lanesCount || !$playersPerLane) { $response['message'] = 'Missing required fields'; break; }
+            $ok = updateLaneConfig($sessionId, $lanesCount, $playersPerLane, $laneSelectionOpen);
+            $response = $ok ? ['success' => true, 'message' => 'Lane configuration updated'] : ['success' => false, 'message' => 'Failed to update lane configuration'];
             break;
             
         default:

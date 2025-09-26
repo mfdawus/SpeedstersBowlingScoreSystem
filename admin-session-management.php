@@ -25,7 +25,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 'game_mode' => $_POST['game_mode'] ?? 'Solo',
                 'max_players' => $_POST['max_players'] ?? 20,
                 'created_by' => $currentUser['user_id'],
-                'notes' => $_POST['notes'] ?? ''
+                'notes' => $_POST['notes'] ?? '',
+                'lanes_count' => $_POST['lanes_count'] ?? 8,
+                'players_per_lane' => $_POST['players_per_lane'] ?? 4,
+                'lane_selection_open' => $_POST['lane_selection_open'] ?? 1,
+                'assignment_locked' => $_POST['assignment_locked'] ?? 0,
+                'available_lanes' => $_POST['available_lanes'] ?? null
             ];
             
             $sessionId = createGameSession($sessionData);
@@ -83,7 +88,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 'game_mode' => $_POST['game_mode'] ?? 'Solo',
                 'max_players' => $_POST['max_players'] ?? 20,
                 'status' => $_POST['status'] ?? 'Scheduled',
-                'notes' => $_POST['notes'] ?? ''
+                'notes' => $_POST['notes'] ?? '',
+                'lanes_count' => $_POST['lanes_count'] ?? 8,
+                'players_per_lane' => $_POST['players_per_lane'] ?? 4,
+                'lane_selection_open' => $_POST['lane_selection_open'] ?? 1,
+                'assignment_locked' => $_POST['assignment_locked'] ?? 0,
+                'available_lanes' => $_POST['available_lanes'] ?? null
             ];
             
             if (updateGameSession($sessionId, $updateData)) {
@@ -552,6 +562,64 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             </div>
           </div>
         </div>
+        <!-- Lane Configuration for Active Session -->
+        <div class="row mb-4">
+          <div class="col-12">
+            <div class="card admin-card">
+              <div class="card-body">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                  <div>
+                    <h5 class="card-title fw-semibold mb-1">Lane Configuration</h5>
+                    <small class="text-muted">Configure lanes and capacity for this session</small>
+                  </div>
+                  <div class="btn-group">
+                    <button class="btn btn-outline-primary btn-sm" onclick="saveLaneConfig(<?php echo $activeSession['session_id']; ?>)">
+                      <i class="ti ti-device-floppy me-1"></i>Save
+                    </button>
+                    <button class="btn btn-outline-secondary btn-sm" onclick="autoAssignRemaining(<?php echo $activeSession['session_id']; ?>)">
+                      <i class="ti ti-arrows-random me-1"></i>Auto-assign remaining
+                    </button>
+                    <button class="btn btn-outline-danger btn-sm" onclick="lockAssignment(<?php echo $activeSession['session_id']; ?>, 1)">
+                      <i class="ti ti-lock me-1"></i>Lock
+                    </button>
+                    <button class="btn btn-outline-success btn-sm" onclick="lockAssignment(<?php echo $activeSession['session_id']; ?>, 0)">
+                      <i class="ti ti-lock-open me-1"></i>Unlock
+                    </button>
+                  </div>
+                </div>
+                <div class="row g-3">
+                  <div class="col-md-3">
+                    <label class="form-label">Total Lanes</label>
+                    <input type="number" min="1" max="24" step="1" class="form-control" id="lanesCountInput"
+                      value="<?php echo isset($activeSession['lanes_count']) ? (int)$activeSession['lanes_count'] : 8; ?>">
+                  </div>
+                  <div class="col-md-3">
+                    <label class="form-label">Players per Lane</label>
+                    <input type="number" min="1" max="6" step="1" class="form-control" id="playersPerLaneInput"
+                      value="<?php echo isset($activeSession['players_per_lane']) ? (int)$activeSession['players_per_lane'] : 4; ?>">
+                  </div>
+                  <div class="col-md-3">
+                    <label class="form-label">Lane Selection</label>
+                    <select id="laneSelectionOpenInput" class="form-select">
+                      <?php $selOpen = isset($activeSession['lane_selection_open']) ? (int)$activeSession['lane_selection_open'] : 1; ?>
+                      <option value="1" <?php echo $selOpen ? 'selected' : ''; ?>>Open (players can choose)</option>
+                      <option value="0" <?php echo !$selOpen ? 'selected' : ''; ?>>Closed</option>
+                    </select>
+                  </div>
+                  <div class="col-md-3">
+                    <label class="form-label">Assignment Status</label>
+                    <div class="form-control bg-light">
+                      <?php $locked = isset($activeSession['assignment_locked']) ? (int)$activeSession['assignment_locked'] : 0; ?>
+                      <span class="badge <?php echo $locked ? 'bg-danger' : 'bg-success'; ?>">
+                        <?php echo $locked ? 'Locked' : 'Unlocked'; ?>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
         <?php else: ?>
         <div class="row mb-4">
           <div class="col-12">
@@ -847,6 +915,70 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 </div>
               </div>
             </div>
+            
+            <!-- Lane Configuration Section -->
+            <div class="row">
+              <div class="col-12">
+                <div class="mb-3">
+                  <h6 class="fw-bold text-primary mb-3">
+                    <i class="ti ti-target me-2"></i>Lane Configuration
+                  </h6>
+                </div>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="lanesCount" class="form-label">Total Lanes</label>
+                  <input type="number" class="form-control" id="lanesCount" name="lanes_count" 
+                         min="1" max="24" value="8" required>
+                  <small class="form-text text-muted">Number of bowling lanes available</small>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="playersPerLane" class="form-label">Players per Lane</label>
+                  <input type="number" class="form-control" id="playersPerLane" name="players_per_lane" 
+                         min="1" max="6" value="4" required>
+                  <small class="form-text text-muted">Maximum players that can be assigned to each lane</small>
+                </div>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-12">
+                <div class="mb-3">
+                  <label for="availableLanes" class="form-label">Specific Lane Numbers (Optional)</label>
+                  <input type="text" class="form-control" id="availableLanes" name="available_lanes" 
+                         placeholder="e.g., 7,8,9 or leave empty for sequential lanes">
+                  <small class="form-text text-muted">
+                    Enter specific lane numbers separated by commas (e.g., 7,8,9 for lanes 7, 8, and 9). 
+                    Leave empty to use sequential lanes starting from 1.
+                  </small>
+                </div>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="laneSelectionOpen" class="form-label">Lane Selection</label>
+                  <select class="form-select" id="laneSelectionOpen" name="lane_selection_open">
+                    <option value="1">Open (players can choose)</option>
+                    <option value="0">Closed (admin assigns only)</option>
+                  </select>
+                  <small class="form-text text-muted">Allow players to select their preferred lane</small>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="assignmentLocked" class="form-label">Assignment Status</label>
+                  <select class="form-select" id="assignmentLocked" name="assignment_locked">
+                    <option value="0">Unlocked (can modify)</option>
+                    <option value="1">Locked (final assignments)</option>
+                  </select>
+                  <small class="form-text text-muted">Lock prevents further lane changes</small>
+                </div>
+              </div>
+            </div>
           </div>
           <div class="modal-footer">
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -922,6 +1054,70 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                   <small class="form-text text-muted">
                     <strong>Tip:</strong> Changing status affects available actions and score entry permissions.
                   </small>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Lane Configuration Section -->
+            <div class="row">
+              <div class="col-12">
+                <div class="mb-3">
+                  <h6 class="fw-bold text-primary mb-3">
+                    <i class="ti ti-target me-2"></i>Lane Configuration
+                  </h6>
+                </div>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="editLanesCount" class="form-label">Total Lanes</label>
+                  <input type="number" class="form-control" id="editLanesCount" name="lanes_count" 
+                         min="1" max="24" value="8" required>
+                  <small class="form-text text-muted">Number of bowling lanes available</small>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="editPlayersPerLane" class="form-label">Players per Lane</label>
+                  <input type="number" class="form-control" id="editPlayersPerLane" name="players_per_lane" 
+                         min="1" max="6" value="4" required>
+                  <small class="form-text text-muted">Maximum players that can be assigned to each lane</small>
+                </div>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-12">
+                <div class="mb-3">
+                  <label for="editAvailableLanes" class="form-label">Specific Lane Numbers (Optional)</label>
+                  <input type="text" class="form-control" id="editAvailableLanes" name="available_lanes" 
+                         placeholder="e.g., 7,8,9 or leave empty for sequential lanes">
+                  <small class="form-text text-muted">
+                    Enter specific lane numbers separated by commas (e.g., 7,8,9 for lanes 7, 8, and 9). 
+                    Leave empty to use sequential lanes starting from 1.
+                  </small>
+                </div>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="editLaneSelectionOpen" class="form-label">Lane Selection</label>
+                  <select class="form-select" id="editLaneSelectionOpen" name="lane_selection_open">
+                    <option value="1">Open (players can choose)</option>
+                    <option value="0">Closed (admin assigns only)</option>
+                  </select>
+                  <small class="form-text text-muted">Allow players to select their preferred lane</small>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="editAssignmentLocked" class="form-label">Assignment Status</label>
+                  <select class="form-select" id="editAssignmentLocked" name="assignment_locked">
+                    <option value="0">Unlocked (can modify)</option>
+                    <option value="1">Locked (final assignments)</option>
+                  </select>
+                  <small class="form-text text-muted">Lock prevents further lane changes</small>
                 </div>
               </div>
             </div>
@@ -1076,6 +1272,58 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
       }
     }
 
+    // ===== Lane config & assignment actions =====
+    async function saveLaneConfig(sessionId) {
+      const lanes = document.getElementById('lanesCountInput')?.value || 8;
+      const ppl = document.getElementById('playersPerLaneInput')?.value || 4;
+      const open = document.getElementById('laneSelectionOpenInput')?.value || 1;
+      const formData = new FormData();
+      formData.append('action', 'update_lane_config');
+      formData.append('session_id', sessionId);
+      formData.append('lanes_count', lanes);
+      formData.append('players_per_lane', ppl);
+      formData.append('lane_selection_open', open);
+      try {
+        const res = await fetch('ajax/session-management.php', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (data.success) showNotification(data.message, 'success');
+        else showNotification(data.message || 'Failed to save', 'error');
+      } catch (e) { showNotification('Failed to save lane config', 'error'); }
+    }
+
+    async function autoAssignRemaining(sessionId) {
+      if (!confirm('Auto-assign all unassigned participants to available lanes?')) return;
+      const formData = new FormData();
+      formData.append('action', 'auto_assign_remaining');
+      formData.append('session_id', sessionId);
+      try {
+        const res = await fetch('ajax/session-management.php', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (data.success) {
+          showNotification(`Assigned ${data.assigned || 0} participants`, 'success');
+        } else {
+          showNotification(data.message || 'Auto-assign failed', 'error');
+        }
+      } catch (e) { showNotification('Auto-assign failed', 'error'); }
+    }
+
+    async function lockAssignment(sessionId, lock) {
+      const formData = new FormData();
+      formData.append('action', 'lock_assignment');
+      formData.append('session_id', sessionId);
+      formData.append('lock', lock ? 1 : 0);
+      try {
+        const res = await fetch('ajax/session-management.php', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (data.success) {
+          showNotification(data.message, 'success');
+          setTimeout(() => location.reload(), 1200);
+        } else {
+          showNotification(data.message || 'Failed to update', 'error');
+        }
+      } catch (e) { showNotification('Failed to update', 'error'); }
+    }
+
     // End Session
     async function endSession(sessionId) {
       if (!confirm('Are you sure you want to end this session? This action cannot be undone.')) return;
@@ -1137,6 +1385,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
           document.getElementById('editMaxPlayers').value = session.max_players;
           document.getElementById('editSessionStatus').value = session.status;
           document.getElementById('editSessionNotes').value = session.notes || '';
+          
+          // Populate lane configuration fields
+          document.getElementById('editLanesCount').value = session.lanes_count || 8;
+          document.getElementById('editPlayersPerLane').value = session.players_per_lane || 4;
+          document.getElementById('editLaneSelectionOpen').value = session.lane_selection_open !== undefined ? session.lane_selection_open : 1;
+          document.getElementById('editAssignmentLocked').value = session.assignment_locked !== undefined ? session.assignment_locked : 0;
+          
+          // Populate available lanes field
+          if (session.available_lanes) {
+            try {
+              const lanes = JSON.parse(session.available_lanes);
+              document.getElementById('editAvailableLanes').value = lanes.join(',');
+            } catch (e) {
+              document.getElementById('editAvailableLanes').value = '';
+            }
+          } else {
+            document.getElementById('editAvailableLanes').value = '';
+          }
           
           // Show the modal
           const modal = new bootstrap.Modal(document.getElementById('editSessionModal'));
@@ -1270,6 +1536,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
       
       const formData = new FormData(this);
       formData.append('action', 'update_session');
+      
+      // Convert available lanes from comma-separated to JSON
+      const availableLanesInput = document.getElementById('editAvailableLanes');
+      if (availableLanesInput.value.trim()) {
+        const lanes = availableLanesInput.value.split(',').map(lane => parseInt(lane.trim())).filter(lane => !isNaN(lane));
+        formData.set('available_lanes', JSON.stringify(lanes));
+      } else {
+        formData.set('available_lanes', '');
+      }
       
       try {
         const response = await fetch('', {

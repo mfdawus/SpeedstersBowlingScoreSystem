@@ -99,7 +99,12 @@ function createSessionDraft() {
             'game_mode' => $_POST['game_mode'] ?? 'Solo',
             'max_players' => $maxPlayers,
             'created_by' => $currentUserId,
-            'notes' => trim($_POST['notes'] ?? '')
+            'notes' => trim($_POST['notes'] ?? ''),
+            'lanes_count' => $_POST['lanes_count'] ?? 8,
+            'players_per_lane' => $_POST['players_per_lane'] ?? 4,
+            'lane_selection_open' => $_POST['lane_selection_open'] ?? 1,
+            'assignment_locked' => $_POST['assignment_locked'] ?? 0,
+            'available_lanes' => !empty($_POST['available_lanes']) ? json_encode(array_map('intval', explode(',', $_POST['available_lanes']))) : null
         ];
         
         // Create the session

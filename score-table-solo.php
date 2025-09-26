@@ -233,6 +233,7 @@ $currentUser = getCurrentUser();
                             <tr>
                               <th scope="col">Rank</th>
                               <th scope="col">Player</th>
+                              <th scope="col">Lane</th>
                               <th scope="col">Total Score</th>
                               <th scope="col">Avg/Game</th>
                               <th scope="col">Games Played</th>
@@ -244,7 +245,7 @@ $currentUser = getCurrentUser();
                           </thead>
                           <tbody id="overallTableBody">
                             <tr>
-                              <td colspan="9" class="text-center py-4">
+                              <td colspan="10" class="text-center py-4">
                                 <div class="loading-spinner"></div>
                                 <span class="ms-2">Loading data...</span>
                               </td>
@@ -489,7 +490,7 @@ $currentUser = getCurrentUser();
     function updateOverallTable() {
       const tbody = document.getElementById('overallTableBody');
       if (!currentData || currentData.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted py-4">No data available</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="10" class="text-center text-muted py-4">No data available</td></tr>';
         return;
       }
 
@@ -516,6 +517,12 @@ $currentUser = getCurrentUser();
                   <small class="text-muted">${player.user_role}</small>
                 </div>
               </div>
+            </td>
+            <td>
+              ${player.lane_number ? 
+                `Lane ${player.lane_number}` : 
+                `-`
+              }
             </td>
             <td><span class="fw-bold text-success">${totalScore}</span></td>
             <td>${avgScore}</td>

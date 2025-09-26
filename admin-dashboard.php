@@ -236,6 +236,64 @@ $activeSession = getActiveSession();
       font-size: 0.85rem;
       letter-spacing: 0.5px;
     }
+    
+    /* Lane Assignment Styling */
+    .lane-assignment {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+      color: white;
+      border-radius: 12px;
+      padding: 8px 12px;
+      min-width: 60px;
+      box-shadow: 0 3px 8px rgba(0, 123, 255, 0.3);
+      transition: all 0.3s ease;
+    }
+    
+    .lane-assignment:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(0, 123, 255, 0.4);
+    }
+    
+    .lane-number {
+      font-size: 1.4rem;
+      font-weight: bold;
+      line-height: 1;
+      margin-bottom: 2px;
+    }
+    
+    .lane-label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      opacity: 0.9;
+    }
+    
+    .lane-unassigned {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+      color: white;
+      border-radius: 12px;
+      padding: 8px 12px;
+      min-width: 60px;
+      box-shadow: 0 3px 8px rgba(108, 117, 125, 0.3);
+      transition: all 0.3s ease;
+    }
+    
+    .lane-unassigned:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(108, 117, 125, 0.4);
+    }
+    
+    .lane-unassigned i {
+      font-size: 1.2rem;
+      margin-bottom: 2px;
+    }
   </style>
 </head>
 
@@ -557,6 +615,7 @@ $activeSession = getActiveSession();
                               <th scope="col">Rank</th>
                               <th scope="col">Team/Player</th>
                               <th scope="col">Team Name</th>
+                              <th scope="col">Lane</th>
                               <th scope="col">Total Score</th>
                               <th scope="col">Avg/Game</th>
                               <th scope="col">Games</th>
@@ -568,7 +627,7 @@ $activeSession = getActiveSession();
                           </thead>
                           <tbody id="leaderboardTable">
                             <tr>
-                              <td colspan="10" class="text-center py-4">
+                              <td colspan="11" class="text-center py-4">
                                 <div class="spinner-border text-primary" role="status">
                                   <span class="visually-hidden">Loading...</span>
                                 </div>
@@ -600,6 +659,30 @@ $activeSession = getActiveSession();
                                     </div>
                                   </td>
                                   <td><span class="badge <?php echo $badgeClass; ?>"><?php echo htmlspecialchars($teamName); ?></span></td>
+                                  <td>
+                                    <?php 
+                                    // Get lane assignment for this player in active session
+                                    $laneNumber = null;
+                                    if ($activeSession) {
+                                        try {
+                                            $pdo = getDBConnection();
+                                            $stmt = $pdo->prepare("SELECT lane_number FROM session_participants WHERE session_id = ? AND user_id = ?");
+                                            $stmt->execute([$activeSession['session_id'], $player['user_id']]);
+                                            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+                                            if ($result) {
+                                                $laneNumber = $result['lane_number'];
+                                            }
+                                        } catch (Exception $e) {
+                                            // Handle error silently
+                                        }
+                                    }
+                                    ?>
+                                    <?php if ($laneNumber): ?>
+                                      <span>Lane <?php echo $laneNumber; ?></span>
+                                    <?php else: ?>
+                                      <span class="text-muted">-</span>
+                                    <?php endif; ?>
+                                  </td>
                                   <td><span class="fw-bold text-success"><?php echo number_format($totalScore); ?></span></td>
                                   <td><?php echo number_format($player['avg_score'], 1); ?></td>
                                   <td><?php echo $player['total_games']; ?></td>
@@ -622,7 +705,7 @@ $activeSession = getActiveSession();
                               endforeach; ?>
                             <?php else: ?>
                               <tr>
-                                <td colspan="10" class="text-center text-muted py-4">
+                                <td colspan="11" class="text-center text-muted py-4">
                                   <i class="ti ti-user fs-1 mb-2"></i>
                                   <p class="mb-0">No player data available</p>
                                   <small>Players will appear here once they start playing</small>
@@ -1281,7 +1364,7 @@ $activeSession = getActiveSession();
       // Update leaderboard
       const tbody = document.querySelector('#leaderboardTable tbody');
       if (tbody) {
-        tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted py-4"><i class="ti ti-calendar-off fs-1 mb-2"></i><br>No Active Session<br><small>Create a session to start tracking scores</small></td></tr>';
+        tbody.innerHTML = '<tr><td colspan="11" class="text-center text-muted py-4"><i class="ti ti-calendar-off fs-1 mb-2"></i><br>No Active Session<br><small>Create a session to start tracking scores</small></td></tr>';
       }
       
       // Update team stats
@@ -1317,7 +1400,7 @@ $activeSession = getActiveSession();
       // Update leaderboard
       const tbody = document.querySelector('#leaderboardTable tbody');
       if (tbody) {
-        tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted py-4"><i class="ti ti-users-off fs-1 mb-2"></i><br>No Participants in Active Session<br><small>Add players to the session to start tracking scores</small></td></tr>';
+        tbody.innerHTML = '<tr><td colspan="11" class="text-center text-muted py-4"><i class="ti ti-users-off fs-1 mb-2"></i><br>No Participants in Active Session<br><small>Add players to the session to start tracking scores</small></td></tr>';
       }
       
       // Update team stats
@@ -1394,6 +1477,12 @@ $activeSession = getActiveSession();
               <i class="ti ti-users me-1"></i>
               ${player.team_name || 'No Team'}
             </span>
+          </td>
+          <td>
+            ${player.lane_number ? 
+              `Lane ${player.lane_number}` : 
+              `-`
+            }
           </td>
           <td>
             <div class="score-display">

@@ -94,6 +94,64 @@ if ($sessionId) {
       background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
       color: #333;
     }
+    
+    /* Lane Assignment Styling */
+    .lane-assignment {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+      color: white;
+      border-radius: 12px;
+      padding: 8px 12px;
+      min-width: 60px;
+      box-shadow: 0 3px 8px rgba(0, 123, 255, 0.3);
+      transition: all 0.3s ease;
+    }
+    
+    .lane-assignment:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(0, 123, 255, 0.4);
+    }
+    
+    .lane-number {
+      font-size: 1.4rem;
+      font-weight: bold;
+      line-height: 1;
+      margin-bottom: 2px;
+    }
+    
+    .lane-label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      opacity: 0.9;
+    }
+    
+    .lane-unassigned {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+      color: white;
+      border-radius: 12px;
+      padding: 8px 12px;
+      min-width: 60px;
+      box-shadow: 0 3px 8px rgba(108, 117, 125, 0.3);
+      transition: all 0.3s ease;
+    }
+    
+    .lane-unassigned:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(108, 117, 125, 0.4);
+    }
+    
+    .lane-unassigned i {
+      font-size: 1.2rem;
+      margin-bottom: 2px;
+    }
   </style>
 </head>
 
@@ -508,6 +566,7 @@ if ($sessionId) {
                           <thead>
                             <tr>
                               <th scope="col">Player</th>
+                              <th scope="col">Lane</th>
                               <th scope="col">Total Score</th>
                               <th scope="col">Avg/Game</th>
                               <th scope="col">Games Played</th>
@@ -595,6 +654,30 @@ if ($sessionId) {
                                   </div>
                                 </div>
                               </td>
+                              <td>
+                                <?php 
+                                // Get lane assignment for this player in current session
+                                $laneNumber = null;
+                                if ($sessionId) {
+                                    try {
+                                        $pdo = getDBConnection();
+                                        $stmt = $pdo->prepare("SELECT lane_number FROM session_participants WHERE session_id = ? AND user_id = ?");
+                                        $stmt->execute([$sessionId, $player['user_id']]);
+                                        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+                                        if ($result) {
+                                            $laneNumber = $result['lane_number'];
+                                        }
+                                    } catch (Exception $e) {
+                                        // Handle error silently
+                                    }
+                                }
+                                ?>
+                                <?php if ($laneNumber): ?>
+                                  <span>Lane <?php echo $laneNumber; ?></span>
+                                <?php else: ?>
+                                  <span class="text-muted">-</span>
+                                <?php endif; ?>
+                              </td>
                                     <td><span class="fw-bold text-success"><?php echo $stats['total_score']; ?></span></td>
                                     <td><span class="fw-bold text-primary"><?php echo $stats['avg_score']; ?></span></td>
                                     <td><?php echo $stats['games_played']; ?></td>
@@ -657,13 +740,14 @@ if ($sessionId) {
                             <table class="table table-bordered" id="game1Table">
                               <thead class="table-dark">
                                 <tr>
-                                  <th scope="col" style="width: 30%;">Player</th>
+                                  <th scope="col" style="width: 25%;">Player</th>
+                                  <th scope="col" style="width: 10%;">Lane</th>
                                   <th scope="col" style="width: 12%;">Score</th>
                                   <th scope="col" style="width: 12%;">Strikes</th>
                                   <th scope="col" style="width: 12%;">Spares</th>
                                   <th scope="col" style="width: 12%;">Open Frames</th>
-                                  <th scope="col" style="width: 12%;">Status</th>
-                                  <th scope="col" style="width: 20%;">Actions</th>
+                                  <th scope="col" style="width: 10%;">Status</th>
+                                  <th scope="col" style="width: 17%;">Actions</th>
                             </tr>
                               </thead>
                               <tbody>
@@ -712,6 +796,30 @@ if ($sessionId) {
                                             <br><small class="text-muted"><?php echo htmlspecialchars($player['user_role']); ?></small>
                                   </div>
                                 </div>
+                                      </td>
+                                      <td>
+                                        <?php 
+                                        // Get lane assignment for this player in current session
+                                        $laneNumber = null;
+                                        if ($sessionId) {
+                                            try {
+                                                $pdo = getDBConnection();
+                                                $stmt = $pdo->prepare("SELECT lane_number FROM session_participants WHERE session_id = ? AND user_id = ?");
+                                                $stmt->execute([$sessionId, $player['user_id']]);
+                                                $result = $stmt->fetch(PDO::FETCH_ASSOC);
+                                                if ($result) {
+                                                    $laneNumber = $result['lane_number'];
+                                                }
+                                            } catch (Exception $e) {
+                                                // Handle error silently
+                                            }
+                                        }
+                                        ?>
+                                        <?php if ($laneNumber): ?>
+                                          <span>Lane <?php echo $laneNumber; ?></span>
+                                        <?php else: ?>
+                                          <span class="text-muted">-</span>
+                                        <?php endif; ?>
                                       </td>
                                       <td>
                                         <input type="number" 
@@ -812,13 +920,14 @@ if ($sessionId) {
                             <table class="table table-bordered" id="game2Table">
                               <thead class="table-dark">
                                 <tr>
-                                  <th scope="col" style="width: 30%;">Player</th>
+                                  <th scope="col" style="width: 25%;">Player</th>
+                                  <th scope="col" style="width: 10%;">Lane</th>
                                   <th scope="col" style="width: 12%;">Score</th>
                                   <th scope="col" style="width: 12%;">Strikes</th>
                                   <th scope="col" style="width: 12%;">Spares</th>
                                   <th scope="col" style="width: 12%;">Open Frames</th>
-                                  <th scope="col" style="width: 12%;">Status</th>
-                                  <th scope="col" style="width: 20%;">Actions</th>
+                                  <th scope="col" style="width: 10%;">Status</th>
+                                  <th scope="col" style="width: 17%;">Actions</th>
                             </tr>
                               </thead>
                               <tbody>
@@ -856,6 +965,30 @@ if ($sessionId) {
                                             <br><small class="text-muted"><?php echo htmlspecialchars($player['user_role']); ?></small>
                                   </div>
                                 </div>
+                                      </td>
+                                      <td>
+                                        <?php 
+                                        // Get lane assignment for this player in current session
+                                        $laneNumber = null;
+                                        if ($sessionId) {
+                                            try {
+                                                $pdo = getDBConnection();
+                                                $stmt = $pdo->prepare("SELECT lane_number FROM session_participants WHERE session_id = ? AND user_id = ?");
+                                                $stmt->execute([$sessionId, $player['user_id']]);
+                                                $result = $stmt->fetch(PDO::FETCH_ASSOC);
+                                                if ($result) {
+                                                    $laneNumber = $result['lane_number'];
+                                                }
+                                            } catch (Exception $e) {
+                                                // Handle error silently
+                                            }
+                                        }
+                                        ?>
+                                        <?php if ($laneNumber): ?>
+                                          <span>Lane <?php echo $laneNumber; ?></span>
+                                        <?php else: ?>
+                                          <span class="text-muted">-</span>
+                                        <?php endif; ?>
                                       </td>
                                       <td>
                                         <input type="number" 
@@ -1002,6 +1135,30 @@ if ($sessionId) {
                                 </div>
                                       </td>
                                       <td>
+                                        <?php 
+                                        // Get lane assignment for this player in current session
+                                        $laneNumber = null;
+                                        if ($sessionId) {
+                                            try {
+                                                $pdo = getDBConnection();
+                                                $stmt = $pdo->prepare("SELECT lane_number FROM session_participants WHERE session_id = ? AND user_id = ?");
+                                                $stmt->execute([$sessionId, $player['user_id']]);
+                                                $result = $stmt->fetch(PDO::FETCH_ASSOC);
+                                                if ($result) {
+                                                    $laneNumber = $result['lane_number'];
+                                                }
+                                            } catch (Exception $e) {
+                                                // Handle error silently
+                                            }
+                                        }
+                                        ?>
+                                        <?php if ($laneNumber): ?>
+                                          <span>Lane <?php echo $laneNumber; ?></span>
+                                        <?php else: ?>
+                                          <span class="text-muted">-</span>
+                                        <?php endif; ?>
+                                      </td>
+                                      <td>
                                         <input type="number" 
                                                class="form-control form-control-sm score-input" 
                                                data-user-id="<?php echo $player['user_id']; ?>" 
@@ -1100,13 +1257,14 @@ if ($sessionId) {
                             <table class="table table-bordered" id="game4Table">
                               <thead class="table-dark">
                                 <tr>
-                                  <th scope="col" style="width: 30%;">Player</th>
+                                  <th scope="col" style="width: 25%;">Player</th>
+                                  <th scope="col" style="width: 10%;">Lane</th>
                                   <th scope="col" style="width: 12%;">Score</th>
                                   <th scope="col" style="width: 12%;">Strikes</th>
                                   <th scope="col" style="width: 12%;">Spares</th>
                                   <th scope="col" style="width: 12%;">Open Frames</th>
-                                  <th scope="col" style="width: 12%;">Status</th>
-                                  <th scope="col" style="width: 20%;">Actions</th>
+                                  <th scope="col" style="width: 10%;">Status</th>
+                                  <th scope="col" style="width: 17%;">Actions</th>
                             </tr>
                               </thead>
                               <tbody>
@@ -1144,6 +1302,30 @@ if ($sessionId) {
                                             <br><small class="text-muted"><?php echo htmlspecialchars($player['user_role']); ?></small>
                                   </div>
                                 </div>
+                                      </td>
+                                      <td>
+                                        <?php 
+                                        // Get lane assignment for this player in current session
+                                        $laneNumber = null;
+                                        if ($sessionId) {
+                                            try {
+                                                $pdo = getDBConnection();
+                                                $stmt = $pdo->prepare("SELECT lane_number FROM session_participants WHERE session_id = ? AND user_id = ?");
+                                                $stmt->execute([$sessionId, $player['user_id']]);
+                                                $result = $stmt->fetch(PDO::FETCH_ASSOC);
+                                                if ($result) {
+                                                    $laneNumber = $result['lane_number'];
+                                                }
+                                            } catch (Exception $e) {
+                                                // Handle error silently
+                                            }
+                                        }
+                                        ?>
+                                        <?php if ($laneNumber): ?>
+                                          <span>Lane <?php echo $laneNumber; ?></span>
+                                        <?php else: ?>
+                                          <span class="text-muted">-</span>
+                                        <?php endif; ?>
                                       </td>
                                       <td>
                                         <input type="number" 

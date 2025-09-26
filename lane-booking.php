@@ -1,7 +1,36 @@
 <?php
-// Check maintenance bypass for admin users
-require_once 'includes/maintenance-bypass.php';
-requireMaintenanceBypass('booking', 'Lane Booking System');
+// Get current user and their active session
+require_once 'includes/auth.php';
+require_once 'includes/session-management.php';
+
+$currentUser = getCurrentUser();
+$userActiveSession = null;
+$userLaneAssignment = null;
+
+if ($currentUser) {
+    // Get active session
+    $activeSession = getActiveSession();
+    
+    if ($activeSession) {
+        // Check if user is participating in this session
+        if (canUserParticipateInSession($currentUser['user_id'], $activeSession['session_id'])) {
+            $userActiveSession = $activeSession;
+            
+            // Get user's current lane assignment/preference
+            try {
+                $pdo = getDBConnection();
+                $stmt = $pdo->prepare("SELECT lane_number FROM session_participants WHERE session_id = ? AND user_id = ?");
+                $stmt->execute([$activeSession['session_id'], $currentUser['user_id']]);
+                $result = $stmt->fetch(PDO::FETCH_ASSOC);
+                if ($result) {
+                    $userLaneAssignment = $result['lane_number'];
+                }
+            } catch (Exception $e) {
+                // Handle error silently
+            }
+        }
+    }
+}
 ?>
 <!doctype html>
 <html lang="en">
@@ -149,6 +178,107 @@ requireMaintenanceBypass('booking', 'Lane Booking System');
      .calendar-container {
        position: relative;
      }
+     
+     /* Mobile responsiveness fixes */
+     @media (max-width: 768px) {
+       /* Active Session Card Mobile Fixes */
+       .card.bg-primary .card-body {
+         padding: 1rem;
+       }
+       
+       .card.bg-primary .d-flex.align-items-center.justify-content-between {
+         flex-direction: column;
+         align-items: flex-start !important;
+         gap: 1rem;
+       }
+       
+       .card.bg-primary .d-flex.align-items-center.gap-4 {
+         flex-direction: column;
+         gap: 0.5rem !important;
+         align-items: flex-start !important;
+       }
+       
+       .card.bg-primary .d-flex.align-items-center.gap-4 > div {
+         margin-bottom: 0.5rem;
+       }
+       
+       /* Lane Assignment Card Mobile Fixes */
+       .card .row {
+         margin: 0;
+       }
+       
+       .card .col-md-8,
+       .card .col-md-4 {
+         padding: 0;
+         margin-bottom: 1rem;
+       }
+       
+       .card .d-flex.align-items-center.justify-content-end {
+         justify-content: flex-start !important;
+       }
+       
+       /* Lane Assignment Info Mobile Layout */
+       .card .d-flex.align-items-center {
+         flex-direction: column;
+         align-items: flex-start !important;
+         text-align: left;
+       }
+       
+       .card .bg-primary.rounded-circle.p-3.me-3 {
+         margin-right: 0 !important;
+         margin-bottom: 1rem;
+         align-self: center;
+       }
+       
+       /* Button Mobile Fixes */
+       .btn {
+         width: 100%;
+         margin-bottom: 0.5rem;
+       }
+       
+       /* Table Mobile Fixes */
+       .table-responsive {
+         font-size: 0.875rem;
+       }
+       
+       .table th,
+       .table td {
+         padding: 0.5rem 0.25rem;
+       }
+       
+       /* Breadcrumb Mobile Fixes */
+       .page-title-right {
+         display: none;
+       }
+       
+       .page-title-box h4 {
+         font-size: 1.25rem;
+       }
+     }
+     
+     @media (max-width: 576px) {
+       /* Extra small screens */
+       .card-body {
+         padding: 0.75rem;
+       }
+       
+       .card.bg-primary h4 {
+         font-size: 1.1rem;
+       }
+       
+       .card h5 {
+         font-size: 1rem;
+       }
+       
+       .card h4 {
+         font-size: 1.25rem;
+       }
+       
+       .btn {
+         font-size: 0.875rem;
+         padding: 0.5rem 1rem;
+       }
+     }
    </style>
 </head>
 
@@ -180,257 +310,230 @@ requireMaintenanceBypass('booking', 'Lane Booking System');
             </div>
           </div>
 
-          <!-- Booking Steps -->
-          <div class="row">
+          <?php if ($userActiveSession): ?>
+          <!-- Active Session Information -->
+          <div class="row mb-4">
             <div class="col-12">
-              <div class="card">
+              <div class="card bg-primary text-white">
                 <div class="card-body">
-                  <div class="d-flex align-items-center justify-content-center mb-4">
-                    <div class="d-flex align-items-center">
-                      <div class="bg-primary rounded-circle p-2 me-3">
-                        <i class="ti ti-calendar text-white fs-5"></i>
-                      </div>
+                  <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between">
+                    <div class="d-flex align-items-center mb-3 mb-md-0">
                       <div class="me-3">
-                        <h6 class="mb-0 fw-bold">1. Select Date</h6>
-                        <small class="text-muted">Choose your preferred date</small>
-                      </div>
-                    </div>
-                    <div class="mx-3">
-                      <i class="ti ti-arrow-right text-muted fs-4"></i>
-                    </div>
-                    <div class="d-flex align-items-center">
-                      <div class="bg-secondary rounded-circle p-2 me-3">
-                        <i class="ti ti-clock text-white fs-5"></i>
-                      </div>
-                      <div class="me-3">
-                        <h6 class="mb-0 fw-bold">2. Choose Time</h6>
-                        <small class="text-muted">Pick available time slot</small>
-                      </div>
-                    </div>
-                    <div class="mx-3">
-                      <i class="ti ti-arrow-right text-muted fs-4"></i>
-                    </div>
-                    <div class="d-flex align-items-center">
-                      <div class="bg-secondary rounded-circle p-2 me-3">
-                        <i class="ti ti-target text-white fs-5"></i>
-                      </div>
-                      <div class="me-3">
-                        <h6 class="mb-0 fw-bold">3. Select Lane</h6>
-                        <small class="text-muted">Choose your lane</small>
-                      </div>
-                    </div>
-                    <div class="mx-3">
-                      <i class="ti ti-arrow-right text-muted fs-4"></i>
-                    </div>
-                    <div class="d-flex align-items-center">
-                      <div class="bg-secondary rounded-circle p-2 me-3">
-                        <i class="ti ti-check text-white fs-5"></i>
+                        <i class="ti ti-calendar-event fs-1"></i>
                       </div>
                       <div>
-                        <h6 class="mb-0 fw-bold">4. Confirm</h6>
-                        <small class="text-muted">Complete booking</small>
+                        <h4 class="mb-1 fw-bold">Active Session: <?php echo htmlspecialchars($userActiveSession['session_name']); ?></h4>
+                        <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center gap-2 gap-md-4">
+                          <div class="d-flex align-items-center">
+                            <i class="ti ti-calendar me-2"></i>
+                            <span><?php echo date('l, M j, Y', strtotime($userActiveSession['session_date'])); ?></span>
+                          </div>
+                          <div class="d-flex align-items-center">
+                            <i class="ti ti-clock me-2"></i>
+                            <span><?php echo date('g:i A', strtotime($userActiveSession['session_time'])); ?></span>
+                          </div>
+                          <div class="d-flex align-items-center">
+                            <i class="ti ti-user me-2"></i>
+                            <span><?php echo ucfirst($userActiveSession['game_mode']); ?></span>
+                          </div>
+                          <?php if ($userLaneAssignment): ?>
+                          <div class="d-flex align-items-center">
+                            <i class="ti ti-target me-2"></i>
+                            <span>
+                              <?php if ($userActiveSession['status'] === 'Scheduled'): ?>
+                                Preferred Lane <?php echo $userLaneAssignment; ?> (will be randomized when session starts)
+                              <?php else: ?>
+                                Assigned to Lane <?php echo $userLaneAssignment; ?>
+                              <?php endif; ?>
+                            </span>
+                          </div>
+                          <?php endif; ?>
+                        </div>
                       </div>
+                    </div>
+                    <div class="d-flex flex-column flex-md-row gap-2">
+                      <?php if (!$userLaneAssignment): ?>
+                      <button class="btn btn-primary" onclick="drawRandomLane()">
+                        <i class="ti ti-target me-2"></i>Draw Your Lane
+                      </button>
+                      <?php else: ?>
+                      <span class="badge bg-success fs-6">
+                        <i class="ti ti-check me-1"></i>Assigned to Lane <?php echo $userLaneAssignment; ?>
+                      </span>
+                      <?php endif; ?>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
+          <?php else: ?>
+          <!-- No Active Session -->
+          <div class="row mb-4">
+            <div class="col-12">
+              <div class="alert alert-info">
+                <i class="ti ti-info-circle me-2"></i>
+                <strong>No Active Session</strong> - You are not currently participating in any active bowling session.
+              </div>
+            </div>
+          </div>
+          <?php endif; ?>
 
-          <!-- Main Booking Interface -->
+          <?php if ($userActiveSession): ?>
+          <!-- Current Lane Assignment -->
           <div class="row">
-            <!-- Date Selection -->
-            <div class="col-lg-4">
-              <div class="card">
-                <div class="card-body">
-                  <h5 class="card-title mb-4">
-                    <i class="ti ti-calendar me-2"></i>
-                    Select Date
-                  </h5>
-                  
-                  <!-- Calendar -->
-                  <div class="calendar-container">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                      <button class="btn btn-outline-secondary btn-sm" onclick="previousMonth()">
-                        <i class="ti ti-chevron-left"></i>
-                      </button>
-                      <h6 class="mb-0" id="currentMonth">March 2025</h6>
-                      <button class="btn btn-outline-secondary btn-sm" onclick="nextMonth()">
-                        <i class="ti ti-chevron-right"></i>
-                      </button>
-                    </div>
-                    
-                    <div class="calendar-grid">
-                      <div class="calendar-header">
-                        <div>Sun</div>
-                        <div>Mon</div>
-                        <div>Tue</div>
-                        <div>Wed</div>
-                        <div>Thu</div>
-                        <div>Fri</div>
-                        <div>Sat</div>
-                      </div>
-                      <div class="calendar-days" id="calendarDays">
-                        <!-- Calendar days will be populated by JavaScript -->
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Time Selection -->
-            <div class="col-lg-4">
-              <div class="card">
-                <div class="card-body">
-                  <h5 class="card-title mb-4">
-                    <i class="ti ti-clock me-2"></i>
-                    Select Time
-                  </h5>
-                  
-                  <div class="time-slots" id="timeSlots">
-                    <!-- Time slots will be populated by JavaScript -->
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Lane Selection -->
-            <div class="col-lg-4">
+            <div class="col-12">
               <div class="card">
                 <div class="card-body">
                   <h5 class="card-title mb-4">
                     <i class="ti ti-target me-2"></i>
-                    Select Lane
-                  </h5>
-                  
-                  <div class="lanes-grid" id="lanesGrid">
-                    <!-- Lanes will be populated by JavaScript -->
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Booking Summary -->
-          <div class="row mt-4">
-            <div class="col-12">
-              <div class="card">
-                <div class="card-body">
-                  <h5 class="card-title mb-4">
-                    <i class="ti ti-receipt me-2"></i>
-                    Booking Summary
+                    Your Lane Assignment
                   </h5>
                   
                   <div class="row">
-                    <div class="col-12">
-                      <div class="booking-details">
-                        <div class="row">
-                          <div class="col-md-4">
-                            <div class="d-flex align-items-center mb-3">
-                              <i class="ti ti-calendar text-primary me-3 fs-4"></i>
-                              <div>
-                                <h6 class="mb-0">Selected Date</h6>
-                                <p class="text-muted mb-0" id="selectedDate">Not selected</p>
-                              </div>
-                            </div>
-                          </div>
-                          <div class="col-md-4">
-                            <div class="d-flex align-items-center mb-3">
-                              <i class="ti ti-clock text-primary me-3 fs-4"></i>
-                              <div>
-                                <h6 class="mb-0">Selected Time</h6>
-                                <p class="text-muted mb-0" id="selectedTime">Not selected</p>
-                              </div>
-                            </div>
-                          </div>
-                          <div class="col-md-4">
-                            <div class="d-flex align-items-center mb-3">
-                              <i class="ti ti-target text-primary me-3 fs-4"></i>
-                              <div>
-                                <h6 class="mb-0">Selected Lane</h6>
-                                <p class="text-muted mb-0" id="selectedLane">Not selected</p>
-                              </div>
-                            </div>
-                          </div>
+                    <div class="col-12 col-md-8">
+                      <div class="d-flex align-items-center">
+                        <div class="bg-primary rounded-circle p-3 me-3">
+                          <i class="ti ti-target text-white fs-3"></i>
+                        </div>
+                        <div>
+                          <h6 class="mb-0">Your Lane Assignment</h6>
+                          <h4 class="mb-0 text-primary">
+                            <?php if ($userLaneAssignment): ?>
+                              Lane <?php echo $userLaneAssignment; ?>
+                            <?php else: ?>
+                              Not Assigned
+                            <?php endif; ?>
+                          </h4>
+                          <small class="text-muted">
+                            <?php if ($userLaneAssignment): ?>
+                              You have been assigned to this lane
+                            <?php else: ?>
+                              Click "Draw Your Lane" to get assigned
+                            <?php endif; ?>
+                          </small>
                         </div>
                       </div>
                     </div>
-
-                  </div>
-                  
-                  <div class="mt-4">
-                    <button class="btn btn-primary btn-lg" id="confirmBooking" disabled>
-                      <i class="ti ti-check me-2"></i>
-                      Confirm Booking
-                    </button>
-                    <button class="btn btn-outline-secondary btn-lg ms-2" onclick="resetBooking()">
-                      <i class="ti ti-refresh me-2"></i>
-                      Reset
-                    </button>
+                    <div class="col-12 col-md-4 mt-3 mt-md-0">
+                      <div class="d-flex align-items-center justify-content-md-end">
+                        <?php if (!$userLaneAssignment): ?>
+                        <button class="btn btn-primary btn-lg" onclick="drawRandomLane()">
+                          <i class="ti ti-target me-2"></i>Draw Your Lane
+                        </button>
+                        <?php else: ?>
+                        <span class="badge bg-success fs-5 p-3">
+                          <i class="ti ti-check me-2"></i>Assigned
+                        </span>
+                        <?php endif; ?>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
+          <?php endif; ?>
 
-          <!-- Recent Bookings -->
+          <!-- Lane History -->
           <div class="row mt-4">
             <div class="col-12">
               <div class="card">
                 <div class="card-body">
                   <h5 class="card-title mb-4">
                     <i class="ti ti-history me-2"></i>
-                    Recent Bookings
+                    Your Lane History
                   </h5>
                   
+                  <?php
+                  // Get user's lane history from sessions
+                  $laneHistory = [];
+                  if ($currentUser) {
+                      try {
+                          $pdo = getDBConnection();
+                          $stmt = $pdo->prepare("
+                              SELECT 
+                                  gs.session_id,
+                                  gs.session_name,
+                                  gs.session_date,
+                                  gs.session_time,
+                                  gs.game_mode,
+                                  gs.status as session_status,
+                                  sp.lane_number,
+                                  sp.joined_at
+                              FROM game_sessions gs
+                              JOIN session_participants sp ON gs.session_id = sp.session_id
+                              WHERE sp.user_id = ? AND sp.lane_number IS NOT NULL
+                              ORDER BY gs.session_date DESC, gs.session_time DESC
+                              LIMIT 10
+                          ");
+                          $stmt->execute([$currentUser['user_id']]);
+                          $laneHistory = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                      } catch (Exception $e) {
+                          // Handle error silently
+                      }
+                  }
+                  ?>
+                  
+                  <?php if (!empty($laneHistory)): ?>
                   <div class="table-responsive">
                     <table class="table table-hover">
                       <thead>
                         <tr>
+                          <th>Session</th>
                           <th>Date</th>
                           <th>Time</th>
                           <th>Lane</th>
-                          <th>Duration</th>
+                          <th>Game Mode</th>
                           <th>Status</th>
-                          <th>Actions</th>
                         </tr>
                       </thead>
                       <tbody>
+                        <?php foreach ($laneHistory as $history): ?>
                         <tr>
-                          <td>Mar 15, 2025</td>
-                          <td>2:00 PM</td>
-                          <td>Lane 3</td>
-                          <td>2 hours</td>
-                          <td><span class="badge bg-success">Confirmed</span></td>
                           <td>
-                            <button class="btn btn-sm btn-outline-primary">View</button>
-                            <button class="btn btn-sm btn-outline-danger">Cancel</button>
+                            <strong><?php echo htmlspecialchars($history['session_name']); ?></strong>
+                          </td>
+                          <td><?php echo date('M j, Y', strtotime($history['session_date'])); ?></td>
+                          <td><?php echo date('g:i A', strtotime($history['session_time'])); ?></td>
+                          <td>
+                            <span class="badge bg-primary">Lane <?php echo $history['lane_number']; ?></span>
+                          </td>
+                          <td><?php echo ucfirst($history['game_mode']); ?></td>
+                          <td>
+                            <?php
+                            $statusClass = '';
+                            switch ($history['session_status']) {
+                                case 'Scheduled':
+                                    $statusClass = 'bg-warning';
+                                    break;
+                                case 'Active':
+                                    $statusClass = 'bg-info';
+                                    break;
+                                case 'Completed':
+                                    $statusClass = 'bg-success';
+                                    break;
+                                case 'Cancelled':
+                                    $statusClass = 'bg-danger';
+                                    break;
+                                default:
+                                    $statusClass = 'bg-secondary';
+                            }
+                            ?>
+                            <span class="badge <?php echo $statusClass; ?>"><?php echo ucfirst($history['session_status']); ?></span>
                           </td>
                         </tr>
-                        <tr>
-                          <td>Mar 12, 2025</td>
-                          <td>7:30 PM</td>
-                          <td>Lane 5</td>
-                          <td>2 hours</td>
-                          <td><span class="badge bg-success">Completed</span></td>
-                          <td>
-                            <button class="btn btn-sm btn-outline-primary">View</button>
-                          </td>
-                        </tr>
-                        <tr>
-                          <td>Mar 10, 2025</td>
-                          <td>4:00 PM</td>
-                          <td>Lane 2</td>
-                          <td>2 hours</td>
-                          <td><span class="badge bg-success">Completed</span></td>
-                          <td>
-                            <button class="btn btn-sm btn-outline-primary">View</button>
-                          </td>
-                        </tr>
+                        <?php endforeach; ?>
                       </tbody>
                     </table>
                   </div>
+                  <?php else: ?>
+                  <div class="text-center py-4">
+                    <i class="ti ti-target fs-1 text-muted mb-3"></i>
+                    <h6 class="text-muted">No Lane History</h6>
+                    <p class="text-muted mb-0">You haven't been assigned to any lanes yet.</p>
+                  </div>
+                  <?php endif; ?>
                 </div>
               </div>
             </div>
@@ -599,63 +702,66 @@ requireMaintenanceBypass('booking', 'Lane Booking System');
        min-height: 300px;
      }
      
-     .lanes-grid {
-       position: relative;
-       min-height: 280px;
-     }
+    .lanes-grid {
+      position: relative;
+      min-height: 280px;
+    }
    </style>
 
   <script>
     // Global variables
-    let selectedDate = null;
-    let selectedTime = null;
-    let selectedLane = null;
-    let currentMonth = new Date();
+    let currentSessionId = <?php echo $userActiveSession ? $userActiveSession['session_id'] : 'null'; ?>;
+    let currentUserLane = <?php echo $userLaneAssignment ? $userLaneAssignment : 'null'; ?>;
 
-    // Initialize the page
-    document.addEventListener('DOMContentLoaded', function() {
-      generateCalendar();
-      generateTimeSlots();
-      generateLanes();
-      updateBookingSummary();
-    });
+    // Draw random lane function
+    async function drawRandomLane() {
+      if (!currentSessionId) {
+        alert('No active session found');
+        return;
+      }
 
-    // Calendar functions
-    function generateCalendar() {
-      const monthNames = ["January", "February", "March", "April", "May", "June",
-        "July", "August", "September", "October", "November", "December"];
-      
-      document.getElementById('currentMonth').textContent = 
-        monthNames[currentMonth.getMonth()] + ' ' + currentMonth.getFullYear();
-      
-      const firstDay = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
-      const lastDay = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
-      const startDate = new Date(firstDay);
-      startDate.setDate(startDate.getDate() - firstDay.getDay());
-      
-      const calendarDays = document.getElementById('calendarDays');
-      calendarDays.innerHTML = '';
-      
-      for (let i = 0; i < 42; i++) {
-        const date = new Date(startDate);
-        date.setDate(startDate.getDate() + i);
-        
-        const dayElement = document.createElement('div');
-        dayElement.className = 'calendar-day';
-        dayElement.textContent = date.getDate();
-        
-        if (date.getMonth() !== currentMonth.getMonth()) {
-          dayElement.classList.add('other-month');
+      if (currentUserLane) {
+        alert('You already have a lane assigned!');
+        return;
+      }
+
+      // Show loading state
+      const button = event.target;
+      const originalText = button.innerHTML;
+      button.disabled = true;
+      button.innerHTML = '<i class="ti ti-loader me-2"></i>Drawing...';
+
+      try {
+        const form = new FormData();
+        form.append('action', 'draw_random_lane');
+        form.append('session_id', currentSessionId);
+
+        const response = await fetch('ajax/session-management.php', {
+          method: 'POST',
+          body: form
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          alert('Lane drawn successfully! You have been assigned to Lane ' + result.lane_number);
+          location.reload();
+        } else {
+          alert('Failed to draw lane: ' + (result.message || 'Unknown error'));
+          button.disabled = false;
+          button.innerHTML = originalText;
         }
-        
-        if (date.toDateString() === new Date().toDateString()) {
-          dayElement.classList.add('today');
-        }
-        
-        dayElement.addEventListener('click', () => selectDate(date));
-        calendarDays.appendChild(dayElement);
+      } catch (error) {
+        console.error('Error:', error);
+        alert('An error occurred while drawing your lane');
+        button.disabled = false;
+        button.innerHTML = originalText;
       }
     }
+  </script>
+  
+  <!-- Countdown Timer Script -->
+  <script>
 
     function selectDate(date) {
       selectedDate = date;
@@ -724,12 +830,40 @@ requireMaintenanceBypass('booking', 'Lane Booking System');
       });
     }
 
-    // Lanes functions
-    function generateLanes() {
+    // Show lane selection modal
+    function showLaneSelection() {
+      if (!currentSessionId) {
+        alert('No active session found');
+        return;
+      }
+      
+      loadModalLaneStatus();
+      const modal = new bootstrap.Modal(document.getElementById('laneSelectionModal'));
+      modal.show();
+    }
+
+    // Load lane status for the modal
+    async function loadModalLaneStatus() {
+      try {
+        const form = new FormData();
+        form.append('action', 'lane_status');
+        form.append('session_id', currentSessionId);
+        const res = await fetch('ajax/session-management.php', { method: 'POST', body: form });
+        const data = await res.json();
+        if (!data.success) { 
+          alert('Failed to load lane status');
+          return; 
+        }
+        renderModalLanes(data.status, data.user_lane);
+      } catch (e) {
+        alert('Error loading lane status');
+      }
+    }
+
+    function renderStaticLanes(count) {
       const lanesGrid = document.getElementById('lanesGrid');
       lanesGrid.innerHTML = '';
-      
-      for (let i = 1; i <= 8; i++) {
+      for (let i = 1; i <= count; i++) {
         const lane = document.createElement('div');
         lane.className = 'lane-card available';
         lane.innerHTML = `
@@ -741,6 +875,152 @@ requireMaintenanceBypass('booking', 'Lane Booking System');
         lanesGrid.appendChild(lane);
       }
     }
+
+    async function loadLaneStatus() {
+      try {
+        const form = new FormData();
+        form.append('action', 'lane_status');
+        form.append('session_id', sessionId);
+        const res = await fetch('ajax/session-management.php', { method: 'POST', body: form });
+        const data = await res.json();
+        if (!data.success) { renderStaticLanes(8); return; }
+        renderLanesFromStatus(data.status, data.user_lane);
+      } catch (e) {
+        renderStaticLanes(8);
+      }
+    }
+
+    // Render lanes in the modal
+    function renderModalLanes(status, userLane) {
+      const modalLanesGrid = document.getElementById('modalLanesGrid');
+      modalLanesGrid.innerHTML = '';
+      selectedLane = null;
+      
+      if (!status || !status.lanes) {
+        modalLanesGrid.innerHTML = '<div class="alert alert-warning">No lanes available</div>';
+        return;
+      }
+      
+      (status.lanes || []).forEach(info => {
+        const lane = document.createElement('div');
+        const isCurrentUserLane = userLane && Number(userLane) === Number(info.lane_number);
+        const classes = ['lane-card', 'available'];
+        
+        if (isCurrentUserLane) {
+          classes.push('selected');
+          selectedLane = info.lane_number;
+        }
+        
+        lane.className = classes.join(' ');
+        lane.innerHTML = `
+          <i class="ti ti-target fs-1 text-primary mb-2"></i>
+          <h5 class="mb-1">Lane ${info.lane_number}</h5>
+          <div class="lane-text">Lane ${info.lane_number}</div>
+          <div class="lane-players mt-2">
+            <small class="text-muted">Players: ${info.players ? info.players.length : 0}</small>
+            ${info.players && info.players.length > 0 ? 
+              `<div class="player-list mt-1">
+                ${info.players.map(player => `<small class="d-block">• ${player.first_name} ${player.last_name}</small>`).join('')}
+              </div>` : 
+              '<small class="text-muted d-block">No players assigned</small>'
+            }
+          </div>
+          ${isCurrentUserLane ? '<div class="mt-2"><span class="badge bg-info">Your Current Assignment</span></div>' : ''}
+        `;
+        
+        // Allow selection for preferences (always available before session starts)
+        lane.style.cursor = 'pointer';
+        lane.addEventListener('click', () => selectLaneInModal(info.lane_number));
+        
+        modalLanesGrid.appendChild(lane);
+      });
+      
+      // Update confirm button state
+      updateConfirmButton();
+      
+      // Show status message
+      const statusMsg = document.createElement('div');
+      statusMsg.className = 'mt-3';
+      statusMsg.innerHTML = '<div class="alert alert-info"><i class="ti ti-info-circle me-2"></i>Choose your preferred lane. All assignments will be randomized when the session starts.</div>';
+      modalLanesGrid.appendChild(statusMsg);
+    }
+    
+    // Select lane in modal
+    function selectLaneInModal(laneNumber) {
+      // Remove previous selection
+      document.querySelectorAll('#modalLanesGrid .lane-card').forEach(card => {
+        card.classList.remove('selected');
+      });
+      
+      // Add selection to clicked lane
+      event.target.closest('.lane-card').classList.add('selected');
+      selectedLane = laneNumber;
+      updateConfirmButton();
+    }
+    
+    // Update confirm button state
+    function updateConfirmButton() {
+      const confirmBtn = document.getElementById('confirmLaneSelection');
+      if (selectedLane) {
+        confirmBtn.disabled = false;
+        confirmBtn.innerHTML = selectedLane === currentUserLane ? 
+          '<i class="ti ti-check me-2"></i>Keep Current Assignment' : 
+          '<i class="ti ti-check me-2"></i>Draw This Lane';
+      } else {
+        confirmBtn.disabled = true;
+        confirmBtn.innerHTML = '<i class="ti ti-target me-2"></i>Select a Lane';
+      }
+    }
+
+    // Submit lane choice
+    async function submitLaneChoice(laneNumber) {
+      if (!currentSessionId) return;
+      try {
+        const form = new FormData();
+        form.append('action', 'submit_lane_choice');
+        form.append('session_id', currentSessionId);
+        form.append('lane_number', laneNumber);
+        const res = await fetch('ajax/session-management.php', { method: 'POST', body: form });
+        const data = await res.json();
+        if (data.success) {
+          return true;
+        } else {
+          alert(data.message || 'Failed to select lane');
+          return false;
+        }
+      } catch (e) {
+        alert('Failed to select lane');
+        return false;
+      }
+    }
+    
+    // Confirm lane selection from modal
+    document.getElementById('confirmLaneSelection').addEventListener('click', async function() {
+      if (!selectedLane) return;
+      
+      const originalText = this.innerHTML;
+      this.disabled = true;
+      this.innerHTML = '<i class="ti ti-loader me-2"></i>Confirming...';
+      
+      const success = await submitLaneChoice(selectedLane);
+      if (success) {
+        // Update current user lane
+        currentUserLane = selectedLane;
+        
+        // Close modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('laneSelectionModal'));
+        modal.hide();
+        
+        // Show success message
+        alert('Lane drawn successfully!');
+        
+        // Refresh the page to show updated assignment
+        location.reload();
+      } else {
+        this.disabled = false;
+        this.innerHTML = originalText;
+      }
+    });
 
     function selectLane(laneNumber) {
       selectedLane = laneNumber;
@@ -754,22 +1034,8 @@ requireMaintenanceBypass('booking', 'Lane Booking System');
     }
 
     function updateLanes() {
-      // Simulate lane availability based on time
-      const lanes = document.querySelectorAll('.lane-card');
-      lanes.forEach((lane, index) => {
-        lane.classList.remove('booked');
-        if (Math.random() < 0.4) { // 40% chance of being booked
-          lane.classList.add('booked');
-          lane.classList.remove('available');
-          lane.querySelector('small').textContent = 'Booked';
-          lane.querySelector('small').className = 'text-danger';
-        } else {
-          lane.classList.add('available');
-          lane.classList.remove('booked');
-          lane.querySelector('small').textContent = 'Available';
-          lane.querySelector('small').className = 'text-success';
-        }
-      });
+      // If session-based, reload status; otherwise no-op
+      if (sessionId) { loadLaneStatus(); }
     }
 
     // Booking summary functions
