@@ -553,6 +553,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     <a href="admin-score-monitoring-solo.php" class="btn btn-warning action-btn">
                       <i class="ti ti-edit me-2"></i>Enter Scores
                     </a>
+                    <button class="btn btn-info action-btn" onclick="resetSessionTimer(<?php echo $activeSession['session_id']; ?>)">
+                      <i class="ti ti-clock me-2"></i>Reset Timer
+                    </button>
                     <button class="btn btn-danger action-btn" onclick="endSession(<?php echo $activeSession['session_id']; ?>)">
                       <i class="ti ti-square me-2"></i>End Session
                     </button>
@@ -1350,6 +1353,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         }
       } catch (error) {
         showNotification('An error occurred while ending the session', 'error');
+      }
+    }
+
+    // Reset Session Timer
+    async function resetSessionTimer(sessionId) {
+      if (!confirm('Are you sure you want to reset the session timer? This will restart the timer from 00:00:00.')) return;
+      
+      const formData = new FormData();
+      formData.append('action', 'reset_session_timer');
+      formData.append('session_id', sessionId);
+      
+      try {
+        const response = await fetch('ajax/session-management.php', {
+          method: 'POST',
+          body: formData
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          showNotification(result.message, 'success');
+          setTimeout(() => {
+            location.reload();
+          }, 1500);
+        } else {
+          showNotification(result.message, 'error');
+        }
+      } catch (error) {
+        showNotification('An error occurred while resetting the timer', 'error');
       }
     }
 

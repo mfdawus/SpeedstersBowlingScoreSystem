@@ -646,6 +646,22 @@ case 'get_players_data':
             ];
             break;
 
+        case 'reset_session_timer':
+            $sessionId = $_POST['session_id'] ?? null;
+            if (!$sessionId) { $response['message'] = 'Missing session_id'; break; }
+            
+            try {
+                $result = resetSessionStartTime($sessionId);
+                if ($result) {
+                    $response = ['success' => true, 'message' => 'Session timer reset successfully'];
+                } else {
+                    $response['message'] = 'Failed to reset session timer';
+                }
+            } catch (Exception $e) {
+                $response['message'] = 'Database error: ' . $e->getMessage();
+            }
+            break;
+            
         case 'draw_random_lane':
             $sessionId = $_POST['session_id'] ?? null;
             if (!$sessionId) { $response['message'] = 'Missing session_id'; break; }

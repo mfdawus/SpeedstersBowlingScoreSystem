@@ -166,6 +166,10 @@ $isAdmin = isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'Admin';
 <script>
   <?php if ($activeSession): ?>
     // Active session - show playing time
+    // Debug: Log session start time
+    console.log('Session started_at:', '<?php echo $activeSession['started_at']; ?>');
+    console.log('Current time:', new Date().toISOString());
+    
     const sessionStartTime = new Date('<?php echo $activeSession['started_at']; ?>').getTime();
     
     function updateSessionDuration() {

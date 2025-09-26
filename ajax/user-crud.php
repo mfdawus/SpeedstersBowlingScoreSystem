@@ -33,12 +33,74 @@ try {
 
     $action = $_POST['action'] ?? '';
     switch ($action) {
+        case 'change_password':
+            $userId = $_POST['user_id'] ?? 0;
+            $newPassword = $_POST['new_password'] ?? '';
+            $confirmPassword = $_POST['confirm_password'] ?? '';
+            
+            if (!$userId) {
+                $response['message'] = 'User ID is required';
+                break;
+            }
+            
+            if (empty($newPassword)) {
+                $response['message'] = 'New password is required';
+                break;
+            }
+            
+            if ($newPassword !== $confirmPassword) {
+                $response['message'] = 'Passwords do not match';
+                break;
+            }
+            
+            if (strlen($newPassword) < 6) {
+                $response['message'] = 'Password must be at least 6 characters long';
+                break;
+            }
+            
+            try {
+                $pdo = getDBConnection();
+                $hashedPassword = password_hash($newPassword, PASSWORD_DEFAULT);
+                
+                $stmt = $pdo->prepare("UPDATE users SET password = ? WHERE user_id = ?");
+                $result = $stmt->execute([$hashedPassword, $userId]);
+                
+                if ($result) {
+                    $response = ['success' => true, 'message' => 'Password changed successfully'];
+                } else {
+                    $response['message'] = 'Failed to change password';
+                }
+            } catch (Exception $e) {
+                $response['message'] = 'Database error: ' . $e->getMessage();
+            }
+            break;
+            
         case 'view':
             $userId = $_POST['user_id'] ?? 0;
+            error_log("View user request - User ID: " . $userId);
+            
             if ($userId) {
                 $user = getUserById($userId);
                 if ($user && !isset($user['error'])) {
-                    $user['recent_games'] = getUserRecentGames($userId, 5);
+                    $recentGames = getUserRecentGames($userId, 5);
+                    $user['recent_games'] = $recentGames;
+                    
+                    // Debug logging
+                    error_log("User ID: " . $userId);
+                    error_log("Recent games count: " . count($recentGames));
+                    error_log("Recent games data: " . json_encode($recentGames));
+                    
+                    // Temporary: Check if any users have games
+                    $checkAnyGames = $pdo->prepare("SELECT COUNT(*) as total FROM game_scores");
+                    $checkAnyGames->execute();
+                    $totalGames = $checkAnyGames->fetch(PDO::FETCH_ASSOC)['total'];
+                    error_log("Total games in database: " . $totalGames);
+                    
+                    $checkUserGames = $pdo->prepare("SELECT COUNT(*) as user_games FROM game_scores WHERE user_id = ?");
+                    $checkUserGames->execute([$userId]);
+                    $userGames = $checkUserGames->fetch(PDO::FETCH_ASSOC)['user_games'];
+                    error_log("Games for user " . $userId . ": " . $userGames);
+                    
                     $response = ['success' => true, 'data' => $user];
                 } else {
                     $response['message'] = 'User not found: ' . ($user['error'] ?? 'Unknown error');

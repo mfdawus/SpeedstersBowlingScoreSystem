@@ -229,6 +229,9 @@ $allUsers = getAllUsersData();
                                   <button class="btn btn-sm btn-outline-warning" onclick="editUser(<?php echo $user['user_id']; ?>)" title="Edit User">
                                     <i class="ti ti-edit"></i>
                                   </button>
+                                  <button class="btn btn-sm btn-outline-info" onclick="changeUserPassword(<?php echo $user['user_id']; ?>, '<?php echo htmlspecialchars($user['username']); ?>')" title="Change Password">
+                                    <i class="ti ti-key"></i>
+                                  </button>
                                   <button class="btn btn-sm btn-outline-danger" onclick="deleteUser(<?php echo $user['user_id']; ?>)" title="Delete User">
                                     <i class="ti ti-trash"></i>
                                   </button>
@@ -388,7 +391,51 @@ $allUsers = getAllUsersData();
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-          <button type="button" class="btn btn-warning" onclick="editUserFromDetails()">Edit Player</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Change Password Modal -->
+  <div class="modal fade" id="changePasswordModal" tabindex="-1" aria-labelledby="changePasswordModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="changePasswordModalLabel">Change User Password</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="changePasswordForm">
+            <input type="hidden" id="changePasswordUserId" name="user_id">
+            
+            <div class="mb-3">
+              <label for="changePasswordUsername" class="form-label">Username</label>
+              <input type="text" class="form-control" id="changePasswordUsername" readonly>
+            </div>
+            
+            <div class="mb-3">
+              <label for="newPassword" class="form-label">New Password</label>
+              <input type="password" class="form-control" id="newPassword" name="new_password" required minlength="6">
+              <small class="form-text text-muted">Password must be at least 6 characters long</small>
+            </div>
+            
+            <div class="mb-3">
+              <label for="confirmPassword" class="form-label">Confirm New Password</label>
+              <input type="password" class="form-control" id="confirmPassword" name="confirm_password" required minlength="6">
+              <small class="form-text text-muted">Re-enter the new password to confirm</small>
+            </div>
+            
+            <div class="alert alert-warning" role="alert">
+              <i class="ti ti-alert-triangle me-2"></i>
+              <strong>Warning:</strong> This action will immediately change the user's password. The user will need to use the new password for their next login.
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-danger" onclick="confirmPasswordChange()">
+            <i class="ti ti-key me-2"></i>Change Password
+          </button>
         </div>
       </div>
     </div>
@@ -423,6 +470,12 @@ $allUsers = getAllUsersData();
 
     // CRUD Functions
     function viewUser(userId) {
+      console.log('Viewing user with ID:', userId);
+      
+      if (!userId || userId === 0) {
+        alert('Error: Invalid user ID provided');
+        return;
+      }
       
       fetch('ajax/user-crud.php', {
         method: 'POST',
@@ -440,9 +493,23 @@ $allUsers = getAllUsersData();
       .then(text => {
         try {
           const data = JSON.parse(text);
+          console.log('AJAX Response:', data);
+          
           if (data.success) {
+            console.log('User data:', data.data);
+            console.log('Recent games:', data.data.recent_games);
             populateViewModal(data.data);
-            $('#viewUserModal').modal('show');
+            $('#userDetailsModal').modal('show');
+            
+            // Fix accessibility issue by ensuring proper focus management
+            $('#userDetailsModal').on('shown.bs.modal', function () {
+              $(this).removeAttr('aria-hidden');
+              $(this).find('.btn').first().focus();
+            });
+            
+            $('#userDetailsModal').on('hidden.bs.modal', function () {
+              $(this).attr('aria-hidden', 'true');
+            });
           } else {
             alert('Error: ' + data.message);
           }
@@ -518,6 +585,58 @@ $allUsers = getAllUsersData();
       document.getElementById('viewUserAvgScore').textContent = user.avg_score ? parseFloat(user.avg_score).toFixed(1) : '0.0';
       document.getElementById('viewUserJoined').textContent = user.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A';
       
+      // Populate recent games table
+      const gamesTableBody = document.getElementById('detailPlayerGamesTable');
+      console.log('Recent games data:', user.recent_games);
+      console.log('Recent games length:', user.recent_games ? user.recent_games.length : 'undefined');
+      
+      if (user.recent_games && user.recent_games.length > 0) {
+        console.log('Populating games table with data');
+        gamesTableBody.innerHTML = '';
+        
+        // Group games by date and session
+        const gamesBySession = {};
+        user.recent_games.forEach(game => {
+          const sessionKey = game.game_date + '_' + (game.team_name || 'solo');
+          if (!gamesBySession[sessionKey]) {
+            gamesBySession[sessionKey] = {
+              date: game.game_date,
+              gameType: game.game_mode,
+              teamName: game.team_name || 'Solo',
+              games: {}
+            };
+          }
+          gamesBySession[sessionKey].games[game.game_number] = game.player_score;
+        });
+        
+        // Create table rows
+        Object.values(gamesBySession).forEach(session => {
+          const row = document.createElement('tr');
+          const game1 = session.games[1] || '-';
+          const game2 = session.games[2] || '-';
+          const game3 = session.games[3] || '-';
+          const game4 = session.games[4] || '-';
+          const game5 = session.games[5] || '-';
+          
+          const total = Object.values(session.games).reduce((sum, score) => sum + (parseInt(score) || 0), 0);
+          
+          row.innerHTML = `
+            <td>${new Date(session.date).toLocaleDateString()}</td>
+            <td>${session.gameType}</td>
+            <td>${game1}</td>
+            <td>${game2}</td>
+            <td>${game3}</td>
+            <td>${game4}</td>
+            <td>${game5}</td>
+            <td><strong>${total}</strong></td>
+          `;
+          gamesTableBody.appendChild(row);
+        });
+      } else {
+        console.log('No games found, showing empty message');
+        gamesTableBody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">No games recorded</td></tr>';
+      }
+      
       // Update avatar
       document.getElementById('viewUserAvatar').src = 'assets/images/profile/user-' + ((user.user_id % 8) + 1) + '.jpg';
       
@@ -567,10 +686,69 @@ $allUsers = getAllUsersData();
     }
 
     function editUserFromView() {
-      $('#viewUserModal').modal('hide');
+      $('#userDetailsModal').modal('hide');
       setTimeout(() => {
         editUser(document.getElementById('editUserId').value);
       }, 300);
+    }
+
+    // Password Change Functions
+    function changeUserPassword(userId, username) {
+      document.getElementById('changePasswordUserId').value = userId;
+      document.getElementById('changePasswordUsername').value = username;
+      document.getElementById('newPassword').value = '';
+      document.getElementById('confirmPassword').value = '';
+      
+      const modal = new bootstrap.Modal(document.getElementById('changePasswordModal'));
+      modal.show();
+    }
+
+    function confirmPasswordChange() {
+      const newPassword = document.getElementById('newPassword').value;
+      const confirmPassword = document.getElementById('confirmPassword').value;
+      const userId = document.getElementById('changePasswordUserId').value;
+      
+      // Client-side validation
+      if (!newPassword) {
+        showNotification('Please enter a new password', 'error');
+        return;
+      }
+      
+      if (newPassword.length < 6) {
+        showNotification('Password must be at least 6 characters long', 'error');
+        return;
+      }
+      
+      if (newPassword !== confirmPassword) {
+        showNotification('Passwords do not match', 'error');
+        return;
+      }
+      
+      // Proceed with password change
+      const formData = new FormData();
+      formData.append('action', 'change_password');
+      formData.append('user_id', userId);
+      formData.append('new_password', newPassword);
+      formData.append('confirm_password', confirmPassword);
+      
+      fetch('ajax/user-crud.php', {
+        method: 'POST',
+        body: formData
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          showNotification(data.message, 'success');
+          const modal = bootstrap.Modal.getInstance(document.getElementById('changePasswordModal'));
+          modal.hide();
+        } else {
+          showNotification(data.message, 'error');
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        showNotification('An error occurred while changing the password', 'error');
+      });
     }
 
     function exportUsers() {
@@ -645,6 +823,7 @@ $allUsers = getAllUsersData();
               if (modal) {
                 modal.hide();
               }
+              
               // Refresh the page after a short delay
               setTimeout(() => {
                 location.reload();
@@ -719,29 +898,6 @@ $allUsers = getAllUsersData();
 
     // All old functions removed - using PHP data only
 
-    // Tournament countdown functionality
-    function updateCountdown() {
-      const tournamentDate = new Date('2024-12-25T00:00:00').getTime();
-      const now = new Date().getTime();
-      const distance = tournamentDate - now;
-      
-      const days = Math.floor(distance / (1000 * 60 * 60 * 24));
-      const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-      const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-      const seconds = Math.floor((distance % (1000 * 60)) / 1000);
-      
-      document.getElementById('days').innerHTML = days.toString().padStart(2, '0');
-      document.getElementById('hours').innerHTML = hours.toString().padStart(2, '0');
-      document.getElementById('minutes').innerHTML = minutes.toString().padStart(2, '0');
-      document.getElementById('seconds').innerHTML = seconds.toString().padStart(2, '0');
-    }
-    
-    // Update countdown every second
-    setInterval(updateCountdown, 1000);
-    
-    // Initial call
-    updateCountdown();
-    
     // Search and filter functionality
     function filterUsers() {
       const searchTerm = document.getElementById('userSearch').value.toLowerCase();

@@ -160,6 +160,20 @@ function getUserRecentGames($userId, $limit = 5) {
     try {
         $pdo = getDBConnection();
 
+        // First, let's check if there are any games for this user at all
+        $checkStmt = $pdo->prepare("
+            SELECT COUNT(*) as total_games
+            FROM game_scores
+            WHERE user_id = ?
+        ");
+        $checkStmt->execute([$userId]);
+        $totalGames = $checkStmt->fetch(PDO::FETCH_ASSOC)['total_games'];
+        
+        if ($totalGames == 0) {
+            return [];
+        }
+
+        // Get recent games (including incomplete ones for now)
         $stmt = $pdo->prepare("
             SELECT
                 game_date,
@@ -167,10 +181,12 @@ function getUserRecentGames($userId, $limit = 5) {
                 player_score,
                 team_name,
                 lane_number,
-                status
+                status,
+                game_number,
+                created_at
             FROM game_scores
-            WHERE user_id = ? AND status = 'Completed'
-            ORDER BY game_date DESC, score_id DESC
+            WHERE user_id = ?
+            ORDER BY created_at DESC
             LIMIT ?
         ");
         $stmt->execute([$userId, $limit]);
@@ -178,6 +194,7 @@ function getUserRecentGames($userId, $limit = 5) {
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     } catch(PDOException $e) {
+        error_log("Error getting user recent games: " . $e->getMessage());
         return [];
     }
 }

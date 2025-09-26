@@ -103,6 +103,25 @@ function getActiveSession() {
 }
 
 // Start a session
+function resetSessionStartTime($sessionId) {
+    try {
+        $pdo = getDBConnection();
+        
+        $stmt = $pdo->prepare("
+            UPDATE game_sessions 
+            SET started_at = NOW() 
+            WHERE session_id = ? AND status = 'Active'
+        ");
+        
+        $result = $stmt->execute([$sessionId]);
+        return $result;
+        
+    } catch(PDOException $e) {
+        error_log("Error resetting session start time: " . $e->getMessage());
+        return false;
+    }
+}
+
 function startSession($sessionId) {
     try {
         $pdo = getDBConnection();
