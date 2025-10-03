@@ -95,6 +95,30 @@ if ($sessionId) {
       color: #333;
     }
     
+    /* Prevent layout shifts during score updates */
+    .table tbody tr {
+      transition: background-color 0.3s ease;
+    }
+    
+    .table tbody tr:hover {
+      transform: none;
+    }
+    
+    .table-responsive {
+      min-height: 200px;
+    }
+    
+    /* Ensure stable input field sizing */
+    .score-input {
+      min-width: 80px;
+      transition: all 0.2s ease;
+    }
+    
+    .score-input:focus {
+      transform: none;
+      box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+    }
+    
     /* Lane Assignment Styling */
     .lane-assignment {
       display: flex;
@@ -644,7 +668,7 @@ if ($sessionId) {
                                 foreach ($playerStats as $stats):
                                   $player = $stats['player'];
                                 ?>
-                                  <tr>
+                                  <tr data-player-id="<?php echo $player['user_id']; ?>">
                               <td>
                                 <div class="d-flex align-items-center">
                                         <img src="assets/images/profile/user-<?php echo ($player['user_id'] % 8) + 1; ?>.jpg" alt="Player" class="rounded-circle me-2" width="32">
@@ -883,7 +907,7 @@ if ($sessionId) {
                                   endforeach; ?>
                                 <?php else: ?>
                                   <tr>
-                                    <td colspan="7" class="text-center text-muted py-4">
+                                    <td colspan="8" class="text-center text-muted py-4">
                                       <i class="ti ti-users fs-1 mb-3 d-block"></i>
                                       No players found in the database.
                                     </td>
@@ -891,7 +915,7 @@ if ($sessionId) {
                                 <?php endif; ?>
                                 <?php } catch (Exception $e) { ?>
                                   <tr>
-                                    <td colspan="7" class="text-center text-muted py-4">
+                                    <td colspan="8" class="text-center text-muted py-4">
                                       <i class="ti ti-alert-triangle fs-1 mb-3 d-block"></i>
                                       Error loading players: <?php echo htmlspecialchars($e->getMessage()); ?>
                                     </td>
@@ -1052,7 +1076,7 @@ if ($sessionId) {
                                   endforeach; ?>
                                 <?php else: ?>
                                   <tr>
-                                    <td colspan="7" class="text-center text-muted py-4">
+                                    <td colspan="8" class="text-center text-muted py-4">
                                       <i class="ti ti-users fs-1 mb-3 d-block"></i>
                                       No players found in the database.
                                     </td>
@@ -1060,7 +1084,7 @@ if ($sessionId) {
                                 <?php endif; ?>
                                 <?php } catch (Exception $e) { ?>
                                   <tr>
-                                    <td colspan="7" class="text-center text-muted py-4">
+                                    <td colspan="8" class="text-center text-muted py-4">
                                       <i class="ti ti-alert-triangle fs-1 mb-3 d-block"></i>
                                       Error loading players: <?php echo htmlspecialchars($e->getMessage()); ?>
                                     </td>
@@ -1089,13 +1113,14 @@ if ($sessionId) {
                             <table class="table table-bordered" id="game3Table">
                               <thead class="table-dark">
                                 <tr>
-                                  <th scope="col" style="width: 30%;">Player</th>
+                                  <th scope="col" style="width: 25%;">Player</th>
+                                  <th scope="col" style="width: 10%;">Lane</th>
                                   <th scope="col" style="width: 12%;">Score</th>
                                   <th scope="col" style="width: 12%;">Strikes</th>
                                   <th scope="col" style="width: 12%;">Spares</th>
                                   <th scope="col" style="width: 12%;">Open Frames</th>
-                                  <th scope="col" style="width: 12%;">Status</th>
-                                  <th scope="col" style="width: 20%;">Actions</th>
+                                  <th scope="col" style="width: 10%;">Status</th>
+                                  <th scope="col" style="width: 17%;">Actions</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -1220,7 +1245,7 @@ if ($sessionId) {
                                   endforeach; ?>
                                 <?php else: ?>
                                   <tr>
-                                    <td colspan="7" class="text-center text-muted py-4">
+                                    <td colspan="8" class="text-center text-muted py-4">
                                       <i class="ti ti-users fs-1 mb-3 d-block"></i>
                                       No players found in the database.
                                     </td>
@@ -1228,7 +1253,7 @@ if ($sessionId) {
                                 <?php endif; ?>
                                 <?php } catch (Exception $e) { ?>
                                   <tr>
-                                    <td colspan="7" class="text-center text-muted py-4">
+                                    <td colspan="8" class="text-center text-muted py-4">
                                       <i class="ti ti-alert-triangle fs-1 mb-3 d-block"></i>
                                       Error loading players: <?php echo htmlspecialchars($e->getMessage()); ?>
                                     </td>
@@ -1389,7 +1414,7 @@ if ($sessionId) {
                                   endforeach; ?>
                                 <?php else: ?>
                                   <tr>
-                                    <td colspan="7" class="text-center text-muted py-4">
+                                    <td colspan="8" class="text-center text-muted py-4">
                                       <i class="ti ti-users fs-1 mb-3 d-block"></i>
                                       No players found in the database.
                                     </td>
@@ -1397,7 +1422,7 @@ if ($sessionId) {
                                 <?php endif; ?>
                                 <?php } catch (Exception $e) { ?>
                                   <tr>
-                                    <td colspan="7" class="text-center text-muted py-4">
+                                    <td colspan="8" class="text-center text-muted py-4">
                                       <i class="ti ti-alert-triangle fs-1 mb-3 d-block"></i>
                                       Error loading players: <?php echo htmlspecialchars($e->getMessage()); ?>
                                     </td>
@@ -1426,13 +1451,14 @@ if ($sessionId) {
                             <table class="table table-bordered" id="game5Table">
                               <thead class="table-dark">
                                 <tr>
-                                  <th scope="col" style="width: 30%;">Player</th>
+                                  <th scope="col" style="width: 25%;">Player</th>
+                                  <th scope="col" style="width: 10%;">Lane</th>
                                   <th scope="col" style="width: 12%;">Score</th>
                                   <th scope="col" style="width: 12%;">Strikes</th>
                                   <th scope="col" style="width: 12%;">Spares</th>
                                   <th scope="col" style="width: 12%;">Open Frames</th>
-                                  <th scope="col" style="width: 12%;">Status</th>
-                                  <th scope="col" style="width: 20%;">Actions</th>
+                                  <th scope="col" style="width: 10%;">Status</th>
+                                  <th scope="col" style="width: 17%;">Actions</th>
                                 </tr>
                               </thead>
                               <tbody>
@@ -1469,6 +1495,30 @@ if ($sessionId) {
                                             <strong><?php echo htmlspecialchars($player['first_name'] . ' ' . $player['last_name']); ?></strong>
                       </div>
                     </div>
+                                      </td>
+                                      <td>
+                                        <?php 
+                                        // Get lane assignment for this player in current session
+                                        $laneNumber = null;
+                                        if ($sessionId) {
+                                            try {
+                                                $pdo = getDBConnection();
+                                                $stmt = $pdo->prepare("SELECT lane_number FROM session_participants WHERE session_id = ? AND user_id = ?");
+                                                $stmt->execute([$sessionId, $player['user_id']]);
+                                                $result = $stmt->fetch(PDO::FETCH_ASSOC);
+                                                if ($result) {
+                                                    $laneNumber = $result['lane_number'];
+                                                }
+                                            } catch (Exception $e) {
+                                                // Handle error silently
+                                            }
+                                        }
+                                        ?>
+                                        <?php if ($laneNumber): ?>
+                                          <span>Lane <?php echo $laneNumber; ?></span>
+                                        <?php else: ?>
+                                          <span class="text-muted">-</span>
+                                        <?php endif; ?>
                                       </td>
                                       <td>
                                         <input type="number" 
@@ -1532,7 +1582,7 @@ if ($sessionId) {
                                   endforeach; ?>
                                 <?php else: ?>
                                   <tr>
-                                    <td colspan="7" class="text-center text-muted py-4">
+                                    <td colspan="8" class="text-center text-muted py-4">
                                       <i class="ti ti-users fs-1 mb-3 d-block"></i>
                                       No players found in the database.
                                     </td>
@@ -1540,7 +1590,7 @@ if ($sessionId) {
                                 <?php endif; ?>
                                 <?php } catch (Exception $e) { ?>
                                   <tr>
-                                    <td colspan="7" class="text-center text-muted py-4">
+                                    <td colspan="8" class="text-center text-muted py-4">
                                       <i class="ti ti-alert-triangle fs-1 mb-3 d-block"></i>
                                       Error loading players: <?php echo htmlspecialchars($e->getMessage()); ?>
                                     </td>
@@ -1572,23 +1622,1005 @@ if ($sessionId) {
   <script>
     // Admin-specific functions
     function viewPlayerDetails(playerId) {
-      showNotification('Opening detailed view for player: ' + playerId, 'info');
-      // Here you would open a detailed player modal or navigate to player details page
+      // Find the player row to get current data - try multiple methods
+      let playerRow = document.querySelector(`tr[data-player-id="${playerId}"]`);
+      
+      // If not found by data attribute, try to find by button onclick
+      if (!playerRow) {
+        const button = document.querySelector(`button[onclick*="viewPlayerDetails(${playerId})"]`);
+        if (button) {
+          playerRow = button.closest('tr');
+        }
+      }
+      
+      // If still not found, try to find by user ID in input fields
+      if (!playerRow) {
+        const input = document.querySelector(`input[data-user-id="${playerId}"]`);
+        if (input) {
+          playerRow = input.closest('tr');
+        }
+      }
+      
+      if (!playerRow) {
+        showNotification('Player not found in current table. Please refresh the page and try again.', 'error');
+        return;
+      }
+      
+      // Extract player data from the row
+      const playerName = playerRow.querySelector('h6')?.textContent || 'Unknown Player';
+      const laneNumber = playerRow.querySelector('td:nth-child(3)')?.textContent || 'Not assigned';
+      const totalScore = playerRow.querySelector('td:nth-child(4) span')?.textContent || '0';
+      const avgScore = playerRow.querySelector('td:nth-child(5)')?.textContent || '0';
+      const gamesPlayed = playerRow.querySelector('td:nth-child(6)')?.textContent || '0';
+      const bestScore = playerRow.querySelector('td:nth-child(7) span')?.textContent || '0';
+      const strikes = playerRow.querySelector('td:nth-child(8)')?.textContent || '0';
+      const spares = playerRow.querySelector('td:nth-child(9)')?.textContent || '0';
+      const lastUpdated = playerRow.querySelector('td:nth-child(10) small')?.textContent || 'Never';
+      
+      // Create and show detailed modal
+      showPlayerDetailsModal({
+        playerId: playerId,
+        playerName: playerName,
+        laneNumber: laneNumber,
+        totalScore: totalScore,
+        avgScore: avgScore,
+        gamesPlayed: gamesPlayed,
+        bestScore: bestScore,
+        strikes: strikes,
+        spares: spares,
+        lastUpdated: lastUpdated
+      });
     }
 
     function editPlayerScore(playerId) {
-      showNotification('Opening score editor for player: ' + playerId, 'info');
-      // Here you would open the score editing interface
+      // Find the player row - try multiple methods
+      let playerRow = document.querySelector(`tr[data-player-id="${playerId}"]`);
+      
+      // If not found by data attribute, try to find by button onclick
+      if (!playerRow) {
+        const button = document.querySelector(`button[onclick*="editPlayerScore(${playerId})"]`);
+        if (button) {
+          playerRow = button.closest('tr');
+        }
+      }
+      
+      // If still not found, try to find by user ID in input fields
+      if (!playerRow) {
+        const input = document.querySelector(`input[data-user-id="${playerId}"]`);
+        if (input) {
+          playerRow = input.closest('tr');
+        }
+      }
+      
+      if (!playerRow) {
+        showNotification('Player not found in current table. Please refresh the page and try again.', 'error');
+        return;
+      }
+      
+      const playerName = playerRow.querySelector('h6')?.textContent || 'Unknown Player';
+      
+      // Create and show score editor modal
+      showScoreEditorModal(playerId, playerName);
     }
 
     function viewPlayerHistory(playerId) {
-      showNotification('Loading score history for player: ' + playerId, 'info');
-      // Here you would load and display player's complete score history
+      // Find the player row - try multiple methods
+      let playerRow = document.querySelector(`tr[data-player-id="${playerId}"]`);
+      
+      // If not found by data attribute, try to find by button onclick
+      if (!playerRow) {
+        const button = document.querySelector(`button[onclick*="viewPlayerHistory(${playerId})"]`);
+        if (button) {
+          playerRow = button.closest('tr');
+        }
+      }
+      
+      // If still not found, try to find by user ID in input fields
+      if (!playerRow) {
+        const input = document.querySelector(`input[data-user-id="${playerId}"]`);
+        if (input) {
+          playerRow = input.closest('tr');
+        }
+      }
+      
+      if (!playerRow) {
+        showNotification('Player not found in current table. Please refresh the page and try again.', 'error');
+        return;
+      }
+      
+      const playerName = playerRow.querySelector('h6')?.textContent || 'Unknown Player';
+      
+      // Load and show player history
+      loadPlayerHistory(playerId, playerName);
+    }
+
+    function showPlayerDetailsModal(playerData) {
+      // Create modal HTML
+      const modalHtml = `
+        <div class="modal fade" id="playerDetailsModal" tabindex="-1" aria-labelledby="playerDetailsModalLabel" aria-hidden="true">
+          <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title" id="playerDetailsModalLabel">
+                  <i class="ti ti-user me-2"></i>Player Details - ${playerData.playerName}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body">
+                <div class="row">
+                  <div class="col-md-6">
+                    <h6 class="text-primary mb-3">Current Statistics</h6>
+                    <table class="table table-sm">
+                      <tr><td><strong>Player ID:</strong></td><td>${playerData.playerId}</td></tr>
+                      <tr><td><strong>Lane:</strong></td><td>${playerData.laneNumber}</td></tr>
+                      <tr><td><strong>Total Score:</strong></td><td><span class="badge bg-success">${playerData.totalScore}</span></td></tr>
+                      <tr><td><strong>Average Score:</strong></td><td><span class="badge bg-info">${playerData.avgScore}</span></td></tr>
+                      <tr><td><strong>Games Played:</strong></td><td><span class="badge bg-secondary">${playerData.gamesPlayed}</span></td></tr>
+                    </table>
+                  </div>
+                  <div class="col-md-6">
+                    <h6 class="text-primary mb-3">Performance Metrics</h6>
+                    <table class="table table-sm">
+                      <tr><td><strong>Best Game:</strong></td><td><span class="badge bg-warning">${playerData.bestScore}</span></td></tr>
+                      <tr><td><strong>Total Strikes:</strong></td><td><span class="badge bg-danger">${playerData.strikes}</span></td></tr>
+                      <tr><td><strong>Total Spares:</strong></td><td><span class="badge bg-info">${playerData.spares}</span></td></tr>
+                      <tr><td><strong>Last Updated:</strong></td><td><small class="text-muted">${playerData.lastUpdated}</small></td></tr>
+                    </table>
+                  </div>
+                </div>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-warning" onclick="editPlayerScore(${playerData.playerId}); $('#playerDetailsModal').modal('hide');">
+                  <i class="ti ti-edit me-1"></i>Edit Scores
+                </button>
+                <button type="button" class="btn btn-info" onclick="viewPlayerHistory(${playerData.playerId}); $('#playerDetailsModal').modal('hide');">
+                  <i class="ti ti-history me-1"></i>View History
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      // Remove existing modal if any
+      const existingModal = document.getElementById('playerDetailsModal');
+      if (existingModal) {
+        existingModal.remove();
+      }
+      
+      // Add modal to body
+      document.body.insertAdjacentHTML('beforeend', modalHtml);
+      
+      // Show modal
+      const modal = new bootstrap.Modal(document.getElementById('playerDetailsModal'));
+      modal.show();
+    }
+
+    function showScoreEditorModal(playerId, playerName) {
+      // Create score editor modal
+      const modalHtml = `
+        <div class="modal fade" id="scoreEditorModal" tabindex="-1" aria-labelledby="scoreEditorModalLabel" aria-hidden="true">
+          <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title" id="scoreEditorModalLabel">
+                  <i class="ti ti-edit me-2"></i>Edit Scores - ${playerName}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body">
+                <div class="row">
+                  <div class="col-md-6">
+                    <h6 class="text-primary mb-3">Game 1</h6>
+                    <div class="mb-3">
+                      <label class="form-label">Score</label>
+                      <input type="number" class="form-control" id="game1_score" min="0" max="300" placeholder="0-300">
+                    </div>
+                    <div class="row">
+                      <div class="col-4">
+                        <label class="form-label">Strikes</label>
+                        <input type="number" class="form-control" id="game1_strikes" min="0" max="12" placeholder="0-12">
+                      </div>
+                      <div class="col-4">
+                        <label class="form-label">Spares</label>
+                        <input type="number" class="form-control" id="game1_spares" min="0" max="10" placeholder="0-10">
+                      </div>
+                      <div class="col-4">
+                        <label class="form-label">Open Frames</label>
+                        <input type="number" class="form-control" id="game1_open" min="0" max="10" placeholder="0-10">
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <h6 class="text-primary mb-3">Game 2</h6>
+                    <div class="mb-3">
+                      <label class="form-label">Score</label>
+                      <input type="number" class="form-control" id="game2_score" min="0" max="300" placeholder="0-300">
+                    </div>
+                    <div class="row">
+                      <div class="col-4">
+                        <label class="form-label">Strikes</label>
+                        <input type="number" class="form-control" id="game2_strikes" min="0" max="12" placeholder="0-12">
+                      </div>
+                      <div class="col-4">
+                        <label class="form-label">Spares</label>
+                        <input type="number" class="form-control" id="game2_spares" min="0" max="10" placeholder="0-10">
+                      </div>
+                      <div class="col-4">
+                        <label class="form-label">Open Frames</label>
+                        <input type="number" class="form-control" id="game2_open" min="0" max="10" placeholder="0-10">
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="row mt-3">
+                  <div class="col-md-6">
+                    <h6 class="text-primary mb-3">Game 3</h6>
+                    <div class="mb-3">
+                      <label class="form-label">Score</label>
+                      <input type="number" class="form-control" id="game3_score" min="0" max="300" placeholder="0-300">
+                    </div>
+                    <div class="row">
+                      <div class="col-4">
+                        <label class="form-label">Strikes</label>
+                        <input type="number" class="form-control" id="game3_strikes" min="0" max="12" placeholder="0-12">
+                      </div>
+                      <div class="col-4">
+                        <label class="form-label">Spares</label>
+                        <input type="number" class="form-control" id="game3_spares" min="0" max="10" placeholder="0-10">
+                      </div>
+                      <div class="col-4">
+                        <label class="form-label">Open Frames</label>
+                        <input type="number" class="form-control" id="game3_open" min="0" max="10" placeholder="0-10">
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <h6 class="text-primary mb-3">Game 4</h6>
+                    <div class="mb-3">
+                      <label class="form-label">Score</label>
+                      <input type="number" class="form-control" id="game4_score" min="0" max="300" placeholder="0-300">
+                    </div>
+                    <div class="row">
+                      <div class="col-4">
+                        <label class="form-label">Strikes</label>
+                        <input type="number" class="form-control" id="game4_strikes" min="0" max="12" placeholder="0-12">
+                      </div>
+                      <div class="col-4">
+                        <label class="form-label">Spares</label>
+                        <input type="number" class="form-control" id="game4_spares" min="0" max="10" placeholder="0-10">
+                      </div>
+                      <div class="col-4">
+                        <label class="form-label">Open Frames</label>
+                        <input type="number" class="form-control" id="game4_open" min="0" max="10" placeholder="0-10">
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="row mt-3">
+                  <div class="col-md-6">
+                    <h6 class="text-primary mb-3">Game 5</h6>
+                    <div class="mb-3">
+                      <label class="form-label">Score</label>
+                      <input type="number" class="form-control" id="game5_score" min="0" max="300" placeholder="0-300">
+                    </div>
+                    <div class="row">
+                      <div class="col-4">
+                        <label class="form-label">Strikes</label>
+                        <input type="number" class="form-control" id="game5_strikes" min="0" max="12" placeholder="0-12">
+                      </div>
+                      <div class="col-4">
+                        <label class="form-label">Spares</label>
+                        <input type="number" class="form-control" id="game5_spares" min="0" max="10" placeholder="0-10">
+                      </div>
+                      <div class="col-4">
+                        <label class="form-label">Open Frames</label>
+                        <input type="number" class="form-control" id="game5_open" min="0" max="10" placeholder="0-10">
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" onclick="saveAllPlayerScores(${playerId})">
+                  <i class="ti ti-device-floppy me-1"></i>Save All Scores
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      // Remove existing modal if any
+      const existingModal = document.getElementById('scoreEditorModal');
+      if (existingModal) {
+        existingModal.remove();
+      }
+      
+      // Add modal to body
+      document.body.insertAdjacentHTML('beforeend', modalHtml);
+      
+      // Show modal first
+      const modal = new bootstrap.Modal(document.getElementById('scoreEditorModal'));
+      modal.show();
+      
+      // Load current scores after modal is shown
+      setTimeout(() => {
+        loadCurrentScores(playerId);
+      }, 300);
+    }
+
+    function loadPlayerHistory(playerId, playerName) {
+      // Show loading notification
+      showNotification('Loading player history...', 'info');
+      
+      // Create history modal
+      const modalHtml = `
+        <div class="modal fade" id="playerHistoryModal" tabindex="-1" aria-labelledby="playerHistoryModalLabel" aria-hidden="true">
+          <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title" id="playerHistoryModalLabel">
+                  <i class="ti ti-history me-2"></i>Score History - ${playerName}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body">
+                <div id="historyContent">
+                  <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                      <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Loading player history...</p>
+                  </div>
+                </div>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="exportPlayerHistory(${playerId})">
+                  <i class="ti ti-download me-1"></i>Export History
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      // Remove existing modal if any
+      const existingModal = document.getElementById('playerHistoryModal');
+      if (existingModal) {
+        existingModal.remove();
+      }
+      
+      // Add modal to body
+      document.body.insertAdjacentHTML('beforeend', modalHtml);
+      
+      // Show modal
+      const modal = new bootstrap.Modal(document.getElementById('playerHistoryModal'));
+      modal.show();
+      
+      // Load history data
+      fetchPlayerHistoryData(playerId);
     }
 
     function editGameScore(playerId, gameNumber) {
       showNotification('Editing Game ' + gameNumber + ' score for player: ' + playerId, 'warning');
       // Here you would open a quick edit modal for the specific game score
+    }
+
+    function loadCurrentScores(playerId) {
+      
+      // Load current scores for the player from the table data
+      for (let game = 1; game <= 5; game++) {
+        let playerRow = null;
+        
+        // Try to find player row in the specific game table first
+        const gameTable = document.getElementById(`game${game}Table`);
+        if (gameTable) {
+          playerRow = gameTable.querySelector(`tr[data-player-id="${playerId}"]`);
+        }
+        
+        // If not found in game table, try to find by input field
+        if (!playerRow) {
+          const input = document.querySelector(`input[data-user-id="${playerId}"][data-game="${game}"]`);
+          if (input) {
+            playerRow = input.closest('tr');
+          }
+        }
+        
+        // If still not found, try to find by button onclick
+        if (!playerRow) {
+          const button = document.querySelector(`button[onclick*="savePlayerScore(${playerId}, ${game}"]`);
+          if (button) {
+            playerRow = button.closest('tr');
+          }
+        }
+        
+        if (playerRow) {
+          const scoreInput = playerRow.querySelector('[data-field="score"]');
+          const strikesInput = playerRow.querySelector('[data-field="strikes"]');
+          const sparesInput = playerRow.querySelector('[data-field="spares"]');
+          const openFramesInput = playerRow.querySelector('[data-field="open_frames"]');
+          
+          // Get the modal input elements
+          const modalScoreInput = document.getElementById(`game${game}_score`);
+          const modalStrikesInput = document.getElementById(`game${game}_strikes`);
+          const modalSparesInput = document.getElementById(`game${game}_spares`);
+          const modalOpenFramesInput = document.getElementById(`game${game}_open`);
+          
+          // Populate the modal inputs with existing values
+          if (scoreInput && modalScoreInput) {
+            modalScoreInput.value = scoreInput.value || '';
+          }
+          if (strikesInput && modalStrikesInput) {
+            modalStrikesInput.value = strikesInput.value || '';
+          }
+          if (sparesInput && modalSparesInput) {
+            modalSparesInput.value = sparesInput.value || '';
+          }
+          if (openFramesInput && modalOpenFramesInput) {
+            modalOpenFramesInput.value = openFramesInput.value || '';
+          }
+        }
+      }
+      
+      // Also try to load from the current data cache if available
+      if (window.currentData && window.currentData.length > 0) {
+        const playerData = window.currentData.find(p => p.user_id == playerId);
+        if (playerData) {
+          console.log('Loading from current data cache:', playerData);
+          
+          for (let game = 1; game <= 5; game++) {
+            const gameScore = playerData[`game_${game}_score`];
+            if (gameScore) {
+              const modalScoreInput = document.getElementById(`game${game}_score`);
+              const modalStrikesInput = document.getElementById(`game${game}_strikes`);
+              const modalSparesInput = document.getElementById(`game${game}_spares`);
+              const modalOpenFramesInput = document.getElementById(`game${game}_open`);
+              
+              if (modalScoreInput) modalScoreInput.value = gameScore.player_score || '';
+              if (modalStrikesInput) modalStrikesInput.value = gameScore.strikes || '';
+              if (modalSparesInput) modalSparesInput.value = gameScore.spares || '';
+              if (modalOpenFramesInput) modalOpenFramesInput.value = gameScore.open_frames || '';
+              
+              console.log(`Loaded from cache - Game ${game}:`, gameScore);
+            }
+          }
+        }
+      }
+    }
+
+    function saveAllPlayerScores(playerId) {
+      const saveBtn = document.querySelector('#scoreEditorModal .btn-success');
+      const originalText = saveBtn.innerHTML;
+      saveBtn.innerHTML = '<i class="ti ti-loader ti-spin me-1"></i>Saving...';
+      saveBtn.disabled = true;
+      
+      // Set saving flag to prevent other refreshes
+      isSavingScore = true;
+      
+      let savedCount = 0;
+      let totalGames = 0;
+      
+      // Save each game score
+      for (let game = 1; game <= 5; game++) {
+        const score = document.getElementById(`game${game}_score`).value;
+        const strikes = document.getElementById(`game${game}_strikes`).value;
+        const spares = document.getElementById(`game${game}_spares`).value;
+        const openFrames = document.getElementById(`game${game}_open`).value;
+        
+        if (score && score > 0) {
+          totalGames++;
+          
+          // Use the existing savePlayerScore function
+          const formData = new FormData();
+          formData.append('action', 'add_score');
+          formData.append('session_id', window.currentSessionId || <?php echo $sessionId ? $sessionId : 'null'; ?>);
+          formData.append('user_id', playerId);
+          formData.append('game_number', game);
+          formData.append('player_score', score);
+          formData.append('strikes', strikes || 0);
+          formData.append('spares', spares || 0);
+          formData.append('open_frames', openFrames || 0);
+          formData.append('game_mode', 'Solo');
+          
+          fetch('ajax/session-management.php', {
+            method: 'POST',
+            body: formData
+          })
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              savedCount++;
+              if (savedCount === totalGames) {
+                showNotification(`All ${savedCount} scores saved successfully!`, 'success');
+                $('#scoreEditorModal').modal('hide');
+                // Update the table data without full refresh
+                setTimeout(() => {
+                  updateTableAfterSave(playerId);
+                }, 500);
+              }
+            } else {
+              showNotification(`Failed to save Game ${game}: ${data.message}`, 'error');
+            }
+          })
+          .catch(error => {
+            showNotification(`Error saving Game ${game}: ${error.message}`, 'error');
+          });
+        }
+      }
+      
+      if (totalGames === 0) {
+        showNotification('No scores to save', 'warning');
+        saveBtn.innerHTML = originalText;
+        saveBtn.disabled = false;
+        isSavingScore = false;
+      }
+    }
+
+    function fetchPlayerHistoryData(playerId) {
+      // Fetch player history from server
+      const formData = new FormData();
+      formData.append('action', 'get_player_history');
+      formData.append('user_id', playerId);
+      
+      fetch('ajax/session-management.php', {
+        method: 'POST',
+        body: formData
+      })
+      .then(response => response.json())
+      .then(data => {
+        const historyContent = document.getElementById('historyContent');
+        if (data.success && data.history) {
+          // Display history data
+          let historyHtml = `
+            <div class="row">
+              <div class="col-12">
+                <h6 class="text-primary mb-3">Recent Games</h6>
+                <div class="table-responsive">
+                  <table class="table table-sm table-hover">
+                    <thead>
+                      <tr>
+                        <th>Date</th>
+                        <th>Game</th>
+                        <th>Score</th>
+                        <th>Strikes</th>
+                        <th>Spares</th>
+                        <th>Open Frames</th>
+                        <th>Session</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+          `;
+          
+          data.history.forEach(score => {
+            historyHtml += `
+              <tr>
+                <td>${new Date(score.game_date).toLocaleDateString()}</td>
+                <td><span class="badge bg-primary">Game ${score.game_number}</span></td>
+                <td><strong class="text-success">${score.player_score}</strong></td>
+                <td>${score.strikes || 0}</td>
+                <td>${score.spares || 0}</td>
+                <td>${score.open_frames || 0}</td>
+                <td><small class="text-muted">${score.session_name || 'N/A'}</small></td>
+              </tr>
+            `;
+          });
+          
+          historyHtml += `
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          `;
+          
+          historyContent.innerHTML = historyHtml;
+        } else {
+          historyContent.innerHTML = `
+            <div class="text-center text-muted">
+              <i class="ti ti-history" style="font-size: 3rem; opacity: 0.3;"></i>
+              <p class="mt-3">No score history found for this player.</p>
+            </div>
+          `;
+        }
+      })
+      .catch(error => {
+        const historyContent = document.getElementById('historyContent');
+        historyContent.innerHTML = `
+          <div class="text-center text-danger">
+            <i class="ti ti-alert-circle" style="font-size: 3rem;"></i>
+            <p class="mt-3">Error loading player history: ${error.message}</p>
+          </div>
+        `;
+      });
+    }
+
+    function updateTableAfterSave(playerId) {
+      // Update table data after save without full refresh
+      
+      // Reset the saving flag immediately
+      isSavingScore = false;
+      
+      // Use a simple, direct approach - just refresh the data without clearing tables
+      const dateFilter = document.getElementById('dateFilter');
+      const selectedDate = dateFilter ? dateFilter.value : 'today';
+      
+      
+      // Clear cache and reload data using the stable method
+      delete dataCache[selectedDate];
+      refreshDataStable(selectedDate, true);
+    }
+
+    function refreshDataGentle(selectedDate) {
+      // Fetch fresh data and update tables gently without layout disruption
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', 'ajax/session-management.php', true);
+      xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+      
+      xhr.onreadystatechange = function() {
+        if (xhr.readyState === 4 && xhr.status === 200) {
+          try {
+            const data = JSON.parse(xhr.responseText);
+            if (data.success) {
+              console.log('Refreshing data gently for:', selectedDate);
+              
+              // Update the data cache
+              dataCache[selectedDate] = {
+                players: data.players,
+                session_id: data.session_id
+              };
+              
+              // Store the session_id
+              if (data.session_id) {
+                window.currentSessionId = data.session_id;
+              }
+              
+              // Update tables with gentle method
+              updateTablesGentle(data.players, selectedDate);
+              
+            } else {
+              console.error('Error refreshing data:', data.message);
+            }
+          } catch (e) {
+            console.error('Error parsing refresh response:', e);
+          }
+        }
+      };
+      
+      xhr.send('action=get_players_data&selected_date=' + encodeURIComponent(selectedDate) + '&session_type=Solo&t=' + Date.now());
+    }
+
+    function updateTablesGentle(players, selectedDate) {
+      try {
+        // Update tables gently without disrupting layout
+        
+        // Store current data globally
+        window.currentData = players;
+        
+        // DON'T update table headers to avoid duplicate headers
+        // updateTableHeaders(selectedDate);
+        
+        // Update Overall Rankings with dynamic lanes
+        updateOverallRankingsTable(players);
+        
+        // Update Game tabs with gentle method
+        for (let game = 1; game <= 5; game++) {
+          updateGameTableGentle(players, game);
+        }
+      } catch (error) {
+        console.error('Error in updateTablesGentle:', error);
+      }
+    }
+
+
+    function updateGameTableGentle(players, gameNumber) {
+      const table = document.getElementById(`game${gameNumber}Table`);
+      if (!table) {
+        return;
+      }
+      
+      const tbody = table.querySelector('tbody');
+      if (!tbody) {
+        return;
+      }
+      
+      
+      // Update existing rows instead of replacing them
+      players.forEach((player, index) => {
+        let row = tbody.children[index];
+        if (row) {
+          // Update the existing row data
+          updateGameRow(row, player, gameNumber);
+        } else {
+          console.log(`Game ${gameNumber} row ${index} not found for player ${player.name || player.user_id}`);
+        }
+      });
+    }
+
+    function updatePlayerDataOnly(playerId, selectedDate) {
+      // Fetch only the specific player's updated data
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', 'ajax/session-management.php', true);
+      xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+      
+      xhr.onreadystatechange = function() {
+        if (xhr.readyState === 4 && xhr.status === 200) {
+          try {
+            const data = JSON.parse(xhr.responseText);
+            if (data.success && data.players) {
+              // Find the updated player data
+              const updatedPlayer = data.players.find(p => p.user_id == playerId);
+              if (updatedPlayer) {
+                console.log('Updating player data only:', updatedPlayer);
+                
+                // Update the player's row in Overall Rankings
+                updatePlayerRowInTable('overallRankingsTable', updatedPlayer);
+                
+                // Update the player's rows in each game table
+                for (let game = 1; game <= 5; game++) {
+                  updatePlayerRowInTable(`game${game}Table`, updatedPlayer, game);
+                }
+                
+                // Update the global data cache
+                if (window.currentData) {
+                  const playerIndex = window.currentData.findIndex(p => p.user_id == playerId);
+                  if (playerIndex !== -1) {
+                    window.currentData[playerIndex] = updatedPlayer;
+                  }
+                }
+              }
+            }
+          } catch (e) {
+            console.error('Error updating player data:', e);
+          }
+        }
+      };
+      
+      xhr.send('action=get_players_data&selected_date=' + encodeURIComponent(selectedDate) + '&session_type=Solo&t=' + Date.now());
+    }
+
+    function updatePlayerRowInTable(tableId, playerData, gameNumber = null) {
+      const table = document.getElementById(tableId);
+      if (!table) return;
+      
+      // Find the player's row
+      let playerRow = table.querySelector(`tr[data-player-id="${playerData.user_id}"]`);
+      if (!playerRow) {
+        const input = table.querySelector(`input[data-user-id="${playerData.user_id}"]`);
+        if (input) {
+          playerRow = input.closest('tr');
+        }
+      }
+      
+      if (!playerRow) return;
+      
+      // Update the row data based on table type
+      if (tableId === 'overallRankingsTable') {
+        // Update overall rankings row
+        updateOverallRankingsRow(playerRow, playerData);
+      } else if (tableId.startsWith('game')) {
+        // Update game-specific row
+        updateGameRow(playerRow, playerData, gameNumber);
+      }
+    }
+
+    function updateOverallRankingsRow(row, playerData) {
+      console.log('Updating overall rankings row for player:', playerData.name || playerData.user_id);
+      console.log('Player data:', playerData);
+      
+      // Update total score
+      const totalScoreCell = row.querySelector('.total-score');
+      if (totalScoreCell) {
+        totalScoreCell.textContent = playerData.total_score || 0;
+        console.log('Updated total score to:', playerData.total_score || 0);
+      } else {
+        console.log('Total score cell not found');
+      }
+      
+      // Update average
+      const avgCell = row.querySelector('.avg-score');
+      if (avgCell) {
+        avgCell.textContent = playerData.average_score || 0;
+        console.log('Updated average to:', playerData.average_score || 0);
+      } else {
+        console.log('Average cell not found');
+      }
+      
+      // Update games played
+      const gamesPlayedCell = row.querySelector('.games-played');
+      if (gamesPlayedCell) {
+        gamesPlayedCell.textContent = playerData.games_played || 0;
+        console.log('Updated games played to:', playerData.games_played || 0);
+      } else {
+        console.log('Games played cell not found');
+      }
+      
+      // Update best game
+      const bestGameCell = row.querySelector('.best-game');
+      if (bestGameCell) {
+        bestGameCell.textContent = playerData.best_game || 0;
+        console.log('Updated best game to:', playerData.best_game || 0);
+      } else {
+        console.log('Best game cell not found');
+      }
+      
+      // Update strikes
+      const strikesCell = row.querySelector('.total-strikes');
+      if (strikesCell) {
+        strikesCell.textContent = playerData.total_strikes || 0;
+        console.log('Updated strikes to:', playerData.total_strikes || 0);
+      } else {
+        console.log('Strikes cell not found');
+      }
+      
+      // Update spares
+      const sparesCell = row.querySelector('.total-spares');
+      if (sparesCell) {
+        sparesCell.textContent = playerData.total_spares || 0;
+        console.log('Updated spares to:', playerData.total_spares || 0);
+      } else {
+        console.log('Spares cell not found');
+      }
+    }
+
+    function updateGameRow(row, playerData, gameNumber) {
+      if (!gameNumber) return;
+      
+      console.log(`Updating game ${gameNumber} row for player:`, playerData.name || playerData.user_id);
+      
+      const gameScore = playerData[`game_${gameNumber}_score`];
+      if (!gameScore) {
+        console.log(`No game ${gameNumber} score data found for player:`, playerData.name || playerData.user_id);
+        return;
+      }
+      
+      console.log(`Game ${gameNumber} score data:`, gameScore);
+      
+      // Update score input
+      const scoreInput = row.querySelector('[data-field="score"]');
+      if (scoreInput) {
+        scoreInput.value = gameScore.player_score || '';
+        console.log(`Updated game ${gameNumber} score to:`, gameScore.player_score || '');
+      } else {
+        console.log(`Game ${gameNumber} score input not found`);
+      }
+      
+      // Update strikes input
+      const strikesInput = row.querySelector('[data-field="strikes"]');
+      if (strikesInput) {
+        strikesInput.value = gameScore.strikes || '';
+        console.log(`Updated game ${gameNumber} strikes to:`, gameScore.strikes || '');
+      } else {
+        console.log(`Game ${gameNumber} strikes input not found`);
+      }
+      
+      // Update spares input
+      const sparesInput = row.querySelector('[data-field="spares"]');
+      if (sparesInput) {
+        sparesInput.value = gameScore.spares || '';
+        console.log(`Updated game ${gameNumber} spares to:`, gameScore.spares || '');
+      } else {
+        console.log(`Game ${gameNumber} spares input not found`);
+      }
+      
+      // Update open frames input
+      const openFramesInput = row.querySelector('[data-field="open_frames"]');
+      if (openFramesInput) {
+        openFramesInput.value = gameScore.open_frames || '';
+        console.log(`Updated game ${gameNumber} open frames to:`, gameScore.open_frames || '');
+      } else {
+        console.log(`Game ${gameNumber} open frames input not found`);
+      }
+      
+      // Update status
+      updatePlayerStatus(row, gameScore.player_score, gameScore.strikes, gameScore.spares, gameScore.open_frames);
+    }
+
+    function updatePlayerLane(userId, laneNumber) {
+      if (!userId) {
+        showNotification('Invalid user ID', 'error');
+        return;
+      }
+      
+      // Show loading notification
+      showNotification('Updating lane assignment...', 'info');
+      
+      // Get current session ID from multiple sources
+      const urlParams = new URLSearchParams(window.location.search);
+      let sessionId = urlParams.get('session');
+      
+      // Fallback 1: try to get from window.currentSessionId
+      if (!sessionId && window.currentSessionId) {
+        sessionId = window.currentSessionId;
+      }
+      
+      // Fallback 2: try to get from window.currentData
+      if (!sessionId && window.currentData && window.currentData.length > 0) {
+        sessionId = window.currentData[0].session_id;
+      }
+      
+      // Fallback 3: use PHP session ID as last resort
+      if (!sessionId) {
+        sessionId = <?php echo $sessionId ? $sessionId : 'null'; ?>;
+      }
+      
+      
+      if (!sessionId) {
+        showNotification('Unable to determine current session. Please refresh the page.', 'error');
+        return;
+      }
+      
+      // Prepare form data
+      const formData = new FormData();
+      formData.append('action', 'update_player_lane');
+      formData.append('user_id', userId);
+      formData.append('lane_number', laneNumber);
+      formData.append('session_id', sessionId);
+      
+      // Send AJAX request with cache-busting
+      fetch('ajax/session-management.php?v=' + Date.now(), {
+        method: 'POST',
+        body: formData
+      })
+      .then(response => {
+        return response.json();
+      })
+      .then(data => {
+        if (data.success) {
+          showNotification(`Lane updated successfully! Player assigned to ${laneNumber ? 'Lane ' + laneNumber : 'No lane'}`, 'success');
+          
+          // Update the dropdown to show the new lane number
+          const dropdown = document.querySelector(`select[data-user-id="${userId}"]`);
+          if (dropdown) {
+            dropdown.value = laneNumber;
+            
+            // Add visual feedback - highlight the dropdown briefly
+            dropdown.style.backgroundColor = '#d4edda';
+            dropdown.style.borderColor = '#28a745';
+            setTimeout(() => {
+              dropdown.style.backgroundColor = '';
+              dropdown.style.borderColor = '';
+            }, 2000);
+          }
+          
+          // Update the lane number in the current data cache
+          if (window.currentData) {
+            const playerIndex = window.currentData.findIndex(p => p.user_id == userId);
+            if (playerIndex !== -1) {
+              window.currentData[playerIndex].lane_number = laneNumber;
+              console.log('Updated player data cache for user:', userId, 'to lane:', laneNumber);
+            }
+          }
+        } else {
+          console.error('Lane update failed:', data.message);
+          showNotification('Error updating lane: ' + data.message, 'error');
+          // Revert the select value
+          const select = document.querySelector(`select[data-user-id="${userId}"]`);
+          if (select) {
+            select.value = '';
+          }
+        }
+      })
+      .catch(error => {
+        console.error('Error updating lane:', error);
+        showNotification('Error updating lane: ' + error.message, 'error');
+        // Revert the select value
+        const select = document.querySelector(`select[data-user-id="${userId}"]`);
+        if (select) {
+          select.value = '';
+        }
+      });
+    }
+
+    function exportPlayerHistory(playerId) {
+      showNotification('Exporting player history...', 'info');
+      // Export functionality placeholder
+      setTimeout(() => {
+        showNotification('Export feature coming soon!', 'info');
+      }, 1000);
     }
 
     function deleteGameScore(playerId, gameNumber) {
@@ -1614,12 +2646,16 @@ if ($sessionId) {
     
     function savePlayerScore(userId, gameNumber, playerName) {
       
+      // Set flag to prevent table refreshes during save
+      isSavingScore = true;
+      
       // Create unique submission key
       const submissionKey = `${userId}-${gameNumber}`;
       
       // Prevent duplicate submissions
       if (ongoingSubmissions.has(submissionKey)) {
         showNotification('Score is already being saved, please wait...', 'warning');
+        isSavingScore = false;
         return;
       }
       
@@ -1741,10 +2777,8 @@ if ($sessionId) {
             // Update the UI dynamically instead of refreshing the page
             updatePlayerStatus(row, scoreData.player_score, scoreData.strikes, scoreData.spares, scoreData.open_frames);
             
-            // Auto-refresh the current tab data after a short delay
-            setTimeout(() => {
-              refreshCurrentTabData();
-            }, 300);
+            // Update only the specific row data without full table refresh
+            updateRowDataOnly(row, scoreData, gameNumber);
           } else {
             showNotification('Error: ' + data.message, 'error');
           }
@@ -1763,12 +2797,17 @@ if ($sessionId) {
         saveBtn.innerHTML = originalText;
         saveBtn.disabled = false;
         saveBtn.classList.remove('btn-loading');
+        
+        // Reset the saving flag after a short delay
+        setTimeout(() => {
+          isSavingScore = false;
+        }, 1000);
       });
     }
 
     function updatePlayerStatus(row, score, strikes, spares, openFrames) {
       // Update the status column to show "Completed"
-      const statusCell = row.querySelector('td:last-child').previousElementSibling;
+      const statusCell = row.querySelector('td:nth-child(9)'); // Status column is now 9th
       if (statusCell) {
         statusCell.innerHTML = `
           <span class="badge bg-success">Completed</span>
@@ -1789,14 +2828,54 @@ if ($sessionId) {
       updateOverallRankings();
     }
 
+    function updateRowDataOnly(row, scoreData, gameNumber) {
+      // This function updates only the specific row data without refreshing the entire table
+      // It preserves the current layout and only updates the necessary fields
+      
+      try {
+        // Get the user ID from the row
+        const userId = row.querySelector('[data-user-id]')?.getAttribute('data-user-id');
+        if (!userId) return;
+        
+        // Update the input values to reflect the saved data
+        const scoreInput = row.querySelector('[data-field="score"]');
+        const strikesInput = row.querySelector('[data-field="strikes"]');
+        const sparesInput = row.querySelector('[data-field="spares"]');
+        const openFramesInput = row.querySelector('[data-field="open_frames"]');
+        
+        if (scoreInput) scoreInput.value = scoreData.player_score;
+        if (strikesInput) strikesInput.value = scoreData.strikes || 0;
+        if (sparesInput) sparesInput.value = scoreData.spares || 0;
+        if (openFramesInput) openFramesInput.value = scoreData.open_frames || 0;
+        
+        // Add a subtle highlight to show the row was updated
+        row.style.backgroundColor = 'rgba(40, 167, 69, 0.1)';
+        setTimeout(() => {
+          row.style.backgroundColor = '';
+        }, 2000);
+        
+        console.log(`Row data updated for user ${userId} in game ${gameNumber}`);
+        
+      } catch (error) {
+        console.error('Error updating row data:', error);
+      }
+    }
+
     function updateOverallRankings() {
-      // This function would update the Overall Rankings tab
-      // For now, we'll just show a message that rankings need to be refreshed
+      // This function updates the Overall Rankings tab without disrupting the layout
       const overallTab = document.getElementById('overall-tab');
       if (overallTab && overallTab.classList.contains('active')) {
-        // If we're on the overall tab, we could update it here
-        // For now, we'll just add a small indicator
-        console.log('Overall rankings tab is active - would update here');
+        // Only update if we're on the overall tab and it's visible
+        console.log('Overall rankings tab is active - updating rankings');
+        
+        // Add a subtle indicator that rankings have been updated
+        const overallTable = document.getElementById('overallRankingsTable');
+        if (overallTable) {
+          overallTable.style.borderLeft = '3px solid #28a745';
+          setTimeout(() => {
+            overallTable.style.borderLeft = '';
+          }, 2000);
+        }
       }
     }
 
@@ -1807,7 +2886,7 @@ if ($sessionId) {
       
       console.log('Auto-refreshing data for date:', selectedDate);
       
-      // Show a subtle loading indicator
+      // Show a subtle loading indicator without disrupting the layout
       const activeTab = document.querySelector('.nav-link.active');
       if (activeTab) {
         const originalText = activeTab.innerHTML;
@@ -1816,7 +2895,7 @@ if ($sessionId) {
         // Remove loading indicator after refresh
         setTimeout(() => {
           activeTab.innerHTML = originalText;
-        }, 2000);
+        }, 1500);
       }
       
       // Show a subtle notification
@@ -1825,8 +2904,8 @@ if ($sessionId) {
       // Clear cache to force fresh data
       delete dataCache[selectedDate];
       
-      // Reload the data for the current date
-      loadDataForDateFilter(selectedDate);
+      // Use a more stable refresh method that doesn't clear the tables
+      refreshDataStable(selectedDate, true);
     }
 
     function saveAllScores(gameNumber) {
@@ -1923,10 +3002,13 @@ if ($sessionId) {
             }
           });
           
-          // Auto-refresh the current tab data after a short delay
-          setTimeout(() => {
-            refreshCurrentTabData();
-          }, 300);
+          // Update the saved rows without full table refresh
+          scoresToSave.forEach(scoreData => {
+            const row = table.querySelector(`tr [data-user-id="${scoreData.user_id}"]`).closest('tr');
+            if (row) {
+              updateRowDataOnly(row, scoreData, gameNumber);
+            }
+          });
         } else {
           showNotification('Error: ' + data.message, 'error');
         }
@@ -1947,17 +3029,18 @@ if ($sessionId) {
       const selectedDate = this.value;
       console.log('Date filter changed to:', selectedDate);
       showNotification('Loading data for ' + selectedDate + '...', 'info');
+      
+      // Simple approach - just load data for the selected date
       loadDataForDateFilter(selectedDate);
     });
+    
 
 
-    // Refresh table functionality - removed duplicate function
 
     // Tab switching with data loading simulation
     document.querySelectorAll('[data-bs-toggle="tab"]').forEach(tab => {
       tab.addEventListener('shown.bs.tab', function(e) {
         const targetId = e.target.getAttribute('data-bs-target');
-        console.log('Switched to admin tab:', targetId);
         
         // Simulate loading data for specific game
         if (targetId !== '#overall') {
@@ -2000,15 +3083,26 @@ if ($sessionId) {
     const targetDate = new Date('2025-03-15T18:00:00').getTime();
     
     function updateCountdown() {
+      // Check if countdown elements exist before trying to update them
+      const daysEl = document.getElementById('days');
+      const hoursEl = document.getElementById('hours');
+      const minutesEl = document.getElementById('minutes');
+      const secondsEl = document.getElementById('seconds');
+      
+      // If countdown elements don't exist, skip the countdown update
+      if (!daysEl || !hoursEl || !minutesEl || !secondsEl) {
+        return;
+      }
+      
       const now = new Date().getTime();
       const distance = targetDate - now;
       
       if (distance < 0) {
         // Event has passed
-        document.getElementById('days').innerHTML = '00';
-        document.getElementById('hours').innerHTML = '00';
-        document.getElementById('minutes').innerHTML = '00';
-        document.getElementById('seconds').innerHTML = '00';
+        daysEl.innerHTML = '00';
+        hoursEl.innerHTML = '00';
+        minutesEl.innerHTML = '00';
+        secondsEl.innerHTML = '00';
         return;
       }
       
@@ -2017,10 +3111,10 @@ if ($sessionId) {
       const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
       const seconds = Math.floor((distance % (1000 * 60)) / 1000);
       
-      document.getElementById('days').innerHTML = days.toString().padStart(2, '0');
-      document.getElementById('hours').innerHTML = hours.toString().padStart(2, '0');
-      document.getElementById('minutes').innerHTML = minutes.toString().padStart(2, '0');
-      document.getElementById('seconds').innerHTML = seconds.toString().padStart(2, '0');
+      daysEl.innerHTML = days.toString().padStart(2, '0');
+      hoursEl.innerHTML = hours.toString().padStart(2, '0');
+      minutesEl.innerHTML = minutes.toString().padStart(2, '0');
+      secondsEl.innerHTML = seconds.toString().padStart(2, '0');
     }
     
     // Update countdown every second
@@ -2042,25 +3136,27 @@ if ($sessionId) {
     // Cache for loaded data
     const dataCache = {};
     
-    function loadDataForDateFilter(selectedDate) {
+    // Flag to prevent unnecessary refreshes during save operations
+    let isSavingScore = false;
+    
+    function refreshDataStable(selectedDate, forceRefresh = false) {
+      console.log('=== REFRESH DATA STABLE ===');
+      console.log('Selected date:', selectedDate);
+      console.log('Force refresh:', forceRefresh);
+      console.log('isSavingScore flag:', isSavingScore);
+      
+      // Don't refresh if we're currently saving a score, unless forced
+      if (isSavingScore && !forceRefresh) {
+        console.log('Skipping refresh - score save in progress');
+        return;
+      }
+      
+      console.log('Proceeding with refresh...');
+      
       // Set global flag for All Time view
       window.isAllTimeView = (selectedDate === 'all');
       
-      // Clear cache to force fresh data load (temporary fix for score contamination)
-      if (dataCache[selectedDate]) {
-        delete dataCache[selectedDate];
-      }
-      
-      // Always fetch fresh data for now
-      // TODO: Implement smarter cache invalidation later
-      
-      // Show simple loading state
-      const tables = document.querySelectorAll('.table tbody');
-      tables.forEach(table => {
-        table.innerHTML = '<tr><td colspan="9" class="text-center text-muted">Loading...</td></tr>';
-      });
-      
-      // Simple AJAX request
+      // Simple AJAX request without clearing tables
       const xhr = new XMLHttpRequest();
       xhr.open('POST', 'ajax/session-management.php', true);
       xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
@@ -2080,7 +3176,76 @@ if ($sessionId) {
                   window.currentSessionId = data.session_id;
                   console.log('Session ID for date', selectedDate, ':', data.session_id);
                 }
-                updateTablesWithData(data.players, selectedDate);
+                // Use gentle update to preserve table structure
+                updateTablesGentle(data.players, selectedDate);
+                
+                // Show debug info in console
+                if (data.debug) {
+                  console.log('Loading Performance:', data.debug);
+                  console.log(`Query 1: ${data.debug.query1_time}ms, Query 2: ${data.debug.query2_time}ms, Process: ${data.debug.process_time}ms, Total: ${data.debug.total_time}ms`);
+                }
+              } else {
+                showNotification('Error: ' + data.message, 'error');
+              }
+            } catch (e) {
+              showNotification('Error parsing response', 'error');
+            }
+          } else {
+            showNotification('Error loading data', 'error');
+          }
+        }
+      };
+      
+      xhr.send('action=get_players_data&selected_date=' + encodeURIComponent(selectedDate) + '&session_type=Solo&t=' + Date.now());
+    }
+    
+    function loadDataForDateFilter(selectedDate) {
+      // Set global flag for All Time view
+      window.isAllTimeView = (selectedDate === 'all');
+      
+      // Clear cache to force fresh data load (temporary fix for score contamination)
+      if (dataCache[selectedDate]) {
+        delete dataCache[selectedDate];
+      }
+      
+      // Always fetch fresh data for now
+      // TODO: Implement smarter cache invalidation later
+      
+      // Show loading state without clearing existing data
+      const tables = document.querySelectorAll('.table tbody');
+      tables.forEach(table => {
+        // Only show loading if table is empty or has loading message
+        if (table.children.length === 0 || table.innerHTML.includes('Loading...')) {
+        table.innerHTML = '<tr><td colspan="9" class="text-center text-muted">Loading...</td></tr>';
+        }
+      });
+      
+      // Simple AJAX request
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', 'ajax/session-management.php', true);
+      xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+      
+      xhr.onreadystatechange = function() {
+        if (xhr.readyState === 4) {
+          if (xhr.status === 200) {
+            try {
+              const data = JSON.parse(xhr.responseText);
+              if (data.success) {
+                console.log('=== DATA LOADED FOR DATE:', selectedDate, '===');
+                console.log('Players loaded:', data.players.length);
+                console.log('Sample player data:', data.players[0]);
+                
+                dataCache[selectedDate] = {
+                  players: data.players,
+                  session_id: data.session_id
+                };
+                // Store the session_id for this date
+                if (data.session_id) {
+                  window.currentSessionId = data.session_id;
+                  console.log('Session ID for date', selectedDate, ':', data.session_id);
+                }
+                // Use gentle update to preserve table structure
+                updateTablesGentle(data.players, selectedDate);
                 
                 // Show debug info in console
                 if (data.debug) {
@@ -2106,16 +3271,14 @@ if ($sessionId) {
       // Set global flag for All Time view
       window.isAllTimeView = (selectedDate === 'all');
       
+      // Store current data globally for access by other functions
+      window.currentData = players;
+      
       // Update table headers based on view type
       updateTableHeaders(selectedDate);
       
-      // Update Overall Rankings tab
-      updateOverallRankingsTable(players);
-      
-      // Update Game tabs
-      for (let game = 1; game <= 5; game++) {
-        updateGameTable(game, players, selectedDate);
-      }
+      // Use the gentle update method that includes dynamic lanes
+      updateTablesGentle(players, selectedDate);
       
       // Show/hide Save buttons based on view type
       const saveButtons = document.querySelectorAll('.save-all-btn');
@@ -2139,24 +3302,28 @@ if ($sessionId) {
     }
     
     function updateOverallRankingsTable(players) {
-      const tbody = document.querySelector('#overallRankingsTable tbody');
-      if (!tbody) return;
       
+      const tbody = document.querySelector('#overallRankingsTable tbody');
+      if (!tbody) {
+        return;
+      }
+      
+      // Get available lanes for the current session
+      getAvailableLanesForDropdown().then(availableLanes => {
       let html = '';
       
       players.forEach(player => {
-        // For dates with no scores, show zeros instead of historical data
-        const hasScores = player.games_played > 0 && !window.isAllTimeView;
-        const totalScore = hasScores ? (player.total_score || 0) : 0;
-        const avgScore = hasScores ? (player.avg_score || 0) : 0;
-        const gamesPlayed = hasScores ? (player.games_played || 0) : 0;
-        const bestScore = hasScores ? (player.best_score || 0) : 0;
-        const totalStrikes = hasScores ? (player.total_strikes || 0) : 0;
-        const totalSpares = hasScores ? (player.total_spares || 0) : 0;
-        const lastUpdated = hasScores ? (player.last_updated || 'Never') : 'No data';
+        // Always show the actual data from the server - don't hide scores
+        const totalScore = player.total_score || 0;
+        const avgScore = player.avg_score || 0;
+        const gamesPlayed = player.games_played || 0;
+        const bestScore = player.best_score || 0;
+        const totalStrikes = player.total_strikes || 0;
+        const totalSpares = player.total_spares || 0;
+        const lastUpdated = player.last_updated || 'Never';
         
         html += `
-          <tr>
+          <tr data-player-id="${player.user_id}">
             <td>
               <div class="d-flex align-items-center">
                 <img src="assets/images/profile/user-${(player.user_id % 8) + 1}.jpg" alt="Player" class="rounded-circle me-2" width="32">
@@ -2166,21 +3333,27 @@ if ($sessionId) {
                 </div>
               </div>
             </td>
+            <td>
+              <select class="form-select form-select-sm lane-selector" data-user-id="${player.user_id}" onchange="updatePlayerLane(${player.user_id}, this.value)" style="min-width: 80px;">
+                <option value="">Select</option>
+                ${availableLanes.map(lane => `<option value="${lane}" ${player.lane_number == lane ? 'selected' : ''}>Lane ${lane}</option>`).join('')}
+              </select>
+            </td>
             <td><span class="fw-bold text-success">${totalScore}</span></td>
             <td><span class="fw-bold text-primary">${avgScore}</span></td>
             <td>${gamesPlayed}</td>
             <td><span class="badge bg-info">${bestScore > 0 ? bestScore : '-'}</span></td>
-            <td>${totalStrikes}</td>
-            <td>${totalSpares}</td>
+            <td><span class="badge bg-warning">${totalStrikes}</span></td>
+            <td><span class="badge bg-secondary">${totalSpares}</span></td>
             <td><span class="badge bg-success">Active</span></td>
             <td><small class="text-muted">${lastUpdated}</small></td>
             <td>
-              <div class="admin-actions">
-                <button class="btn btn-sm btn-outline-primary" onclick="viewPlayerDetails(${player.user_id})" title="View Details">
+              <div class="d-flex align-items-center">
+                <button class="btn btn-sm btn-outline-primary me-1" onclick="viewPlayerDetails(${player.user_id})" title="View Details">
                   <i class="ti ti-eye"></i>
                 </button>
-                <button class="btn btn-sm btn-outline-warning" onclick="editPlayerScore(${player.user_id})" title="Edit Score">
-                  <i class="ti ti-edit"></i>
+                <button class="btn btn-sm btn-outline-warning me-1" onclick="editPlayerScore(${player.user_id})" title="Edit Scores">
+                  <i class="ti ti-pencil"></i>
                 </button>
                 <button class="btn btn-sm btn-outline-info" onclick="viewPlayerHistory(${player.user_id})" title="View History">
                   <i class="ti ti-history"></i>
@@ -2192,6 +3365,124 @@ if ($sessionId) {
       });
       
       tbody.innerHTML = html || '<tr><td colspan="10" class="text-center text-muted py-4">No Speedsters data available for selected date range</td></tr>';
+      }).catch(error => {
+        console.error('Error getting available lanes:', error);
+        // Fallback to default lanes 1-12 if there's an error
+        const defaultLanes = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+        let html = '';
+        
+        players.forEach(player => {
+        // Always show the actual data from the server - don't hide scores
+        const totalScore = player.total_score || 0;
+        const avgScore = player.avg_score || 0;
+        const gamesPlayed = player.games_played || 0;
+        const bestScore = player.best_score || 0;
+        const totalStrikes = player.total_strikes || 0;
+        const totalSpares = player.total_spares || 0;
+        const lastUpdated = player.last_updated || 'Never';
+        
+        html += `
+          <tr data-player-id="${player.user_id}">
+            <td>
+              <div class="d-flex align-items-center">
+                <img src="assets/images/profile/user-${(player.user_id % 8) + 1}.jpg" alt="Player" class="rounded-circle me-2" width="32">
+                <div>
+                  <h6 class="mb-0">${player.first_name} ${player.last_name}</h6>
+                  <small class="text-muted">${player.user_role}</small>
+                </div>
+              </div>
+            </td>
+            <td>
+              <select class="form-select form-select-sm lane-selector" data-user-id="${player.user_id}" onchange="updatePlayerLane(${player.user_id}, this.value)" style="min-width: 80px;">
+                <option value="">Select</option>
+                ${defaultLanes.map(lane => `<option value="${lane}" ${player.lane_number == lane ? 'selected' : ''}>Lane ${lane}</option>`).join('')}
+              </select>
+            </td>
+            <td><span class="fw-bold text-success">${totalScore}</span></td>
+            <td><span class="fw-bold text-primary">${avgScore}</span></td>
+            <td>${gamesPlayed}</td>
+            <td><span class="badge bg-info">${bestScore > 0 ? bestScore : '-'}</span></td>
+            <td><span class="badge bg-warning">${totalStrikes}</span></td>
+            <td><span class="badge bg-secondary">${totalSpares}</span></td>
+            <td><span class="badge bg-success">Active</span></td>
+            <td><small class="text-muted">${lastUpdated}</small></td>
+            <td>
+              <div class="d-flex align-items-center">
+                <button class="btn btn-sm btn-outline-primary me-1" onclick="viewPlayerDetails(${player.user_id})" title="View Details">
+                  <i class="ti ti-eye"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-warning me-1" onclick="editPlayerScore(${player.user_id})" title="Edit Scores">
+                  <i class="ti ti-pencil"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-info" onclick="viewPlayerHistory(${player.user_id})" title="View History">
+                  <i class="ti ti-history"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+        `;
+        });
+        
+        tbody.innerHTML = html || '<tr><td colspan="10" class="text-center text-muted py-4">No Speedsters data available for selected date range</td></tr>';
+      });
+    }
+
+
+    function getAvailableLanesForDropdown() {
+      return new Promise((resolve, reject) => {
+        // Get current session ID
+        const dateFilter = document.getElementById('dateFilter');
+        const selectedDate = dateFilter ? dateFilter.value : 'today';
+        
+        // For 'all' date, use default lanes
+        if (selectedDate === 'all') {
+          resolve([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
+          return;
+        }
+        
+        // Get session ID for the selected date
+        const formData = new FormData();
+        formData.append('action', 'get_players_data');
+        formData.append('selected_date', selectedDate);
+        formData.append('session_type', 'Solo');
+        
+        fetch('ajax/session-management.php', {
+          method: 'POST',
+          body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success && data.session_id) {
+            // Get available lanes for this session
+            const laneFormData = new FormData();
+            laneFormData.append('action', 'get_available_lanes');
+            laneFormData.append('session_id', data.session_id);
+            
+            return fetch('ajax/session-management.php', {
+              method: 'POST',
+              body: laneFormData
+            });
+          } else {
+            // No session found, use default lanes
+            resolve([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
+            return;
+          }
+        })
+        .then(response => response.json())
+        .then(laneData => {
+          if (laneData.success && laneData.lanes) {
+            resolve(laneData.lanes);
+          } else {
+            // Fallback to default lanes
+            resolve([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
+          }
+        })
+        .catch(error => {
+          console.error('Error fetching available lanes:', error);
+          // Fallback to default lanes
+          resolve([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
+        });
+      });
     }
     
     function updateGameTable(gameNumber, players, selectedDate = 'today') {
@@ -2215,7 +3506,7 @@ if ($sessionId) {
         const bestScore = player.best_score || 0;
         
         html += `
-          <tr>
+          <tr data-player-id="${player.user_id}" data-game="${gameNumber}" style="transition: all 0.3s ease;">
             <td>
               <div class="d-flex align-items-center">
                 <img src="assets/images/profile/user-${(player.user_id % 8) + 1}.jpg" alt="Player" class="rounded-circle me-2" width="32">
@@ -2307,7 +3598,28 @@ if ($sessionId) {
         html += `</tr>`;
       });
       
+      // Store current table structure to prevent layout shifts
+      const currentRows = tbody.querySelectorAll('tr');
+      const isFirstLoad = currentRows.length === 0 || (currentRows.length === 1 && currentRows[0].textContent.includes('Loading'));
+      
+      // Use requestAnimationFrame to ensure smooth updates
+      requestAnimationFrame(() => {
       tbody.innerHTML = html || '<tr><td colspan="7" class="text-center text-muted py-4">No data available for selected date range</td></tr>';
+        
+        // Add a subtle animation to indicate the update
+        if (!isFirstLoad && html) {
+          const newRows = tbody.querySelectorAll('tr');
+          newRows.forEach((row, index) => {
+            row.style.opacity = '0';
+            row.style.transform = 'translateY(10px)';
+            setTimeout(() => {
+              row.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+              row.style.opacity = '1';
+              row.style.transform = 'translateY(0)';
+            }, index * 50);
+          });
+        }
+      });
     }
     
     function refreshTable() {
@@ -2367,6 +3679,7 @@ if ($sessionId) {
         showNotification('Error exporting to CSV: ' + error.message, 'error');
       }
     }
+
   </script>
 </body>
 

@@ -62,6 +62,39 @@ $currentUser = getCurrentUser();
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
     }
+    
+    /* Table stability improvements */
+    .table-responsive {
+      min-height: 200px;
+      transition: all 0.3s ease;
+    }
+    
+    .table tbody tr {
+      transition: all 0.3s ease;
+    }
+    
+    .table tbody tr:hover {
+      transform: none;
+    }
+    
+    /* Prevent layout shifts during updates */
+    .table tbody {
+      position: relative;
+    }
+    
+    .table tbody tr[data-player-id] {
+      will-change: transform, opacity;
+    }
+    
+    /* Smooth transitions for score updates */
+    .score-update {
+      animation: scoreUpdate 0.5s ease-in-out;
+    }
+    
+    @keyframes scoreUpdate {
+      0% { background-color: rgba(40, 167, 69, 0.1); }
+      100% { background-color: transparent; }
+    }
   </style>
 </head>
 
@@ -500,6 +533,10 @@ $currentUser = getCurrentUser();
         return;
       }
       
+      // Store current table structure to prevent layout shifts
+      const currentRows = tbody.querySelectorAll('tr');
+      const isFirstLoad = currentRows.length === 0 || (currentRows.length === 1 && currentRows[0].querySelector('.loading-spinner'));
+      
       let html = '';
       currentData.forEach((player, index) => {
         const rank = index + 1;
@@ -514,7 +551,7 @@ $currentUser = getCurrentUser();
         const lastUpdated = player.last_updated || 'Never';
 
         html += `
-          <tr>
+          <tr data-player-id="${player.user_id || index}" style="transition: all 0.3s ease;">
             <td><span class="rank-badge ${rankClass}">${rank}</span></td>
             <td>
               <div class="d-flex align-items-center">
@@ -537,7 +574,24 @@ $currentUser = getCurrentUser();
         `;
       });
 
-      tbody.innerHTML = html;
+      // Use requestAnimationFrame to ensure smooth updates
+      requestAnimationFrame(() => {
+        tbody.innerHTML = html;
+        
+        // Add a subtle animation to indicate the update
+        if (!isFirstLoad) {
+          const newRows = tbody.querySelectorAll('tr');
+          newRows.forEach((row, index) => {
+            row.style.opacity = '0';
+            row.style.transform = 'translateY(10px)';
+            setTimeout(() => {
+              row.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+              row.style.opacity = '1';
+              row.style.transform = 'translateY(0)';
+            }, index * 50);
+          });
+        }
+      });
     }
 
     // Update individual game tables
@@ -566,6 +620,10 @@ $currentUser = getCurrentUser();
         return scoreB - scoreA;
       });
 
+      // Store current table structure to prevent layout shifts
+      const currentRows = tbody.querySelectorAll('tr');
+      const isFirstLoad = currentRows.length === 0 || (currentRows.length === 1 && currentRows[0].querySelector('.loading-spinner'));
+
       let html = '';
       gamePlayers.forEach((player, index) => {
         const rank = index + 1;
@@ -579,7 +637,7 @@ $currentUser = getCurrentUser();
         const time = gameScore.created_at ? new Date(gameScore.created_at).toLocaleTimeString() : 'N/A';
 
         html += `
-          <tr>
+          <tr data-player-id="${player.user_id || index}" data-game="${gameNumber}" style="transition: all 0.3s ease;">
             <td><span class="rank-badge ${rankClass}">${rank}</span></td>
             <td>
               <div class="d-flex align-items-center">
@@ -600,7 +658,24 @@ $currentUser = getCurrentUser();
         `;
       });
 
-      tbody.innerHTML = html;
+      // Use requestAnimationFrame to ensure smooth updates
+      requestAnimationFrame(() => {
+        tbody.innerHTML = html;
+        
+        // Add a subtle animation to indicate the update
+        if (!isFirstLoad) {
+          const newRows = tbody.querySelectorAll('tr');
+          newRows.forEach((row, index) => {
+            row.style.opacity = '0';
+            row.style.transform = 'translateY(10px)';
+            setTimeout(() => {
+              row.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+              row.style.opacity = '1';
+              row.style.transform = 'translateY(0)';
+            }, index * 50);
+          });
+        }
+      });
     }
 
     // Update overall team rankings table
@@ -610,6 +685,10 @@ $currentUser = getCurrentUser();
         tbody.innerHTML = '<tr><td colspan="10" class="text-center text-muted py-4">No team data available</td></tr>';
         return;
       }
+
+      // Store current table structure to prevent layout shifts
+      const currentRows = tbody.querySelectorAll('tr');
+      const isFirstLoad = currentRows.length === 0 || (currentRows.length === 1 && currentRows[0].querySelector('.loading-spinner'));
 
       // Group players by team
       const teamStats = {};
@@ -652,7 +731,7 @@ $currentUser = getCurrentUser();
         const avgPerPlayer = team.players.length > 0 ? (team.totalScore / team.players.length).toFixed(1) : 0;
 
         html += `
-          <tr>
+          <tr data-team-name="${team.teamName}" style="transition: all 0.3s ease;">
             <td><span class="rank-badge ${rankClass}">${rank}</span></td>
             <td><span class="badge bg-primary fs-6">${team.teamName}</span></td>
             <td><span class="fw-bold text-success fs-5">${team.totalScore}</span></td>
@@ -667,7 +746,24 @@ $currentUser = getCurrentUser();
         `;
       });
 
-      tbody.innerHTML = html;
+      // Use requestAnimationFrame to ensure smooth updates
+      requestAnimationFrame(() => {
+        tbody.innerHTML = html;
+        
+        // Add a subtle animation to indicate the update
+        if (!isFirstLoad) {
+          const newRows = tbody.querySelectorAll('tr');
+          newRows.forEach((row, index) => {
+            row.style.opacity = '0';
+            row.style.transform = 'translateY(10px)';
+            setTimeout(() => {
+              row.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+              row.style.opacity = '1';
+              row.style.transform = 'translateY(0)';
+            }, index * 50);
+          });
+        }
+      });
     }
 
     // Update all tables

@@ -272,6 +272,8 @@ function addScoreToSession($sessionId, $userId, $gameNumber, $playerScore, $stri
     try {
         $pdo = getDBConnection();
         
+        error_log("addScoreToSession called with: sessionId=$sessionId, userId=$userId, gameNumber=$gameNumber, playerScore=$playerScore, gameMode=$gameMode");
+        
         // Single query to check participation, existing score, and get team name
         $checkStmt = $pdo->prepare("
             SELECT 
@@ -286,28 +288,56 @@ function addScoreToSession($sessionId, $userId, $gameNumber, $playerScore, $stri
         $checkStmt->execute([$sessionId, $sessionId, $gameNumber, $userId]);
         $result = $checkStmt->fetch(PDO::FETCH_ASSOC);
         
+        error_log("Check query result: " . json_encode($result));
+        
         // Check if user is selected for this session
         if (!$result || !$result['participant_id']) {
-            error_log("User $userId not selected for session $sessionId");
-            return false;
+            error_log("User $userId not selected for session $sessionId - attempting to add as participant");
+            
+            // For admin score entry, try to add the user as a participant first
+            try {
+                $addParticipantStmt = $pdo->prepare("
+                    INSERT IGNORE INTO session_participants (session_id, user_id, joined_at) 
+                    VALUES (?, ?, NOW())
+                ");
+                $addParticipantStmt->execute([$sessionId, $userId]);
+                
+                // Re-check if user is now a participant
+                $checkStmt->execute([$sessionId, $sessionId, $gameNumber, $userId]);
+                $result = $checkStmt->fetch(PDO::FETCH_ASSOC);
+                
+                if (!$result || !$result['participant_id']) {
+                    error_log("Failed to add user $userId as participant for session $sessionId");
+                    return false;
+                }
+                
+                error_log("Successfully added user $userId as participant for session $sessionId");
+            } catch (PDOException $e) {
+                error_log("Error adding user as participant: " . $e->getMessage());
+                return false;
+            }
         }
         
         $teamName = $result['team_name'];
         
         if ($result['score_id']) {
             // Update existing score instead of creating duplicate
+            error_log("Updating existing score_id: " . $result['score_id']);
             $updateStmt = $pdo->prepare("
                 UPDATE game_scores 
                 SET player_score = ?, strikes = ?, spares = ?, open_frames = ?, 
-                    lane_number = ?, updated_at = NOW()
+                    lane_number = ?
                 WHERE score_id = ?
             ");
-            return $updateStmt->execute([
+            $updateResult = $updateStmt->execute([
                 $playerScore, $strikes, $spares, $openFrames, $laneNumber, $result['score_id']
             ]);
+            error_log("Update result: " . ($updateResult ? 'true' : 'false'));
+            return $updateResult;
         }
         
         // Use the game_mode parameter passed to the function
+        error_log("Inserting new score with team_name: " . $teamName);
         
         $stmt = $pdo->prepare("
             INSERT INTO game_scores (
@@ -317,10 +347,17 @@ function addScoreToSession($sessionId, $userId, $gameNumber, $playerScore, $stri
             ) VALUES (?, ?, ?, CURDATE(), CURTIME(), ?, ?, ?, ?, ?, ?, 'Completed', ?)
         ");
         
-        return $stmt->execute([
+        $insertResult = $stmt->execute([
             $userId, $sessionId, $gameMode, $laneNumber, $gameNumber, 
             $playerScore, $strikes, $spares, $openFrames, $teamName
         ]);
+        
+        error_log("Insert result: " . ($insertResult ? 'true' : 'false'));
+        if (!$insertResult) {
+            error_log("Insert error info: " . json_encode($stmt->errorInfo()));
+        }
+        
+        return $insertResult;
         
     } catch(PDOException $e) {
         error_log("addScoreToSession error: " . $e->getMessage());

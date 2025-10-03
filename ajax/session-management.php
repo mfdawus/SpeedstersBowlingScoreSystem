@@ -40,6 +40,55 @@ try {
     }
     
     require_once __DIR__ . '/../includes/session-management.php';
+    
+    // Fallback function for direct score saving
+    function saveScoreDirectly($userId, $gameNumber, $playerScore, $strikes, $spares, $openFrames, $laneNumber, $gameMode, $sessionId = null) {
+        try {
+            $pdo = getDBConnection();
+            
+            // Get player's team name
+            $stmt = $pdo->prepare("SELECT team_name FROM users WHERE user_id = ?");
+            $stmt->execute([$userId]);
+            $user = $stmt->fetch(PDO::FETCH_ASSOC);
+            $teamName = $user['team_name'] ?? null;
+            
+            // Check if score already exists for this user and game number
+            $checkStmt = $pdo->prepare("
+                SELECT score_id FROM game_scores 
+                WHERE user_id = ? AND game_number = ? AND session_id = ? AND status = 'Completed'
+                ORDER BY created_at DESC LIMIT 1
+            ");
+            $checkStmt->execute([$userId, $gameNumber, $sessionId]);
+            $existingScore = $checkStmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($existingScore) {
+                // Update existing score
+                $updateStmt = $pdo->prepare("
+                    UPDATE game_scores 
+                    SET player_score = ?, strikes = ?, spares = ?, open_frames = ?, 
+                        lane_number = ?
+                    WHERE score_id = ?
+                ");
+                $result = $updateStmt->execute([
+                    $playerScore, $strikes, $spares, $openFrames, $laneNumber, $existingScore['score_id']
+                ]);
+                error_log("Direct score update result: " . ($result ? 'true' : 'false'));
+                return $result;
+            } else {
+                // Insert new score
+                $stmt = $pdo->prepare("
+                    INSERT INTO game_scores (user_id, session_id, game_mode, game_number, player_score, strikes, spares, open_frames, lane_number, game_date, game_time, status, created_at, team_name) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), 'Completed', NOW(), ?)
+                ");
+                $result = $stmt->execute([$userId, $sessionId, $gameMode, $gameNumber, $playerScore, $strikes, $spares, $openFrames, $laneNumber, $teamName]);
+                error_log("Direct score insert result: " . ($result ? 'true' : 'false'));
+                return $result;
+            }
+        } catch (PDOException $e) {
+            error_log("Direct score save error: " . $e->getMessage());
+            return false;
+        }
+    }
 
     switch ($action) {
         case 'create':
@@ -187,90 +236,66 @@ try {
             $spares = $_POST['spares'] ?? 0;
             $openFrames = $_POST['open_frames'] ?? 0;
             $laneNumber = $_POST['lane_number'] ?? null;
-            $gameMode = $_POST['game_mode'] ?? 'Solo'; // Default to Solo for backward compatibility
+            $gameMode = $_POST['game_mode'] ?? 'Solo';
             
-            error_log("Add score request: sessionId=$sessionId, userId=$userId, gameNumber=$gameNumber, playerScore=$playerScore, strikes=$strikes, spares=$spares, openFrames=$openFrames");
-            error_log("SessionId type: " . gettype($sessionId) . ", value: " . var_export($sessionId, true));
+            error_log("Simple score update request: sessionId=$sessionId, userId=$userId, gameNumber=$gameNumber, playerScore=$playerScore");
             
-            // Debug session_id validation
-            if ($sessionId && $sessionId !== 'null' && $sessionId !== '') {
-                // Check if session exists
-                $checkSessionStmt = $pdo->prepare("SELECT session_id FROM game_sessions WHERE session_id = ?");
-                $checkSessionStmt->execute([$sessionId]);
-                $sessionExists = $checkSessionStmt->fetch(PDO::FETCH_ASSOC);
-                error_log("Session validation: sessionId=$sessionId, exists=" . ($sessionExists ? 'true' : 'false'));
-            } else {
-                error_log("Session validation: sessionId is null or invalid, will use NULL");
-            }
-            
-            // Allow saving scores even without an active session (for general score entry)
-            if ($userId && $playerScore > 0) {
-                if ($sessionId && $sessionId !== 'null' && $sessionId !== '' && $sessionId !== null) {
-                    // Save to specific session
-                    $result = addScoreToSession($sessionId, $userId, $gameNumber, $playerScore, $strikes, $spares, $openFrames, $laneNumber, $gameMode);
-                    error_log("addScoreToSession result: " . ($result ? 'true' : 'false'));
-                    if ($result) {
-                        $response = ['success' => true, 'message' => 'Score added to session successfully'];
-                    } else {
-                        $response['message'] = 'Failed to add score to session';
-                    }
-                } else {
-                    // Save directly to game_scores table without session
-                    try {
-                        // Check if score already exists for this user and game number (without session)
-                        $checkStmt = $pdo->prepare("
-                            SELECT score_id FROM game_scores 
-                            WHERE user_id = ? AND game_number = ? AND DATE(game_date) = CURDATE() AND status = 'Completed'
-                            ORDER BY created_at DESC LIMIT 1
+            if ($userId && $playerScore >= 0) {
+                try {
+                    // Simple approach: Just update or insert the score directly
+                    $pdo = getDBConnection();
+                    
+                    // First, try to find and update existing score
+                    $checkStmt = $pdo->prepare("
+                        SELECT score_id FROM game_scores 
+                        WHERE user_id = ? AND game_number = ? AND session_id = ? AND status = 'Completed'
+                        ORDER BY created_at DESC LIMIT 1
+                    ");
+                    $checkStmt->execute([$userId, $gameNumber, $sessionId]);
+                    $existingScore = $checkStmt->fetch(PDO::FETCH_ASSOC);
+                    
+                    if ($existingScore) {
+                        // Update existing score
+                        $updateStmt = $pdo->prepare("
+                            UPDATE game_scores 
+                            SET player_score = ?, strikes = ?, spares = ?, open_frames = ?, 
+                                lane_number = ?
+                            WHERE score_id = ?
                         ");
-                        $checkStmt->execute([$userId, $gameNumber]);
-                        $existingScore = $checkStmt->fetch(PDO::FETCH_ASSOC);
+                        $result = $updateStmt->execute([
+                            $playerScore, $strikes, $spares, $openFrames, $laneNumber, $existingScore['score_id']
+                        ]);
+                        error_log("Simple update result: " . ($result ? 'true' : 'false'));
                         
-                        if ($existingScore) {
-                            // Update existing score instead of creating duplicate
-                            $updateStmt = $pdo->prepare("
-                                UPDATE game_scores 
-                                SET player_score = ?, strikes = ?, spares = ?, open_frames = ?, 
-                                    lane_number = ?, updated_at = NOW()
-                                WHERE score_id = ?
-                            ");
-                            $result = $updateStmt->execute([
-                                $playerScore, $strikes, $spares, $openFrames, $laneNumber, $existingScore['score_id']
-                            ]);
-                            error_log("Direct score update result: " . ($result ? 'true' : 'false'));
-                            if ($result) {
-                                $response = ['success' => true, 'message' => 'Score updated successfully'];
-                            } else {
-                                $response['message'] = 'Failed to update score';
-                            }
+                        if ($result) {
+                            $response = ['success' => true, 'message' => 'Score updated successfully'];
                         } else {
-                            // Get player's team name
-                            $stmt = $pdo->prepare("SELECT team_name FROM users WHERE user_id = ?");
-                            $stmt->execute([$userId]);
-                            $user = $stmt->fetch(PDO::FETCH_ASSOC);
-                            $teamName = $user['team_name'] ?? null;
-                            
-                            // Use the game_mode parameter passed from the frontend
-                            
-                            // Set session_id to NULL if it's invalid or null
-                            $validSessionId = ($sessionId && $sessionId !== 'null' && $sessionId !== '') ? $sessionId : null;
-                            
-                            $stmt = $pdo->prepare("
-                                INSERT INTO game_scores (user_id, session_id, game_mode, game_number, player_score, strikes, spares, open_frames, lane_number, game_date, game_time, status, created_at, team_name) 
-                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), 'Completed', NOW(), ?)
-                            ");
-                            $result = $stmt->execute([$userId, $validSessionId, $gameMode, $gameNumber, $playerScore, $strikes, $spares, $openFrames, $laneNumber, $teamName]);
-                            error_log("Direct score insert result: " . ($result ? 'true' : 'false'));
-                            if ($result) {
-                                $response = ['success' => true, 'message' => 'Score saved successfully'];
-                            } else {
-                                $response['message'] = 'Failed to save score';
-                            }
+                            $response['message'] = 'Failed to update existing score';
                         }
-                    } catch (PDOException $e) {
-                        error_log("Direct score insert error: " . $e->getMessage());
-                        $response['message'] = 'Database error: ' . $e->getMessage();
+                    } else {
+                        // Insert new score
+                        $stmt = $pdo->prepare("SELECT team_name FROM users WHERE user_id = ?");
+                        $stmt->execute([$userId]);
+                        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+                        $teamName = $user['team_name'] ?? null;
+                        
+                        $insertStmt = $pdo->prepare("
+                            INSERT INTO game_scores (user_id, session_id, game_mode, game_number, player_score, strikes, spares, open_frames, lane_number, game_date, game_time, status, created_at, team_name) 
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), 'Completed', NOW(), ?)
+                        ");
+                        $result = $insertStmt->execute([$userId, $sessionId, $gameMode, $gameNumber, $playerScore, $strikes, $spares, $openFrames, $laneNumber, $teamName]);
+                        error_log("Simple insert result: " . ($result ? 'true' : 'false'));
+                        
+                        if ($result) {
+                            $response = ['success' => true, 'message' => 'Score saved successfully'];
+                        } else {
+                            $response['message'] = 'Failed to save new score';
+                        }
                     }
+                    
+                } catch (PDOException $e) {
+                    error_log("Simple score save error: " . $e->getMessage());
+                    $response['message'] = 'Database error: ' . $e->getMessage();
                 }
             } else {
                 $response['message'] = 'Invalid user ID or score. Values: userId=' . $userId . ', playerScore=' . $playerScore;
@@ -320,7 +345,7 @@ case 'get_players_data':
                 COALESCE(SUM(gs.strikes), 0) as total_strikes,
                 COALESCE(SUM(gs.spares), 0) as total_spares,
                 MAX(gs.created_at) as last_updated,
-                sp.lane_number
+                COALESCE(sp.lane_number, u.lane_number) as lane_number
             FROM users u
             LEFT JOIN game_scores gs ON u.user_id = gs.user_id AND gs.status = 'Completed'
             LEFT JOIN session_participants sp ON u.user_id = sp.user_id AND sp.session_id = gs.session_id
@@ -392,9 +417,21 @@ case 'get_players_data':
                 LIMIT 1
             ");
             $sessionStmt->execute([$selectedDate, $sessionType]);
+            
+            // Debug: Check all sessions for this date
+            $allSessionsStmt = $pdo->prepare("
+                SELECT session_id, session_date, status, created_at
+                FROM game_sessions 
+                WHERE DATE(session_date) = ? AND game_mode = ? 
+                ORDER BY created_at DESC
+            ");
+            $allSessionsStmt->execute([$selectedDate, $sessionType]);
+            $allSessions = $allSessionsStmt->fetchAll(PDO::FETCH_ASSOC);
+            error_log("DEBUG: All sessions for date $selectedDate: " . json_encode($allSessions));
         }
         
         $activeSession = $sessionStmt->fetch(PDO::FETCH_ASSOC);
+        error_log("DEBUG: Found session for date $selectedDate: " . json_encode($activeSession));
         
         if ($activeSession) {
             // Get session participants (always show participants, even if no scores)
@@ -423,6 +460,7 @@ case 'get_players_data':
     if ($selectedDate !== 'all') {
         // Only get scores if we have an active session for the selected date
         if (isset($activeSession) && $activeSession) {
+            error_log("DEBUG: Looking for scores in session_id: " . $activeSession['session_id']);
             $stmt = $pdo->prepare("
                 SELECT gs.user_id, gs.game_number, gs.player_score, gs.strikes, gs.spares, gs.open_frames, gs.created_at
                 FROM game_scores gs
@@ -431,6 +469,10 @@ case 'get_players_data':
             ");
             $stmt->execute([$activeSession['session_id']]);
             $allScores = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            error_log("DEBUG: Found " . count($allScores) . " scores for session " . $activeSession['session_id']);
+            if (count($allScores) > 0) {
+                error_log("DEBUG: Sample score: " . json_encode($allScores[0]));
+            }
         }
         // If no active session, allScores remains empty array
     }
@@ -752,6 +794,112 @@ case 'get_players_data':
             if (!$sessionId || !$lanesCount || !$playersPerLane) { $response['message'] = 'Missing required fields'; break; }
             $ok = updateLaneConfig($sessionId, $lanesCount, $playersPerLane, $laneSelectionOpen);
             $response = $ok ? ['success' => true, 'message' => 'Lane configuration updated'] : ['success' => false, 'message' => 'Failed to update lane configuration'];
+            break;
+
+        case 'get_player_history':
+            $userId = $_POST['user_id'] ?? null;
+            if (!$userId) {
+                $response['message'] = 'Missing user ID';
+                break;
+            }
+            
+            try {
+                $pdo = getDBConnection();
+                
+                // Get player's complete score history
+                $stmt = $pdo->prepare("
+                    SELECT 
+                        gs.*,
+                        gsess.session_name,
+                        gsess.session_date
+                    FROM game_scores gs
+                    LEFT JOIN game_sessions gsess ON gs.session_id = gsess.session_id
+                    WHERE gs.user_id = ? AND gs.status = 'Completed'
+                    ORDER BY gs.game_date DESC, gs.game_number ASC
+                    LIMIT 50
+                ");
+                $stmt->execute([$userId]);
+                $history = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                
+                $response = [
+                    'success' => true,
+                    'history' => $history,
+                    'count' => count($history)
+                ];
+                
+            } catch (PDOException $e) {
+                $response['message'] = 'Database error: ' . $e->getMessage();
+            }
+            break;
+            
+        case 'update_player_lane':
+            $userId = $_POST['user_id'] ?? null;
+            $laneNumber = $_POST['lane_number'] ?? null;
+            $sessionId = $_POST['session_id'] ?? null;
+            
+            error_log("Lane update request - User ID: $userId, Lane Number: $laneNumber, Session ID: $sessionId");
+            
+            if (!$userId) {
+                $response['message'] = 'Missing user ID';
+                error_log("Lane update failed: Missing user ID");
+                break;
+            }
+            
+            if (!$sessionId) {
+                $response['message'] = 'Missing session ID';
+                error_log("Lane update failed: Missing session ID");
+                break;
+            }
+            
+            try {
+                $pdo = getDBConnection();
+                
+                // Check if the user is a participant in this session
+                $checkStmt = $pdo->prepare("SELECT participant_id FROM session_participants WHERE session_id = ? AND user_id = ?");
+                $checkStmt->execute([$sessionId, $userId]);
+                $participant = $checkStmt->fetch();
+                
+                if (!$participant) {
+                    error_log("Lane update failed: User $userId is not a participant in session $sessionId");
+                    $response['message'] = 'User is not a participant in this session';
+                    break;
+                }
+                
+                // Update the lane number in session_participants table
+                $stmt = $pdo->prepare("UPDATE session_participants SET lane_number = ? WHERE session_id = ? AND user_id = ?");
+                $result = $stmt->execute([$laneNumber, $sessionId, $userId]);
+                
+                error_log("Lane update SQL result: " . ($result ? 'true' : 'false'));
+                error_log("Lane update affected rows: " . $stmt->rowCount());
+                
+                if ($result && $stmt->rowCount() > 0) {
+                    $response = ['success' => true, 'message' => 'Lane number updated successfully'];
+                    error_log("Lane update successful for user $userId to lane $laneNumber in session $sessionId");
+                } else {
+                    $response['message'] = 'Failed to update lane number - no changes made';
+                    error_log("Lane update failed: No rows affected for user $userId in session $sessionId");
+                }
+            } catch (PDOException $e) {
+                error_log("Lane update error: " . $e->getMessage());
+                $response['message'] = 'Database error: ' . $e->getMessage();
+            }
+            break;
+            
+        case 'get_available_lanes':
+            $sessionId = $_POST['session_id'] ?? null;
+            
+            if (!$sessionId) {
+                $response['message'] = 'Missing session ID';
+                break;
+            }
+            
+            try {
+                require_once __DIR__ . '/../includes/session-management.php';
+                $availableLanes = getAvailableLanes($sessionId);
+                $response = ['success' => true, 'lanes' => $availableLanes];
+            } catch (Exception $e) {
+                $response['message'] = 'Error getting available lanes: ' . $e->getMessage();
+            }
             break;
             
         default:
