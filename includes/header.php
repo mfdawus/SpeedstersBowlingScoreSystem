@@ -1,5 +1,5 @@
 <?php
-// Header component for SPEEDSTERS Bowling System
+// Header component for VIPERS VENOMS Bowling System
 // This ensures consistent header behavior across all pages
 ?>
 

@@ -4,9 +4,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>SPEEDSTERS - Bowling System Login</title>
-  <link rel="shortcut icon" type="image/png" href="./assets/images/logos/speedster main logo.png" />
+  <title>VIPERS VENOMS - Bowling System Login</title>
+  <link rel="shortcut icon" type="image/x-icon" href="./assets/images/logos/favicon.ico" />
   <link rel="stylesheet" href="./assets/css/styles.min.css" />
+  <link rel="stylesheet" href="./assets/css/vipersvenoms-theme.css" />
 </head>
 
 <body>
@@ -21,7 +22,7 @@
             <div class="card mb-0">
               <div class="card-body">
                 <a href="./index.php" class="text-nowrap logo-img text-center d-block py-3 w-100">
-                  <img src="./assets/images/logos/speedster main logo.png" alt="SPEEDSTERS Logo" width="200">
+                  <img src="./assets/images/logos/vipersvenoms-main-logo.png" alt="VIPERS VENOMS Logo" width="200">
                 </a>
                 <p class="text-center">Bowling System Login</p>
                 <?php

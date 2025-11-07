@@ -4,9 +4,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Under Maintenance - SPEEDSTERS Bowling System</title>
-  <link rel="shortcut icon" type="image/png" href="./assets/images/logos/speedster main logo.png" />
+  <title>Under Maintenance - VIPERS VENOMS Bowling System</title>
+  <link rel="shortcut icon" type="image/x-icon" href="./assets/images/logos/favicon.ico" />
   <link rel="stylesheet" href="./assets/css/styles.min.css" />
+  <link rel="stylesheet" href="./assets/css/vipersvenoms-theme.css" />
   <style>
     .maintenance-container {
       min-height: 100vh;

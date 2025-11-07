@@ -20,9 +20,10 @@ $weeklyTopPlayers = getWeeklyTopPlayers(3);
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>SPEEDSTERS - Bowling System Dashboard</title>
-  <link rel="shortcut icon" type="image/png" href="./assets/images/logos/speedster main logo.png" />
+  <title>VIPERS VENOMS - Bowling System Dashboard</title>
+  <link rel="shortcut icon" type="image/x-icon" href="./assets/images/logos/favicon.ico" />
   <link rel="stylesheet" href="./assets/css/styles.min.css" />
+  <link rel="stylesheet" href="./assets/css/vipersvenoms-theme.css" />
   <style>
     .bg-gradient-primary {
       background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%);

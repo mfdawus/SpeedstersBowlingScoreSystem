@@ -133,9 +133,10 @@ error_log("Teams count: " . count($teams));
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Select Participants - Speedsters Bowling</title>
-    <link rel="shortcut icon" type="image/png" href="./assets/images/logos/speedster main logo.png" />
+    <title>Select Participants - VipersVenoms Bowling</title>
+    <link rel="shortcut icon" type="image/x-icon" href="./assets/images/logos/favicon.ico" />
     <link rel="stylesheet" href="./assets/css/styles.min.css" />
+    <link rel="stylesheet" href="./assets/css/vipersvenoms-theme.css" />
     <style>
         /* Match admin dashboard styling */
         .bg-gradient-primary {
