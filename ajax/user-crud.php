@@ -80,31 +80,55 @@ try {
             error_log("View user request - User ID: " . $userId);
             
             if ($userId) {
-                $user = getUserById($userId);
-                if ($user && !isset($user['error'])) {
-                    $recentGames = getUserRecentGames($userId, 5);
-                    $user['recent_games'] = $recentGames;
+                try {
+                    $user = getUserById($userId);
+                    error_log("getUserById result: " . json_encode($user));
                     
-                    // Debug logging
-                    error_log("User ID: " . $userId);
-                    error_log("Recent games count: " . count($recentGames));
-                    error_log("Recent games data: " . json_encode($recentGames));
-                    
-                    // Temporary: Check if any users have games
-                    $checkAnyGames = $pdo->prepare("SELECT COUNT(*) as total FROM game_scores");
-                    $checkAnyGames->execute();
-                    $totalGames = $checkAnyGames->fetch(PDO::FETCH_ASSOC)['total'];
-                    error_log("Total games in database: " . $totalGames);
-                    
-                    $checkUserGames = $pdo->prepare("SELECT COUNT(*) as user_games FROM game_scores WHERE user_id = ?");
-                    $checkUserGames->execute([$userId]);
-                    $userGames = $checkUserGames->fetch(PDO::FETCH_ASSOC)['user_games'];
-                    error_log("Games for user " . $userId . ": " . $userGames);
-                    
-                    $response = ['success' => true, 'data' => $user];
-                } else {
-                    $response['message'] = 'User not found: ' . ($user['error'] ?? 'Unknown error');
-                    $response['debug'] = ['user_id' => $userId, 'user_data' => $user];
+                    if ($user && !isset($user['error'])) {
+                        try {
+                            $recentGames = getUserRecentGames($userId, 5);
+                            $user['recent_games'] = $recentGames;
+                            
+                            // Debug logging
+                            error_log("User ID: " . $userId);
+                            error_log("Recent games count: " . count($recentGames));
+                            error_log("Recent games data: " . json_encode($recentGames));
+                        } catch (Exception $e) {
+                            error_log("Error getting recent games: " . $e->getMessage());
+                            $user['recent_games'] = []; // Empty array as fallback
+                        }
+                        
+                        // Temporary: Check if any users have games
+                        $checkAnyGames = $pdo->prepare("SELECT COUNT(*) as total FROM game_scores");
+                        $checkAnyGames->execute();
+                        $totalGames = $checkAnyGames->fetch(PDO::FETCH_ASSOC)['total'];
+                        error_log("Total games in database: " . $totalGames);
+                        
+                        $checkUserGames = $pdo->prepare("SELECT COUNT(*) as user_games FROM game_scores WHERE user_id = ?");
+                        $checkUserGames->execute([$userId]);
+                        $userGames = $checkUserGames->fetch(PDO::FETCH_ASSOC)['user_games'];
+                        error_log("Games for user " . $userId . ": " . $userGames);
+                        
+                        $response = ['success' => true, 'data' => $user];
+                    } else {
+                        $errorMsg = 'User not found';
+                        if (isset($user['error'])) {
+                            $errorMsg .= ': ' . $user['error'];
+                        }
+                        error_log("Error in view action: " . $errorMsg);
+                        $response['message'] = $errorMsg;
+                        $response['debug'] = ['user_id' => $userId, 'user_data' => $user];
+                    }
+                } catch (Exception $e) {
+                    error_log("Exception in view action: " . $e->getMessage());
+                    error_log("Stack trace: " . $e->getTraceAsString());
+                    $response['message'] = 'Error fetching user: ' . $e->getMessage();
+                    $response['debug'] = [
+                        'user_id' => $userId,
+                        'exception' => $e->getMessage(),
+                        'file' => $e->getFile(),
+                        'line' => $e->getLine()
+                    ];
                 }
             } else {
                 $response['message'] = 'Invalid user ID: ' . $userId;
@@ -125,6 +149,47 @@ try {
                     'team_name' => $_POST['team_name'] ?? ''
                 ];
                 
+                // Handle profile picture upload if present
+                if (isset($_FILES['profile_picture']) && $_FILES['profile_picture']['error'] === UPLOAD_ERR_OK) {
+                    $uploadDir = __DIR__ . '/../uploads/profile_pictures/';
+                    $allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+                    $maxSize = 5 * 1024 * 1024; // 5MB
+                    
+                    $fileType = $_FILES['profile_picture']['type'];
+                    $fileSize = $_FILES['profile_picture']['size'];
+                    
+                    if (!in_array($fileType, $allowedTypes)) {
+                        $response['message'] = 'Invalid file type. Only JPG, PNG, GIF, and WEBP are allowed.';
+                        break;
+                    }
+                    
+                    if ($fileSize > $maxSize) {
+                        $response['message'] = 'File size exceeds 5MB limit.';
+                        break;
+                    }
+                    
+                    // Generate unique filename
+                    $extension = pathinfo($_FILES['profile_picture']['name'], PATHINFO_EXTENSION);
+                    $newFilename = 'user_' . $userId . '_' . time() . '.' . $extension;
+                    $targetPath = $uploadDir . $newFilename;
+                    
+                    // Delete old profile picture if exists
+                    $oldUser = getUserById($userId);
+                    if ($oldUser && !empty($oldUser['profile_picture'])) {
+                        $oldFile = $uploadDir . $oldUser['profile_picture'];
+                        if (file_exists($oldFile)) {
+                            @unlink($oldFile);
+                        }
+                    }
+                    
+                    // Move uploaded file
+                    if (move_uploaded_file($_FILES['profile_picture']['tmp_name'], $targetPath)) {
+                        $data['profile_picture'] = $newFilename;
+                    } else {
+                        $response['message'] = 'Failed to upload profile picture.';
+                        break;
+                    }
+                }
                 
                 if (updateUser($userId, $data)) {
                     $response = ['success' => true, 'message' => 'User updated successfully'];

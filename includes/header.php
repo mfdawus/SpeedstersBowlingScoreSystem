@@ -1,6 +1,15 @@
 <?php
-// Header component for SPEEDSTERS Bowling System
+// Header component for VIPERS VENOMS Bowling System
 // This ensures consistent header behavior across all pages
+
+// Include profile picture helper
+require_once __DIR__ . '/profile-picture-helper.php';
+
+// Get user's profile picture
+$userProfilePicture = './assets/images/profile/user-1.jpg'; // Default
+if (isset($_SESSION['user_id'])) {
+    $userProfilePicture = getUserProfilePicture($_SESSION['user_id']);
+}
 ?>
 
 <!--  Header Start -->
@@ -35,7 +44,7 @@
         <li class="nav-item dropdown">
           <a class="nav-link " href="javascript:void(0)" id="drop2" data-bs-toggle="dropdown"
             aria-expanded="false">
-            <img src="./assets/images/profile/user-1.jpg" alt="" width="35" height="35" class="rounded-circle">
+            <img src="<?php echo htmlspecialchars($userProfilePicture); ?>" alt="Profile Picture" width="35" height="35" class="rounded-circle" style="object-fit: cover;">
             <?php if (isset($currentUser)): ?>
               <span class="ms-2 text-dark">
                 <?php echo htmlspecialchars($currentUser['first_name'] . ' ' . $currentUser['last_name']); ?>

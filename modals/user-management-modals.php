@@ -9,7 +9,7 @@
       <div class="modal-body">
         <div class="row">
           <div class="col-md-4 text-center">
-            <img id="viewUserAvatar" src="assets/images/profile/user-1.jpg" alt="User Avatar" class="rounded-circle mb-3" width="100" height="100">
+            <img id="viewUserAvatar" src="assets/images/profile/user-1.jpg" alt="User Avatar" class="rounded-circle mb-3" width="100" height="100" style="object-fit: cover;">
             <h5 id="viewUserName" class="mb-1"></h5>
             <p id="viewUserTeam" class="text-muted mb-0"></p>
           </div>
@@ -94,6 +94,22 @@
         <div class="modal-body">
           <input type="hidden" id="editUserId" name="user_id">
           
+          <!-- Profile Picture Section -->
+          <div class="row mb-4">
+            <div class="col-12">
+              <div class="d-flex align-items-center gap-3 p-3 bg-light rounded">
+                <div>
+                  <img src="assets/images/profile/user-1.jpg" alt="Profile Picture" id="editUserAvatar" class="rounded-circle" width="80" height="80" style="object-fit: cover;">
+                </div>
+                <div class="flex-grow-1">
+                  <h6 class="mb-2">Profile Picture</h6>
+                  <input type="file" class="form-control form-control-sm" id="editProfilePicture" accept="image/jpeg,image/jpg,image/png,image/gif,image/webp">
+                  <small class="text-muted">Max 5MB (JPG, PNG, GIF, WEBP)</small>
+                </div>
+              </div>
+            </div>
+          </div>
+          
           <div class="row">
             <div class="col-md-6 mb-3">
               <label for="editUsername" class="form-label">Username</label>
@@ -167,7 +183,7 @@
             <label for="editTeamName" class="form-label">Team Name</label>
             <select class="form-select" id="editTeamName" name="team_name">
               <option value="">No Team</option>
-              <option value="Speedsters">Speedsters</option>
+              <option value="VipersVenoms">VipersVenoms</option>
               <option value="Crystal Strikes">Crystal Strikes</option>
             </select>
           </div>
@@ -236,7 +252,7 @@
             <label for="createTeamName" class="form-label">Team Name</label>
             <select class="form-select" id="createTeamName" name="team_name">
               <option value="">No Team</option>
-              <option value="Speedsters">Speedsters</option>
+              <option value="VipersVenoms">VipersVenoms</option>
               <option value="Crystal Strikes">Crystal Strikes</option>
             </select>
           </div>

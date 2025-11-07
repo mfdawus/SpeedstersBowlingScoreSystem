@@ -137,9 +137,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Weekly Game Session Management - SPEEDSTERS Bowling System</title>
-  <link rel="shortcut icon" type="image/png" href="./assets/images/logos/speedster main logo.png" />
+  <title>Weekly Game Session Management - VIPERS VENOMS Bowling System</title>
+  <link rel="shortcut icon" type="image/x-icon" href="./assets/images/logos/favicon.ico" />
   <link rel="stylesheet" href="./assets/css/styles.min.css" />
+  <link rel="stylesheet" href="./assets/css/vipersvenoms-theme.css" />
   <style>
     .bg-gradient-primary {
       background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%);

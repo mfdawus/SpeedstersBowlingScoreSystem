@@ -879,7 +879,7 @@ function replaceParticipant($sessionId, $oldUserId, $newUserId) {
 
 /**
  * Get available players with their average scores for selection
- * Prioritizes Speedsters team for solo matches
+ * Prioritizes VipersVenoms team for solo matches
  */
 function getAvailablePlayersWithAverages($excludeUserIds = [], $prioritizeSpeedsters = true) {
     try {
@@ -894,9 +894,9 @@ function getAvailablePlayersWithAverages($excludeUserIds = [], $prioritizeSpeeds
             $params = $excludeUserIds;
         }
         
-        // Order by Speedsters first if prioritizing
+        // Order by VipersVenoms first if prioritizing
         $orderClause = $prioritizeSpeedsters 
-            ? "ORDER BY (u.team_name = 'Speedsters') DESC, u.first_name, u.last_name"
+            ? "ORDER BY (u.team_name = 'VipersVenoms') DESC, u.first_name, u.last_name"
             : "ORDER BY u.first_name, u.last_name";
         
         $stmt = $pdo->prepare("
@@ -911,7 +911,7 @@ function getAvailablePlayersWithAverages($excludeUserIds = [], $prioritizeSpeeds
                 COALESCE(ROUND(AVG(gs.player_score), 1), 0) as average_score,
                 COUNT(gs.score_id) as games_played,
                 MAX(gs.game_date) as last_played,
-                CASE WHEN u.team_name = 'Speedsters' THEN 1 ELSE 0 END as is_speedsters
+                CASE WHEN u.team_name = 'VipersVenoms' THEN 1 ELSE 0 END as is_speedsters
             FROM users u
             LEFT JOIN game_scores gs ON u.user_id = gs.user_id AND gs.status = 'Completed'
             WHERE u.status = 'Active' 
@@ -1118,7 +1118,7 @@ function getAllTeamNames() {
             AND status = 'Active'
             AND (user_role = 'Player' OR user_role = 'Admin')
             GROUP BY team_name
-            ORDER BY (team_name = 'Speedsters') DESC, team_name ASC
+            ORDER BY (team_name = 'VipersVenoms') DESC, team_name ASC
         ");
         $stmt->execute();
         
@@ -1151,6 +1151,7 @@ function getSessionParticipantsForScoring($sessionId) {
                 u.skill_level,
                 u.status,
                 u.team_name,
+                u.profile_picture,
                 u.created_at,
                 0 as average_score
             FROM session_participants sp

@@ -17,6 +17,7 @@ function getUserById($userId) {
                 user_role,
                 status,
                 team_name,
+                profile_picture,
                 created_at
             FROM users
             WHERE user_id = ?
@@ -75,7 +76,8 @@ function updateUser($userId, $data) {
                 phone = ?,
                 skill_level = ?,
                 status = ?,
-                team_name = ?
+                team_name = ?,
+                profile_picture = ?
             WHERE user_id = ?
         ");
         
@@ -88,6 +90,7 @@ function updateUser($userId, $data) {
             $data['skill_level'],
             $data['status'],
             $data['team_name'],
+            $data['profile_picture'] ?? null,
             $userId
         ]);
         
@@ -159,6 +162,8 @@ function createUser($data) {
 function getUserRecentGames($userId, $limit = 5) {
     try {
         $pdo = getDBConnection();
+        
+        error_log("getUserRecentGames called for user_id: $userId with limit: $limit");
 
         // First, let's check if there are any games for this user at all
         $checkStmt = $pdo->prepare("
@@ -169,11 +174,14 @@ function getUserRecentGames($userId, $limit = 5) {
         $checkStmt->execute([$userId]);
         $totalGames = $checkStmt->fetch(PDO::FETCH_ASSOC)['total_games'];
         
+        error_log("Total games found for user $userId: $totalGames");
+        
         if ($totalGames == 0) {
+            error_log("No games found, returning empty array");
             return [];
         }
 
-        // Get recent games (including incomplete ones for now)
+        // Get recent games - IMPORTANT: LIMIT must be bound as integer
         $stmt = $pdo->prepare("
             SELECT
                 game_date,
@@ -185,16 +193,27 @@ function getUserRecentGames($userId, $limit = 5) {
                 game_number,
                 created_at
             FROM game_scores
-            WHERE user_id = ?
+            WHERE user_id = :user_id
             ORDER BY created_at DESC
-            LIMIT ?
+            LIMIT :limit
         ");
-        $stmt->execute([$userId, $limit]);
+        
+        // Bind user_id as integer
+        $stmt->bindValue(':user_id', $userId, PDO::PARAM_INT);
+        // Bind limit as integer (CRITICAL!)
+        $stmt->bindValue(':limit', (int)$limit, PDO::PARAM_INT);
+        
+        $stmt->execute();
+        $games = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        error_log("Games fetched: " . count($games));
+        error_log("Games data: " . json_encode($games));
 
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        return $games;
 
     } catch(PDOException $e) {
         error_log("Error getting user recent games: " . $e->getMessage());
+        error_log("Stack trace: " . $e->getTraceAsString());
         return [];
     }
 }

@@ -1,0 +1,114 @@
+/* 
+ * VipersVenoms Bowling System - Simple Theme
+ * Clean white design with light purple accents
+ * Just replacing blue with light purple
+ */
+
+:root {
+  /* Light Purple - Simple replacement for blue */
+  --light-purple: #A78BFA;
+  --light-purple-hover: #8B5CF6;
+  --light-purple-dark: #7C3AED;
+}
+
+/* Primary Buttons - Light Purple instead of Blue */
+.btn-primary {
+  background-color: var(--light-purple) !important;
+  border-color: var(--light-purple) !important;
+}
+
+.btn-primary:hover,
+.btn-primary:focus {
+  background-color: var(--light-purple-hover) !important;
+  border-color: var(--light-purple-hover) !important;
+}
+
+/* Background Primary */
+.bg-primary {
+  background-color: var(--light-purple) !important;
+}
+
+/* Text Primary */
+.text-primary {
+  color: var(--light-purple) !important;
+}
+
+/* Links */
+a {
+  color: var(--light-purple);
+}
+
+a:hover {
+  color: var(--light-purple-hover);
+}
+
+/* Badges */
+.badge-primary {
+  background-color: var(--light-purple) !important;
+}
+
+/* Forms - Focus State */
+.form-control:focus,
+.form-select:focus {
+  border-color: var(--light-purple);
+  box-shadow: 0 0 0 0.2rem rgba(167, 139, 250, 0.25);
+}
+
+.form-check-input:checked {
+  background-color: var(--light-purple);
+  border-color: var(--light-purple);
+}
+
+/* Pagination */
+.pagination .page-link {
+  color: var(--light-purple);
+}
+
+.pagination .page-link:hover {
+  color: var(--light-purple-hover);
+}
+
+.pagination .page-item.active .page-link {
+  background-color: var(--light-purple);
+  border-color: var(--light-purple);
+}
+
+/* Sidebar Active Link */
+.sidebar-link.active {
+  color: var(--light-purple) !important;
+}
+
+/* Button Outline Primary */
+.btn-outline-primary {
+  color: var(--light-purple);
+  border-color: var(--light-purple);
+}
+
+.btn-outline-primary:hover {
+  background-color: var(--light-purple);
+  border-color: var(--light-purple);
+  color: white;
+}
+
+/* Gradients - Replace blue with light purple */
+.bg-gradient-primary {
+  background: linear-gradient(135deg, var(--light-purple) 0%, var(--light-purple-hover) 100%) !important;
+}
+
+/* Table Headers */
+.table thead th {
+  background-color: var(--light-purple);
+}
+
+/* Loading Spinner */
+.spinner-border {
+  color: var(--light-purple);
+}
+
+/* Alert Info - Light Purple */
+.alert-info {
+  background-color: rgba(167, 139, 250, 0.1);
+  border-color: var(--light-purple);
+  color: var(--light-purple-dark);
+}
+

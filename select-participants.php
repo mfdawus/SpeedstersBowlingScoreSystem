@@ -86,7 +86,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 exit();
                 
             case 'get_players_by_team':
-                $teamName = $_POST['team_name'] ?? 'Speedsters';
+                $teamName = $_POST['team_name'] ?? 'VipersVenoms';
                 $excludeIds = json_decode($_POST['exclude_ids'] ?? '[]', true);
                 
                 $players = getPlayersByTeamWithAverages($teamName === 'all' ? null : $teamName, $excludeIds);
@@ -95,7 +95,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 
             case 'search_players':
                 $searchTerm = $_POST['search_term'] ?? '';
-                $teamName = $_POST['team_name'] ?? 'Speedsters';
+                $teamName = $_POST['team_name'] ?? 'VipersVenoms';
                 $excludeIds = json_decode($_POST['exclude_ids'] ?? '[]', true);
                 
                 $players = getPlayersByTeamWithAverages($teamName === 'all' ? null : $teamName, $excludeIds);
@@ -133,9 +133,10 @@ error_log("Teams count: " . count($teams));
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Select Participants - Speedsters Bowling</title>
-    <link rel="shortcut icon" type="image/png" href="./assets/images/logos/speedster main logo.png" />
+    <title>Select Participants - VipersVenoms Bowling</title>
+    <link rel="shortcut icon" type="image/x-icon" href="./assets/images/logos/favicon.ico" />
     <link rel="stylesheet" href="./assets/css/styles.min.css" />
+    <link rel="stylesheet" href="./assets/css/vipersvenoms-theme.css" />
     <style>
         /* Match admin dashboard styling */
         .bg-gradient-primary {
@@ -172,7 +173,7 @@ error_log("Teams count: " . count($teams));
             background: linear-gradient(135deg, #f8f9ff 0%, #e3f2fd 100%);
         }
         
-        .participant-card.speedsters {
+        .participant-card.vipersvenoms {
             border-left: 4px solid #28a745;
         }
         
@@ -235,7 +236,7 @@ error_log("Teams count: " . count($teams));
             font-weight: 600;
         }
         
-        .speedsters-section {
+        .vipersvenoms-section {
             border: 2px solid #28a745;
             border-radius: 12px;
             margin-bottom: 30px;
@@ -466,10 +467,10 @@ error_log("Teams count: " . count($teams));
                                     <div class="col-md-4">
                                         <label class="form-label fw-semibold">Filter by Team</label>
                                         <select class="form-select" id="teamFilter" onchange="filterByTeam()">
-                                            <option value="Speedsters" selected>🏆 Speedsters (Primary)</option>
+                                            <option value="VipersVenoms" selected>🏆 VipersVenoms (Primary)</option>
                                             <option value="all">👥 All Teams</option>
                                             <?php foreach ($teams as $team): ?>
-                                                <?php if ($team['team_name'] !== 'Speedsters'): ?>
+                                                <?php if ($team['team_name'] !== 'VipersVenoms'): ?>
                                                     <option value="<?php echo htmlspecialchars($team['team_name']); ?>">
                                                         <?php echo htmlspecialchars($team['team_name']); ?> (<?php echo $team['player_count']; ?>)
                                                     </option>
@@ -525,29 +526,29 @@ error_log("Teams count: " . count($teams));
                     <!-- Available Players -->
                     <div class="row">
                         <div class="col-12">
-                            <!-- Speedsters Section -->
-                            <div class="card admin-card speedsters-section" id="speedstersSection">
+                            <!-- VipersVenoms Section -->
+                            <div class="card admin-card vipersvenoms-section" id="vipersvenomsSection">
                                 <div class="card-header team-section-header">
                                     <div class="d-flex align-items-center justify-content-between">
                                         <div>
                                             <h5 class="card-title fw-semibold mb-1 text-white">
                                                 <i class="ti ti-trophy me-2"></i>
-                                                Speedsters Team (Primary Choice)
+                                                VipersVenoms Team (Primary Choice)
                                             </h5>
                                             <span class="fw-normal text-white-50">Recommended players for solo matches</span>
                                         </div>
                                         <div>
-                                            <span class="badge bg-light text-dark" id="speedstersCount">0 players</span>
+                                            <span class="badge bg-light text-dark" id="vipersvenomsCount">0 players</span>
                                         </div>
                                     </div>
                                 </div>
                                 <div class="card-body">
-                                    <div class="row" id="speedstersPlayers">
-                                        <!-- Speedsters players will be populated here -->
+                                    <div class="row" id="vipersvenomsPlayers">
+                                        <!-- VipersVenoms players will be populated here -->
                                     </div>
-                                    <div id="noSpeedstersMessage" style="display: none;" class="text-center py-4">
+                                    <div id="noVipersVenomsMessage" style="display: none;" class="text-center py-4">
                                         <i class="ti ti-info-circle text-muted fs-1 mb-3"></i>
-                                        <p class="text-muted">No Speedsters team members found. Showing all available players below.</p>
+                                        <p class="text-muted">No VipersVenoms team members found. Showing all available players below.</p>
                                     </div>
                                 </div>
                             </div>
@@ -600,7 +601,7 @@ error_log("Teams count: " . count($teams));
         let selectedParticipants = <?php echo json_encode($currentParticipantIds); ?>;
         let maxPlayers = <?php echo $sessionDraft['max_players']; ?>;
         let allPlayers = <?php echo json_encode($availablePlayers); ?>;
-        let currentTeamFilter = 'Speedsters';
+        let currentTeamFilter = 'VipersVenoms';
         let currentSearchTerm = '';
 
         // Initialize page
@@ -611,7 +612,7 @@ error_log("Teams count: " . count($teams));
 
         // Load players based on current filters
         function loadPlayers() {
-            const speedstersPlayers = allPlayers.filter(p => {
+            const vipersvenomsPlayers = allPlayers.filter(p => {
                 const userId = parseInt(p.user_id);
                 const isSelected = selectedParticipants.includes(userId);
                 return p.is_speedsters == 1 && !isSelected;
@@ -622,25 +623,25 @@ error_log("Teams count: " . count($teams));
             });
 
             // Apply search filter
-            const filteredSpeedsters = filterPlayersBySearch(speedstersPlayers);
+            const filteredVipersVenoms = filterPlayersBySearch(vipersvenomsPlayers);
             const filteredOthers = filterPlayersBySearch(otherPlayers);
 
             // Populate sections
-            populatePlayerSection('speedstersPlayers', filteredSpeedsters);
+            populatePlayerSection('vipersvenomsPlayers', filteredVipersVenoms);
             
             // Update player count badges
-            document.getElementById('speedstersCount').textContent = filteredSpeedsters.length + ' players';
+            document.getElementById('vipersvenomsCount').textContent = filteredVipersVenoms.length + ' players';
             document.getElementById('otherTeamsCount').textContent = filteredOthers.length + ' players';
             
-            // Show message if no Speedsters found
-            if (filteredSpeedsters.length === 0) {
-                $('#noSpeedstersMessage').show();
+            // Show message if no VipersVenoms found
+            if (filteredVipersVenoms.length === 0) {
+                $('#noVipersVenomsMessage').show();
             } else {
-                $('#noSpeedstersMessage').hide();
+                $('#noVipersVenomsMessage').hide();
             }
             
-            // Always show other teams section if we have other players or if no Speedsters
-            if (currentTeamFilter === 'all' || currentTeamFilter !== 'Speedsters' || filteredSpeedsters.length === 0) {
+            // Always show other teams section if we have other players or if no VipersVenoms
+            if (currentTeamFilter === 'all' || currentTeamFilter !== 'VipersVenoms' || filteredVipersVenoms.length === 0) {
                 $('#otherTeamsSection').show();
                 populatePlayerSection('otherTeamsPlayers', filteredOthers);
             } else {
@@ -648,7 +649,7 @@ error_log("Teams count: " . count($teams));
             }
 
             // Show/hide no results
-            if (filteredSpeedsters.length === 0 && filteredOthers.length === 0) {
+            if (filteredVipersVenoms.length === 0 && filteredOthers.length === 0) {
                 $('#noResultsSection').show();
             } else {
                 $('#noResultsSection').hide();
@@ -684,11 +685,11 @@ error_log("Teams count: " . count($teams));
             const col = document.createElement('div');
             col.className = 'col-md-6 col-lg-4 mb-3';
             
-            const isSpeedsters = player.is_speedsters == 1;
+            const isVipersVenoms = player.is_speedsters == 1;
             const skillBadgeClass = getSkillBadgeClass(player.skill_level);
             
             col.innerHTML = `
-                <div class="card participant-card ${isSpeedsters ? 'speedsters' : ''}" onclick="toggleParticipant(${player.user_id})" data-user-id="${player.user_id}">
+                <div class="card participant-card ${isVipersVenoms ? 'vipersvenoms' : ''}" onclick="toggleParticipant(${player.user_id})" data-user-id="${player.user_id}">
                     <div class="card-body p-3">
                         <div class="d-flex align-items-center mb-2">
                             <img src="assets/images/profile/user-${((player.user_id % 8) + 1)}.jpg" alt="Player" class="player-avatar me-3">
@@ -833,9 +834,9 @@ error_log("Teams count: " . count($teams));
         // Reset filters
         function resetFilters() {
             document.getElementById('searchInput').value = '';
-            document.getElementById('teamFilter').value = 'Speedsters';
+            document.getElementById('teamFilter').value = 'VipersVenoms';
             currentSearchTerm = '';
-            currentTeamFilter = 'Speedsters';
+            currentTeamFilter = 'VipersVenoms';
             loadPlayers();
         }
 

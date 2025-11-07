@@ -1,5 +1,5 @@
 <?php
-// Sidebar component for SPEEDSTERS Bowling System
+// Sidebar component for VIPERS VENOMS Bowling System
 // This ensures consistent sidebar behavior across all pages
 
 // Get current page for active state highlighting
@@ -32,9 +32,9 @@ $isAdminPage = strpos($currentPage, 'admin-') === 0 || $currentPage === 'select-
   <!-- Sidebar scroll-->
   <div>
     <div class="brand-logo d-flex align-items-center justify-content-between">
-      <a href="<?php echo $isAdminPage ? './admin-dashboard.php' : './homepage.php'; ?>" class="text-nowrap logo-img d-flex flex-column align-items-start text-decoration-none">
-        <img src="assets/images/logos/speedster main logo.png" alt="SPEEDSTERS Logo" width="90" />
-        <span class="text-muted fw-semibold mt-1" style="font-size: 0.75rem; letter-spacing: 0.5px;"><?php echo $isAdminPage ? 'Admin Panel' : 'Bowling Score System'; ?></span>
+      <a href="<?php echo $isAdminPage ? './admin-dashboard.php' : './homepage.php'; ?>" class="text-nowrap logo-img d-flex flex-column align-items-center text-decoration-none">
+        <img src="assets/images/logos/vipersvenoms-main-logo.png" alt="VIPERS VENOMS Logo" width="90" />
+        <span class="text-muted fw-semibold mt-1" style="font-size: 0.75rem; letter-spacing: 0.5px;"><?php echo $isAdminPage ? 'VipersVenom Bowling Score System' : 'VipersVenom Bowling Score System'; ?></span>
       </a>
       <div class="close-btn d-xl-none d-block sidebartoggler cursor-pointer" id="sidebarCollapse">
         <i class="ti ti-x fs-6"></i>
@@ -99,7 +99,7 @@ $isAdminPage = strpos($currentPage, 'admin-') === 0 || $currentPage === 'select-
                      </li>
                      <li class="sidebar-item">
                        <a href="./admin-score-monitoring-team.php" class="sidebar-link <?php echo ($currentPage == 'admin-score-monitoring-team.php') ? 'active' : ''; ?>">
-                         <i class="ti ti-users-group"></i>
+                         <i class="ti ti-trophy"></i>
                          <span class="hide-menu">Team</span>
                        </a>
                      </li>
@@ -167,7 +167,7 @@ $isAdminPage = strpos($currentPage, 'admin-') === 0 || $currentPage === 'select-
               </li>
               <li class="sidebar-item">
                 <a href="./score-table-team.php" class="sidebar-link <?php echo ($currentPage == 'score-table-team.php') ? 'active' : ''; ?>">
-                  <i class="ti ti-users-group"></i>
+                  <i class="ti ti-trophy"></i>
                   <span class="hide-menu">Team</span>
                 </a>
               </li>

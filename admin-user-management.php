@@ -2,6 +2,7 @@
 require_once 'includes/auth.php';
 require_once 'includes/dashboard.php';
 require_once 'includes/user-management.php';
+require_once 'includes/profile-picture-helper.php';
 requireAdmin(); // Ensure user is admin
 
 // User Management is fully functional - no maintenance mode needed
@@ -26,6 +27,7 @@ function getAllUsersData() {
                 u.user_role,
                 u.status,
                 u.team_name,
+                u.profile_picture,
                 u.created_at,
                 COUNT(gs.score_id) as total_games,
                 AVG(gs.player_score) as avg_score,
@@ -33,7 +35,7 @@ function getAllUsersData() {
             FROM users u
             LEFT JOIN game_scores gs ON u.user_id = gs.user_id AND gs.status = 'Completed'
             WHERE u.status != 'Deleted'
-            GROUP BY u.user_id, u.username, u.first_name, u.last_name, u.email, u.phone, u.skill_level, u.user_role, u.status, u.team_name, u.created_at
+            GROUP BY u.user_id, u.username, u.first_name, u.last_name, u.email, u.phone, u.skill_level, u.user_role, u.status, u.team_name, u.profile_picture, u.created_at
             ORDER BY u.user_role DESC, u.first_name, u.last_name
         ");
         $stmt->execute();
@@ -53,9 +55,10 @@ $allUsers = getAllUsersData();
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>User Management - SPEEDSTERS Bowling System</title>
-  <link rel="shortcut icon" type="image/png" href="./assets/images/logos/speedster main logo.png" />
+  <title>User Management - VIPERS VENOMS Bowling System</title>
+  <link rel="shortcut icon" type="image/x-icon" href="./assets/images/logos/favicon.ico" />
   <link rel="stylesheet" href="./assets/css/styles.min.css" />
+  <link rel="stylesheet" href="./assets/css/vipersvenoms-theme.css" />
   <style>
     .bg-gradient-primary {
       background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%);
@@ -189,7 +192,7 @@ $allUsers = getAllUsersData();
                               </td>
                               <td>
                                 <div class="d-flex align-items-center">
-                                  <img src="assets/images/profile/user-<?php echo ($user['user_id'] % 8) + 1; ?>.jpg" alt="Player" class="rounded-circle me-2" width="32" height="32">
+                                  <img src="<?php echo htmlspecialchars(getProfilePictureUrl($user['profile_picture'] ?? null, true, $user['user_id'] ?? null)); ?>" alt="Player" class="rounded-circle me-2" width="32" height="32" style="object-fit: cover;">
                                   <div>
                                     <h6 class="mb-0 fw-bold"><?php echo htmlspecialchars($user['username']); ?></h6>
                                     <small class="text-muted">Team: <?php echo htmlspecialchars($user['team_name'] ?? 'No Team'); ?></small>
@@ -327,7 +330,7 @@ $allUsers = getAllUsersData();
           <div class="row">
             <div class="col-md-4">
               <div class="text-center mb-4">
-                <img src="assets/images/profile/user-1.jpg" alt="Player" class="rounded-circle mb-3" width="120" height="120">
+                <img id="detailPlayerAvatar" src="assets/images/profile/user-1.jpg" alt="Player" class="rounded-circle mb-3" width="120" height="120" style="object-fit: cover;">
                 <h4 id="detailPlayerName">Player Name</h4>
                 <span class="badge bg-primary" id="detailPlayerSkill">Skill Level</span>
                 <span class="badge bg-success ms-2" id="detailPlayerStatus">Status</span>
@@ -496,8 +499,18 @@ $allUsers = getAllUsersData();
           console.log('AJAX Response:', data);
           
           if (data.success) {
+            console.log('=== AJAX RESPONSE SUCCESS ===');
+            console.log('Full response data:', data);
             console.log('User data:', data.data);
-            console.log('Recent games:', data.data.recent_games);
+            console.log('Recent games from response:', data.data.recent_games);
+            console.log('Type of recent_games:', typeof data.data.recent_games);
+            console.log('Is recent_games an array?', Array.isArray(data.data.recent_games));
+            
+            // Store globally for debugging
+            window.lastUserData = data.data;
+            window.lastAjaxResponse = data;
+            console.log('✅ Stored in window.lastUserData for debugging');
+            
             populateViewModal(data.data);
             $('#userDetailsModal').modal('show');
             
@@ -530,17 +543,33 @@ $allUsers = getAllUsersData();
         },
         body: 'action=view&user_id=' + userId
       })
-      .then(response => response.json())
-      .then(data => {
-        if (data.success) {
-          populateEditModal(data.data);
-          $('#editUserModal').modal('show');
-        } else {
-          alert('Error: ' + data.message);
+      .then(response => {
+        // Check if response is ok
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+        return response.text(); // Get text first to debug
+      })
+      .then(text => {
+        console.log('Raw response:', text); // Debug log
+        try {
+          const data = JSON.parse(text);
+          if (data.success) {
+            populateEditModal(data.data);
+            $('#editUserModal').modal('show');
+          } else {
+            console.error('Error data:', data);
+            alert('Error: ' + data.message);
+          }
+        } catch (e) {
+          console.error('JSON parse error:', e);
+          console.error('Response text:', text);
+          alert('Invalid response from server. Check console for details.');
         }
       })
       .catch(error => {
-        alert('An error occurred while fetching user details');
+        console.error('Fetch error:', error);
+        alert('An error occurred while fetching user details: ' + error.message);
       });
     }
 
@@ -569,9 +598,12 @@ $allUsers = getAllUsersData();
     }
 
     function populateViewModal(user) {
+      console.log('Populating modal with user data:', user);
       
       // Handle undefined values safely
       const username = user.username || 'Unknown User';
+      const fullName = (user.first_name || '') + ' ' + (user.last_name || '');
+      const displayName = fullName.trim() || username;
       
       document.getElementById('viewUserName').textContent = username;
       document.getElementById('viewUserTeam').textContent = 'Team: ' + (user.team_name || 'No Team');
@@ -587,58 +619,138 @@ $allUsers = getAllUsersData();
       
       // Populate recent games table
       const gamesTableBody = document.getElementById('detailPlayerGamesTable');
+      console.log('=== RECENT GAMES DEBUG ===');
       console.log('Recent games data:', user.recent_games);
       console.log('Recent games length:', user.recent_games ? user.recent_games.length : 'undefined');
+      console.log('Recent games is array?', Array.isArray(user.recent_games));
+      console.log('Table element found?', gamesTableBody !== null);
       
-      if (user.recent_games && user.recent_games.length > 0) {
-        console.log('Populating games table with data');
-        gamesTableBody.innerHTML = '';
-        
-        // Group games by date and session
-        const gamesBySession = {};
-        user.recent_games.forEach(game => {
-          const sessionKey = game.game_date + '_' + (game.team_name || 'solo');
-          if (!gamesBySession[sessionKey]) {
-            gamesBySession[sessionKey] = {
-              date: game.game_date,
-              gameType: game.game_mode,
-              teamName: game.team_name || 'Solo',
-              games: {}
-            };
+      if (gamesTableBody) {
+        if (user.recent_games && Array.isArray(user.recent_games) && user.recent_games.length > 0) {
+          console.log('✅ Populating games table with ' + user.recent_games.length + ' games');
+          gamesTableBody.innerHTML = '';
+          
+          // Try SIMPLE approach first - just list all games
+          console.log('Attempting simple game display...');
+          let successCount = 0;
+          
+          try {
+            // Simple row-by-row display (no grouping)
+            user.recent_games.forEach((game, index) => {
+              console.log('Processing game ' + (index + 1) + ':', game);
+              const row = document.createElement('tr');
+              row.innerHTML = `
+                <td>${game.game_date || 'N/A'}</td>
+                <td>${game.game_mode || 'N/A'}</td>
+                <td>${game.game_number == 1 ? game.player_score : '-'}</td>
+                <td>${game.game_number == 2 ? game.player_score : '-'}</td>
+                <td>${game.game_number == 3 ? game.player_score : '-'}</td>
+                <td>${game.game_number == 4 ? game.player_score : '-'}</td>
+                <td>${game.game_number == 5 ? game.player_score : '-'}</td>
+                <td><strong>${game.player_score || 0}</strong></td>
+              `;
+              gamesTableBody.appendChild(row);
+              successCount++;
+            });
+            
+            console.log('✅ Successfully added ' + successCount + ' game rows to table');
+            
+          } catch (error) {
+            console.error('❌ Error displaying games:', error);
+            gamesTableBody.innerHTML = '<tr><td colspan="8" class="text-center text-danger">Error displaying games: ' + error.message + '</td></tr>';
           }
-          gamesBySession[sessionKey].games[game.game_number] = game.player_score;
-        });
-        
-        // Create table rows
-        Object.values(gamesBySession).forEach(session => {
-          const row = document.createElement('tr');
-          const game1 = session.games[1] || '-';
-          const game2 = session.games[2] || '-';
-          const game3 = session.games[3] || '-';
-          const game4 = session.games[4] || '-';
-          const game5 = session.games[5] || '-';
-          
-          const total = Object.values(session.games).reduce((sum, score) => sum + (parseInt(score) || 0), 0);
-          
-          row.innerHTML = `
-            <td>${new Date(session.date).toLocaleDateString()}</td>
-            <td>${session.gameType}</td>
-            <td>${game1}</td>
-            <td>${game2}</td>
-            <td>${game3}</td>
-            <td>${game4}</td>
-            <td>${game5}</td>
-            <td><strong>${total}</strong></td>
-          `;
-          gamesTableBody.appendChild(row);
-        });
+        } else {
+          console.log('No games found or games not an array, showing empty message');
+          gamesTableBody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">No games recorded</td></tr>';
+        }
       } else {
-        console.log('No games found, showing empty message');
-        gamesTableBody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">No games recorded</td></tr>';
+        console.error('Table element detailPlayerGamesTable not found in DOM!');
       }
       
-      // Update avatar
-      document.getElementById('viewUserAvatar').src = 'assets/images/profile/user-' + ((user.user_id % 8) + 1) + '.jpg';
+      // Update avatar - use profile picture if available, otherwise template avatar based on user ID
+      let profilePicUrl;
+      if (user.profile_picture && user.profile_picture !== '' && user.profile_picture !== null) {
+        profilePicUrl = './uploads/profile_pictures/' + user.profile_picture;
+      } else {
+        // Use template avatars (user-1.jpg through user-8.jpg) based on user ID
+        const avatarNumber = ((user.user_id - 1) % 8) + 1;
+        profilePicUrl = './assets/images/profile/user-' + avatarNumber + '.jpg';
+      }
+      
+      // Update both avatar elements (if they exist)
+      const viewUserAvatar = document.getElementById('viewUserAvatar');
+      const detailPlayerAvatar = document.getElementById('detailPlayerAvatar');
+      
+      if (viewUserAvatar) {
+        viewUserAvatar.src = profilePicUrl;
+      }
+      if (detailPlayerAvatar) {
+        detailPlayerAvatar.src = profilePicUrl;
+      }
+      
+      // Also populate detailPlayer modal fields if they exist
+      const detailPlayerName = document.getElementById('detailPlayerName');
+      const detailPlayerEmail = document.getElementById('detailPlayerEmail');
+      const detailPlayerPhone = document.getElementById('detailPlayerPhone');
+      const detailPlayerGames = document.getElementById('detailPlayerGames');
+      const detailPlayerBestScore = document.getElementById('detailPlayerBestScore');
+      const detailPlayerAverage = document.getElementById('detailPlayerAverage');
+      const detailPlayerJoinDate = document.getElementById('detailPlayerJoinDate');
+      const detailPlayerSkill = document.getElementById('detailPlayerSkill');
+      const detailPlayerStatus = document.getElementById('detailPlayerStatus');
+      
+      if (detailPlayerName) detailPlayerName.textContent = username;
+      if (detailPlayerEmail) detailPlayerEmail.textContent = user.email || 'N/A';
+      if (detailPlayerPhone) detailPlayerPhone.textContent = user.phone || 'N/A';
+      if (detailPlayerGames) detailPlayerGames.textContent = user.total_games || '0';
+      if (detailPlayerBestScore) detailPlayerBestScore.textContent = user.best_score || '0';
+      if (detailPlayerAverage) detailPlayerAverage.textContent = user.avg_score ? parseFloat(user.avg_score).toFixed(1) : '0.0';
+      if (detailPlayerJoinDate) {
+        const joinDate = user.created_at ? new Date(user.created_at).toLocaleDateString('en-US', { 
+          year: 'numeric', 
+          month: 'numeric', 
+          day: 'numeric' 
+        }) : 'N/A';
+        detailPlayerJoinDate.textContent = joinDate;
+      }
+      
+      // Set skill level with proper badge styling
+      if (detailPlayerSkill) {
+        const skillLevel = user.skill_level || 'N/A';
+        detailPlayerSkill.textContent = skillLevel.charAt(0).toUpperCase() + skillLevel.slice(1);
+        
+        // Apply appropriate badge color based on skill level
+        detailPlayerSkill.className = 'badge';
+        if (skillLevel.toLowerCase() === 'beginner') {
+          detailPlayerSkill.classList.add('bg-info');
+        } else if (skillLevel.toLowerCase() === 'intermediate') {
+          detailPlayerSkill.classList.add('bg-warning');
+        } else if (skillLevel.toLowerCase() === 'advanced') {
+          detailPlayerSkill.classList.add('bg-primary');
+        } else if (skillLevel.toLowerCase() === 'elite' || skillLevel.toLowerCase() === 'pro') {
+          detailPlayerSkill.classList.add('bg-success');
+        } else {
+          detailPlayerSkill.classList.add('bg-secondary');
+        }
+      }
+      
+      // Set status with proper badge styling
+      if (detailPlayerStatus) {
+        const status = user.status || 'Unknown';
+        detailPlayerStatus.textContent = status;
+        
+        // Apply appropriate badge color based on status
+        detailPlayerStatus.className = 'badge ms-2';
+        if (status.toLowerCase() === 'active') {
+          detailPlayerStatus.classList.add('bg-success');
+        } else if (status.toLowerCase() === 'inactive') {
+          detailPlayerStatus.classList.add('bg-warning');
+        } else if (status.toLowerCase() === 'suspended') {
+          detailPlayerStatus.classList.add('bg-danger');
+        } else {
+          detailPlayerStatus.classList.add('bg-secondary');
+        }
+      }
       
       // Populate recent games
       const gamesTable = document.getElementById('viewUserGamesTable');
@@ -658,6 +770,8 @@ $allUsers = getAllUsersData();
     }
 
     function populateEditModal(user) {
+      console.log('Populating edit modal with user:', user);
+      
       // Basic Information
       document.getElementById('editUserId').value = user.user_id;
       document.getElementById('editUsername').value = user.username || '';
@@ -665,6 +779,17 @@ $allUsers = getAllUsersData();
       document.getElementById('editFirstName').value = user.first_name || '';
       document.getElementById('editLastName').value = user.last_name || '';
       document.getElementById('editPhone').value = user.phone || '';
+      
+      // Profile Picture - construct URL directly
+      let profilePicUrl = 'assets/images/profile/user-1.jpg'; // Default
+      if (user.profile_picture) {
+        profilePicUrl = 'uploads/profile_pictures/' + user.profile_picture;
+      } else if (user.user_id) {
+        // Use template avatar based on user ID
+        const avatarNum = ((user.user_id - 1) % 8) + 1;
+        profilePicUrl = 'assets/images/profile/user-' + avatarNum + '.jpg';
+      }
+      document.getElementById('editUserAvatar').src = profilePicUrl;
       
       // Skill and Status
       document.getElementById('editSkillLevel').value = user.skill_level || 'Beginner';
@@ -803,6 +928,12 @@ $allUsers = getAllUsersData();
           
           const formData = new FormData(this);
           formData.append('action', 'update');
+          
+          // Add profile picture file if selected
+          const profilePicInput = document.getElementById('editProfilePicture');
+          if (profilePicInput && profilePicInput.files.length > 0) {
+            formData.append('profile_picture', profilePicInput.files[0]);
+          }
           
           // Show loading state
           const submitBtn = this.querySelector('button[type="submit"]');

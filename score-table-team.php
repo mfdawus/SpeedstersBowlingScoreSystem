@@ -14,9 +14,10 @@ $currentUser = getCurrentUser();
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Team Score Table - SPEEDSTERS Bowling System</title>
-  <link rel="shortcut icon" type="image/png" href="./assets/images/logos/speedster main logo.png" />
+  <title>Team Score Table - VIPERS VENOMS Bowling System</title>
+  <link rel="shortcut icon" type="image/x-icon" href="./assets/images/logos/favicon.ico" />
   <link rel="stylesheet" href="./assets/css/styles.min.css" />
+  <link rel="stylesheet" href="./assets/css/vipersvenoms-theme.css" />
   <style>
     .bg-gradient-primary {
       background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%);
@@ -276,6 +277,7 @@ $currentUser = getCurrentUser();
                               <th scope="col">Player</th>
                               <th scope="col">Team</th>
                               <th scope="col">Total Score</th>
+                              <th scope="col">Pin Diff</th>
                               <th scope="col">Avg/Game</th>
                               <th scope="col">Games Played</th>
                               <th scope="col">Best Game</th>
@@ -286,7 +288,7 @@ $currentUser = getCurrentUser();
                           </thead>
                           <tbody id="overallTableBody">
                             <tr>
-                              <td colspan="10" class="text-center py-4">
+                              <td colspan="11" class="text-center py-4">
                                 <div class="loading-spinner"></div>
                                 <span class="ms-2">Loading data...</span>
                               </td>
@@ -316,7 +318,7 @@ $currentUser = getCurrentUser();
                           </thead>
                           <tbody id="overallTeamTableBody">
                             <tr>
-                              <td colspan="10" class="text-center py-4">
+                              <td colspan="11" class="text-center py-4">
                                 <div class="loading-spinner"></div>
                                 <span class="ms-2">Loading team data...</span>
                               </td>
@@ -336,6 +338,7 @@ $currentUser = getCurrentUser();
                               <th scope="col">Player</th>
                               <th scope="col">Team</th>
                               <th scope="col">Score</th>
+                              <th scope="col">Pin Diff</th>
                               <th scope="col">Strikes</th>
                               <th scope="col">Spares</th>
                               <th scope="col">Open Frames</th>
@@ -364,6 +367,7 @@ $currentUser = getCurrentUser();
                               <th scope="col">Player</th>
                               <th scope="col">Team</th>
                               <th scope="col">Score</th>
+                              <th scope="col">Pin Diff</th>
                               <th scope="col">Strikes</th>
                               <th scope="col">Spares</th>
                               <th scope="col">Open Frames</th>
@@ -392,6 +396,7 @@ $currentUser = getCurrentUser();
                               <th scope="col">Player</th>
                               <th scope="col">Team</th>
                               <th scope="col">Score</th>
+                              <th scope="col">Pin Diff</th>
                               <th scope="col">Strikes</th>
                               <th scope="col">Spares</th>
                               <th scope="col">Open Frames</th>
@@ -420,6 +425,7 @@ $currentUser = getCurrentUser();
                               <th scope="col">Player</th>
                               <th scope="col">Team</th>
                               <th scope="col">Score</th>
+                              <th scope="col">Pin Diff</th>
                               <th scope="col">Strikes</th>
                               <th scope="col">Spares</th>
                               <th scope="col">Open Frames</th>
@@ -448,6 +454,7 @@ $currentUser = getCurrentUser();
                               <th scope="col">Player</th>
                               <th scope="col">Team</th>
                               <th scope="col">Score</th>
+                              <th scope="col">Pin Diff</th>
                               <th scope="col">Strikes</th>
                               <th scope="col">Spares</th>
                               <th scope="col">Open Frames</th>
@@ -487,6 +494,17 @@ $currentUser = getCurrentUser();
   <script>
     let currentData = null;
     let currentDateFilter = 'today';
+    const currentUserId = <?php echo $_SESSION['user_id'] ?? 'null'; ?>; // Current logged-in user
+
+    // Helper function to get profile picture URL
+    function getProfilePictureUrl(player) {
+      if (player.profile_picture && player.profile_picture !== '' && player.profile_picture !== null) {
+        return `uploads/profile_pictures/${player.profile_picture}`;
+      }
+      // Use template avatars (user-1.jpg through user-8.jpg) based on user ID
+      const avatarNumber = ((player.user_id || 0) % 8) + 1;
+      return `assets/images/profile/user-${avatarNumber}.jpg`;
+    }
 
     // Load data from backend
     async function loadData(dateFilter = 'today') {
@@ -529,7 +547,7 @@ $currentUser = getCurrentUser();
     function updateOverallTable() {
       const tbody = document.getElementById('overallTableBody');
       if (!currentData || currentData.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="10" class="text-center text-muted py-4">No data available</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="11" class="text-center text-muted py-4">No data available</td></tr>';
         return;
       }
       
@@ -537,6 +555,9 @@ $currentUser = getCurrentUser();
       const currentRows = tbody.querySelectorAll('tr');
       const isFirstLoad = currentRows.length === 0 || (currentRows.length === 1 && currentRows[0].querySelector('.loading-spinner'));
       
+      // Get first place total score as benchmark
+      const firstPlaceScore = currentData.length > 0 ? (currentData[0].total_score || 0) : 0;
+
       let html = '';
       currentData.forEach((player, index) => {
         const rank = index + 1;
@@ -550,20 +571,31 @@ $currentUser = getCurrentUser();
         const totalSpares = player.total_spares || 0;
         const lastUpdated = player.last_updated || 'Never';
 
+        // Calculate pin difference from first place
+        const pinDiff = totalScore - firstPlaceScore;
+        const pinDiffDisplay = pinDiff === 0 
+          ? '<span class="badge bg-success">Leader</span>' 
+          : `<span class="text-danger">${pinDiff}</span>`;
+
+        const isCurrentUser = player.user_id === currentUserId;
+        const highlightClass = isCurrentUser ? 'table-active' : '';
+        const highlightStyle = isCurrentUser ? 'background-color: rgba(13, 110, 253, 0.1); font-weight: 600;' : '';
+        
         html += `
-          <tr data-player-id="${player.user_id || index}" style="transition: all 0.3s ease;">
+          <tr data-player-id="${player.user_id || index}" class="${highlightClass}" style="transition: all 0.3s ease; ${highlightStyle}">
             <td><span class="rank-badge ${rankClass}">${rank}</span></td>
             <td>
               <div class="d-flex align-items-center">
-                <img src="assets/images/profile/user-${(index % 8) + 1}.jpg" alt="Player" class="rounded-circle me-2" width="32">
+                <img src="${getProfilePictureUrl(player)}" alt="Player" class="rounded-circle me-2" width="32" height="32" style="object-fit: cover;">
                 <div>
-                  <h6 class="mb-0">${player.first_name} ${player.last_name}</h6>
+                  <h6 class="mb-0 ${isCurrentUser ? 'text-primary' : ''}">${player.first_name} ${player.last_name} ${isCurrentUser ? '<i class="ti ti-user-check ms-1"></i>' : ''}</h6>
                   <small class="text-muted">${player.user_role}</small>
                 </div>
               </div>
             </td>
             <td><span class="badge bg-info">${teamName}</span></td>
             <td><span class="fw-bold text-success">${totalScore}</span></td>
+            <td>${pinDiffDisplay}</td>
             <td>${avgScore}</td>
             <td>${gamesPlayed}</td>
             <td><span class="text-warning">${bestScore}</span></td>
@@ -598,7 +630,7 @@ $currentUser = getCurrentUser();
     function updateGameTable(gameNumber) {
       const tbody = document.getElementById(`game${gameNumber}TableBody`);
       if (!currentData || currentData.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="8" class="text-center text-muted py-4">No data available for Game ${gameNumber}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="9" class="text-center text-muted py-4">No data available for Game ${gameNumber}</td></tr>`;
         return;
       }
 
@@ -609,7 +641,7 @@ $currentUser = getCurrentUser();
       });
 
       if (gamePlayers.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="8" class="text-center text-muted py-4">No scores available for Game ${gameNumber}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="9" class="text-center text-muted py-4">No scores available for Game ${gameNumber}</td></tr>`;
         return;
       }
 
@@ -624,6 +656,9 @@ $currentUser = getCurrentUser();
       const currentRows = tbody.querySelectorAll('tr');
       const isFirstLoad = currentRows.length === 0 || (currentRows.length === 1 && currentRows[0].querySelector('.loading-spinner'));
 
+      // Get first place score as benchmark for this game
+      const firstPlaceScore = gamePlayers.length > 0 ? gamePlayers[0][`game_${gameNumber}_score`].player_score : 0;
+
       let html = '';
       gamePlayers.forEach((player, index) => {
         const rank = index + 1;
@@ -636,20 +671,31 @@ $currentUser = getCurrentUser();
         const openFrames = gameScore.open_frames || 0;
         const time = gameScore.created_at ? new Date(gameScore.created_at).toLocaleTimeString() : 'N/A';
 
+        // Calculate pin difference from first place
+        const pinDiff = score - firstPlaceScore;
+        const pinDiffDisplay = pinDiff === 0 
+          ? '<span class="badge bg-success">Leader</span>' 
+          : `<span class="text-danger">${pinDiff}</span>`;
+
+        const isCurrentUser = player.user_id === currentUserId;
+        const highlightClass = isCurrentUser ? 'table-active' : '';
+        const highlightStyle = isCurrentUser ? 'background-color: rgba(13, 110, 253, 0.1); font-weight: 600;' : '';
+        
         html += `
-          <tr data-player-id="${player.user_id || index}" data-game="${gameNumber}" style="transition: all 0.3s ease;">
+          <tr data-player-id="${player.user_id || index}" data-game="${gameNumber}" class="${highlightClass}" style="transition: all 0.3s ease; ${highlightStyle}">
             <td><span class="rank-badge ${rankClass}">${rank}</span></td>
             <td>
               <div class="d-flex align-items-center">
-                <img src="assets/images/profile/user-${(index % 8) + 1}.jpg" alt="Player" class="rounded-circle me-2" width="32">
+                <img src="${getProfilePictureUrl(player)}" alt="Player" class="rounded-circle me-2" width="32" height="32" style="object-fit: cover;">
                 <div>
-                  <h6 class="mb-0">${player.first_name} ${player.last_name}</h6>
+                  <h6 class="mb-0 ${isCurrentUser ? 'text-primary' : ''}">${player.first_name} ${player.last_name} ${isCurrentUser ? '<i class="ti ti-user-check ms-1"></i>' : ''}</h6>
                   <small class="text-muted">${player.user_role}</small>
                 </div>
               </div>
             </td>
             <td><span class="badge bg-info">${teamName}</span></td>
             <td><span class="fw-bold text-success">${score}</span></td>
+            <td>${pinDiffDisplay}</td>
             <td>${strikes}</td>
             <td>${spares}</td>
             <td>${openFrames}</td>
@@ -682,7 +728,7 @@ $currentUser = getCurrentUser();
     function updateOverallTeamTable() {
       const tbody = document.getElementById('overallTeamTableBody');
       if (!currentData || currentData.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="10" class="text-center text-muted py-4">No team data available</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="11" class="text-center text-muted py-4">No team data available</td></tr>';
         return;
       }
 

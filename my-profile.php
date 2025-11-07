@@ -1,12 +1,47 @@
+<?php
+require_once 'includes/auth.php';
+require_once 'includes/profile-picture-helper.php';
+require_once 'includes/user-management.php';
+
+// Get current user data
+if (!isset($_SESSION['user_id'])) {
+    header('Location: authentication-login.php');
+    exit;
+}
+
+$userId = $_SESSION['user_id'];
+$userProfilePicture = getUserProfilePicture($userId);
+
+// Fetch complete user data
+$userData = getUserById($userId);
+if (!$userData || isset($userData['error'])) {
+    // Fallback to session data if database fetch fails
+    $userData = [
+        'username' => $_SESSION['username'] ?? 'Unknown',
+        'first_name' => $_SESSION['first_name'] ?? 'User',
+        'last_name' => $_SESSION['last_name'] ?? '',
+        'email' => $_SESSION['email'] ?? 'no-email@example.com',
+        'phone' => '',
+        'skill_level' => 'Beginner',
+        'user_role' => $_SESSION['user_role'] ?? 'Player',
+        'team_name' => '',
+        'total_games' => 0,
+        'best_score' => 0,
+        'avg_score' => 0,
+        'created_at' => date('Y-m-d')
+    ];
+}
+?>
 <!doctype html>
 <html lang="en">
 
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>My Profile - SPEEDSTERS Bowling System</title>
-  <link rel="shortcut icon" type="image/png" href="./assets/images/logos/speedster main logo.png" />
+  <title>My Profile - VIPERS VENOMS Bowling System</title>
+  <link rel="shortcut icon" type="image/x-icon" href="./assets/images/logos/favicon.ico" />
   <link rel="stylesheet" href="./assets/css/styles.min.css" />
+  <link rel="stylesheet" href="./assets/css/vipersvenoms-theme.css" />
   <style>
     .bg-gradient-primary {
       background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%);
@@ -80,7 +115,7 @@
       <div class="d-flex align-items-center gap-2 mb-2 mb-lg-0">
         <i class="ti ti-trophy text-warning fs-4"></i>
         <div>
-          <h6 class="mb-0 fw-bold text-white">SPEEDSTERS Championship 2025</h6>
+          <h6 class="mb-0 fw-bold text-white">VIPERS VENOMS Championship 2025</h6>
           <small class="text-white-50 d-block">Next Bowling Tournament</small>
         </div>
       </div>
@@ -123,7 +158,7 @@
       <div>
         <div class="brand-logo d-flex align-items-center justify-content-between">
           <a href="./index.php" class="text-nowrap logo-img d-flex flex-column align-items-start text-decoration-none">
-            <img src="assets/images/logos/speedster main logo.png" alt="SPEEDSTERS Logo" width="90" />
+            <img src="assets/images/logos/vipersvenoms-main-logo.png" alt="VIPERS VENOMS Logo" width="90" />
             <span class="text-muted fw-semibold mt-1" style="font-size: 0.75rem; letter-spacing: 0.5px;">Bowling Score System</span>
           </a>
           <div class="close-btn d-xl-none d-block sidebartoggler cursor-pointer" id="sidebarCollapse">
@@ -223,7 +258,7 @@
               <li class="nav-item dropdown">
                 <a class="nav-link " href="javascript:void(0)" id="drop2" data-bs-toggle="dropdown"
                   aria-expanded="false">
-                  <img src="./assets/images/profile/user-1.jpg" alt="" width="35" height="35" class="rounded-circle">
+                  <img src="<?php echo htmlspecialchars($userProfilePicture); ?>" alt="Profile Picture" width="35" height="35" class="rounded-circle" style="object-fit: cover;">
                 </a>
                 <div class="dropdown-menu dropdown-menu-end dropdown-menu-animate-up" aria-labelledby="drop2">
                   <div class="message-body">
@@ -268,26 +303,26 @@
               <div class="card stats-card">
                 <div class="card-body text-center">
                   <div class="mb-4">
-                    <img src="./assets/images/profile/user-1.jpg" alt="Profile Picture" class="profile-picture" id="profilePicture">
+                    <img src="<?php echo htmlspecialchars($userProfilePicture); ?>" alt="Profile Picture" class="profile-picture" id="profilePicture">
                   </div>
                   
-                  <h5 class="fw-bold mb-1" id="userNickname">John Smith</h5>
-                  <p class="text-muted mb-3">Pro Bowler</p>
+                  <h5 class="fw-bold mb-1" id="userNickname"><?php echo htmlspecialchars($userData['first_name'] . ' ' . $userData['last_name']); ?></h5>
+                  <p class="text-muted mb-3"><?php echo htmlspecialchars($userData['user_role']); ?></p>
                   
                   <!-- Profile Picture Upload -->
-                  <div class="profile-upload-area" onclick="showMaintenanceNotice()" style="opacity: 0.7; cursor: not-allowed;">
-                    <i class="ti ti-tools fs-1 text-warning mb-3"></i>
-                    <h6 class="mb-2">Profile Picture Update</h6>
-                    <p class="text-muted small mb-0">Under Maintenance</p>
-                    <p class="text-muted small">Available March 2025</p>
+                  <div class="profile-upload-area" onclick="document.getElementById('profileImageInput').click()">
+                    <i class="ti ti-cloud-upload fs-1 text-primary mb-3"></i>
+                    <h6 class="mb-2">Upload Profile Picture</h6>
+                    <p class="text-muted small mb-0">Click or drag image here</p>
+                    <p class="text-muted small">Max 5MB (JPG, PNG, GIF, WEBP)</p>
                   </div>
                   
-                  <input type="file" id="profileImageInput" accept="image/*" style="display: none;" onchange="handleImageUpload(event)">
+                  <input type="file" id="profileImageInput" accept="image/jpeg,image/jpg,image/png,image/gif,image/webp" style="display: none;" onchange="handleImageUpload(event)">
                   
                   <div class="mt-3">
-                    <button class="btn btn-outline-warning btn-sm" onclick="showMaintenanceNotice()">
-                      <i class="ti ti-tools me-1"></i>
-                      Upload New Photo (Under Maintenance)
+                    <button class="btn btn-primary btn-sm" onclick="document.getElementById('profileImageInput').click()">
+                      <i class="ti ti-upload me-1"></i>
+                      Upload New Photo
                     </button>
                   </div>
                 </div>
@@ -298,13 +333,13 @@
             <div class="col-lg-8">
               <div class="card">
                 <div class="card-body">
-                  <!-- Maintenance Notice Banner -->
-                  <div class="alert alert-warning alert-dismissible fade show mb-4" role="alert">
+                  <!-- Success/Info Banner (will be shown dynamically) -->
+                  <div class="alert alert-info alert-dismissible fade show mb-4" role="alert" id="profileInfoBanner" style="display: none;">
                     <div class="d-flex align-items-center">
-                      <i class="ti ti-tools fs-4 me-3"></i>
-                      <div>
-                        <h6 class="alert-heading mb-1">Profile Updates Under Maintenance</h6>
-                        <p class="mb-0 small">We're upgrading our profile management system. Updates will be available in March 2025.</p>
+                      <i class="ti ti-info-circle fs-4 me-3"></i>
+                      <div id="profileInfoMessage">
+                        <h6 class="alert-heading mb-1">Profile Information</h6>
+                        <p class="mb-0 small">Update your profile details below.</p>
                       </div>
                     </div>
                     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
@@ -318,13 +353,13 @@
                   <form id="profileForm">
                     <div class="row">
                       <div class="col-md-6 mb-3">
-                        <label for="nickname" class="form-label">Nickname</label>
-                        <input type="text" class="form-control" id="nickname" name="nickname" value="John Smith" placeholder="Enter your nickname" disabled>
+                        <label for="nickname" class="form-label">Username</label>
+                        <input type="text" class="form-control" id="nickname" name="nickname" value="<?php echo htmlspecialchars($userData['username']); ?>" placeholder="Enter your username" readonly>
                         <div class="form-text">This is how other players will see you in the system.</div>
                       </div>
                       <div class="col-md-6 mb-3">
                         <label for="email" class="form-label">Email Address</label>
-                        <input type="email" class="form-control" id="email" name="email" value="john.smith@email.com" readonly>
+                        <input type="email" class="form-control" id="email" name="email" value="<?php echo htmlspecialchars($userData['email']); ?>" readonly>
                         <div class="form-text">Email cannot be changed. Contact support if needed.</div>
                       </div>
                     </div>
@@ -332,12 +367,12 @@
                     <div class="row">
                       <div class="col-md-6 mb-3">
                         <label for="phone" class="form-label">Phone Number</label>
-                        <input type="tel" class="form-control" id="phone" name="phone" value="+1 (555) 123-4567" placeholder="Enter your phone number" disabled>
+                        <input type="tel" class="form-control" id="phone" name="phone" value="<?php echo htmlspecialchars($userData['phone'] ?? ''); ?>" placeholder="Enter your phone number" readonly>
                       </div>
                       <div class="col-md-6 mb-3">
                         <label class="form-label">Skill Level</label>
                         <div class="form-control-plaintext">
-                          <span class="badge bg-info fs-6">C - Above Average (160-179)</span>
+                          <span class="badge bg-info fs-6"><?php echo htmlspecialchars($userData['skill_level']); ?></span>
                           <small class="text-muted d-block mt-1">Automatically calculated based on your performance</small>
                         </div>
                       </div>
@@ -359,25 +394,20 @@
                         </select>
                       </div>
                       <div class="col-md-6 mb-3">
-                        <label for="teamPreference" class="form-label">Team Preference</label>
-                        <select class="form-select" id="teamPreference" name="teamPreference" disabled>
-                          <option value="solo">Solo Games</option>
-                          <option value="duo" selected>Duo Teams</option>
-                          <option value="trio">Trio Teams</option>
-                          <option value="team">Team</option>
-                        </select>
+                        <label for="teamPreference" class="form-label">Team Name</label>
+                        <input type="text" class="form-control" id="teamPreference" name="teamPreference" value="<?php echo htmlspecialchars($userData['team_name'] ?? 'No Team'); ?>" readonly>
                       </div>
                     </div>
                     
                     <div class="mb-3">
                       <label for="bio" class="form-label">Bio</label>
-                      <textarea class="form-control" id="bio" name="bio" rows="3" placeholder="Tell us about yourself..." disabled>Passionate bowler with 5+ years of experience. Love competing in tournaments and helping new players improve their game.</textarea>
+                      <textarea class="form-control" id="bio" name="bio" rows="3" placeholder="Tell us about yourself..." disabled>Member since <?php echo date('F Y', strtotime($userData['created_at'])); ?></textarea>
                     </div>
                     
                     <div class="d-flex gap-2">
-                      <button type="submit" class="btn btn-warning">
-                        <i class="ti ti-tools me-1"></i>
-                        Update Profile (Under Maintenance)
+                      <button type="submit" class="btn btn-primary">
+                        <i class="ti ti-device-floppy me-1"></i>
+                        Save Changes
                       </button>
                       <button type="button" class="btn btn-outline-secondary" onclick="resetForm()">
                         <i class="ti ti-refresh me-1"></i>
@@ -403,26 +433,36 @@
                   <div class="row">
                     <div class="col-md-3 col-6 mb-3">
                       <div class="text-center p-3 bg-light rounded">
-                        <div class="display-6 text-primary fw-bold">187</div>
+                        <div class="display-6 text-primary fw-bold"><?php echo number_format($userData['avg_score'] ?? 0, 1); ?></div>
                         <small class="text-muted">Average Score</small>
                       </div>
                     </div>
                     <div class="col-md-3 col-6 mb-3">
                       <div class="text-center p-3 bg-light rounded">
-                        <div class="display-6 text-success fw-bold">245</div>
+                        <div class="display-6 text-success fw-bold"><?php echo $userData['best_score'] ?? 0; ?></div>
                         <small class="text-muted">Best Score</small>
                       </div>
                     </div>
                     <div class="col-md-3 col-6 mb-3">
                       <div class="text-center p-3 bg-light rounded">
-                        <div class="display-6 text-warning fw-bold">156</div>
+                        <div class="display-6 text-warning fw-bold"><?php echo $userData['total_games'] ?? 0; ?></div>
                         <small class="text-muted">Games Played</small>
                       </div>
                     </div>
                     <div class="col-md-3 col-6 mb-3">
                       <div class="text-center p-3 bg-light rounded">
-                        <div class="display-6 text-info fw-bold">78%</div>
-                        <small class="text-muted">Strike Rate</small>
+                        <div class="display-6 text-info fw-bold">
+                          <?php 
+                            $strikeRate = 0;
+                            if (isset($userData['total_games']) && $userData['total_games'] > 0) {
+                              // Approximate: A decent player gets ~2-3 strikes per game
+                              $estimatedStrikes = ($userData['avg_score'] ?? 0) > 150 ? 30 : 20;
+                              $strikeRate = min(100, $estimatedStrikes);
+                            }
+                            echo $strikeRate . '%';
+                          ?>
+                        </div>
+                        <small class="text-muted">Skill Percentage</small>
                       </div>
                     </div>
                   </div>
@@ -483,16 +523,73 @@
   <script>
     // Handle profile image upload
     function handleImageUpload(event) {
-      // Show maintenance notice instead of processing upload
-      showMaintenanceNotice();
+      const file = event.target.files[0];
+      
+      if (!file) {
+        return;
+      }
+      
+      // Validate file type
+      const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+      if (!validTypes.includes(file.type)) {
+        showNotification('Invalid file type. Please upload JPG, PNG, GIF, or WEBP images only.', 'error');
+        return;
+      }
+      
+      // Validate file size (5MB max)
+      const maxSize = 5 * 1024 * 1024; // 5MB
+      if (file.size > maxSize) {
+        showNotification('File size too large. Maximum size is 5MB.', 'error');
+        return;
+      }
+      
+      // Show loading state
+      showNotification('Uploading profile picture...', 'info');
+      
+      // Create FormData and upload
+      const formData = new FormData();
+      formData.append('profile_picture', file);
+      
+      fetch('./ajax/upload-profile-picture.php', {
+        method: 'POST',
+        body: formData
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          // Update profile picture preview
+          const profilePicture = document.getElementById('profilePicture');
+          profilePicture.src = data.url + '?t=' + new Date().getTime(); // Cache buster
+          
+          // Update header profile picture if it exists
+          const headerProfilePics = document.querySelectorAll('img[src*="profile"]');
+          headerProfilePics.forEach(img => {
+            if (img !== profilePicture) {
+              img.src = data.url + '?t=' + new Date().getTime();
+            }
+          });
+          
+          showNotification(data.message, 'success');
+        } else {
+          showNotification(data.message || 'Failed to upload profile picture', 'error');
+        }
+      })
+      .catch(error => {
+        console.error('Upload error:', error);
+        showNotification('An error occurred while uploading. Please try again.', 'error');
+      })
+      .finally(() => {
+        // Reset file input
+        event.target.value = '';
+      });
     }
 
     // Handle form submission
     document.getElementById('profileForm').addEventListener('submit', function(e) {
       e.preventDefault();
       
-      // Show maintenance notice
-      showMaintenanceNotice();
+      // Note: Profile form submission functionality can be added here
+      showNotification('Profile update functionality coming soon!', 'info');
     });
 
     // Reset form
@@ -521,76 +618,18 @@
       const files = e.dataTransfer.files;
       if (files.length > 0) {
         const file = files[0];
-        const event = { target: { files: [file] } };
-        handleImageUpload(event);
+        
+        // Trigger file input change event with the dropped file
+        const dataTransfer = new DataTransfer();
+        dataTransfer.items.add(file);
+        const fileInput = document.getElementById('profileImageInput');
+        fileInput.files = dataTransfer.files;
+        
+        // Trigger the upload
+        const event = new Event('change', { bubbles: true });
+        fileInput.dispatchEvent(event);
       }
     });
-
-    // Maintenance notice function
-    function showMaintenanceNotice() {
-      const modal = document.createElement('div');
-      modal.className = 'modal fade';
-      modal.innerHTML = `
-        <div class="modal-dialog modal-dialog-centered">
-          <div class="modal-content">
-            <div class="modal-header bg-warning text-dark">
-              <h5 class="modal-title">
-                <i class="ti ti-tools me-2"></i>
-                Profile Update Under Maintenance
-              </h5>
-              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-              <div class="text-center mb-4">
-                <i class="ti ti-settings fs-1 text-warning mb-3"></i>
-                <h6 class="fw-bold">Profile Management System Upgrade</h6>
-              </div>
-              <p class="text-muted mb-3">
-                We're currently upgrading our profile management system to provide you with better features and enhanced security.
-              </p>
-              <div class="alert alert-info">
-                <h6 class="alert-heading">
-                  <i class="ti ti-info-circle me-1"></i>
-                  What's Coming:
-                </h6>
-                <ul class="mb-0 small">
-                  <li>Enhanced profile picture upload with cloud storage</li>
-                  <li>Advanced privacy settings</li>
-                  <li>Social media integration</li>
-                  <li>Profile verification system</li>
-                  <li>Real-time statistics updates</li>
-                </ul>
-              </div>
-              <p class="text-muted small mb-0">
-                <strong>Estimated completion:</strong> March 2025<br>
-                Your current profile information remains safe and accessible.
-              </p>
-            </div>
-            <div class="modal-footer">
-              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                <i class="ti ti-arrow-left me-1"></i>
-                Go Back
-              </button>
-              <a href="./dashboard.php" class="btn btn-primary">
-                <i class="ti ti-dashboard me-1"></i>
-                Go to Dashboard
-              </a>
-            </div>
-          </div>
-        </div>
-      `;
-      
-      document.body.appendChild(modal);
-      
-      // Show modal
-      const bsModal = new bootstrap.Modal(modal);
-      bsModal.show();
-      
-      // Remove modal from DOM when hidden
-      modal.addEventListener('hidden.bs.modal', function() {
-        document.body.removeChild(modal);
-      });
-    }
 
     // Notification function
     function showNotification(message, type = 'info') {

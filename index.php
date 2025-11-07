@@ -4,9 +4,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>SPEEDSTERS - Bowling Score System</title>
-  <link rel="shortcut icon" type="image/png" href="./assets/images/logos/speedster main logo.png" />
+  <title>VIPERS VENOMS - Bowling Score System</title>
+  <link rel="shortcut icon" type="image/x-icon" href="./assets/images/logos/favicon.ico" />
   <link rel="stylesheet" href="./assets/css/styles.min.css" />
+  <link rel="stylesheet" href="./assets/css/vipersvenoms-theme.css" />
   <style>
     .bg-gradient-primary {
       background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%);
@@ -44,9 +45,9 @@
           <div class="welcome-card p-5 text-center">
             <div class="mb-4">
               <a href="./homepage.php" class="logo-link">
-                <img src="assets/images/logos/speedster main logo.png" alt="SPEEDSTERS Logo" width="120" class="mb-3" />
+                <img src="assets/images/logos/vipersvenoms-main-logo.png" alt="VIPERS VENOMS Logo" width="120" class="mb-3" />
               </a>
-              <h1 class="display-4 fw-bold text-primary mb-3">Welcome to SPEEDSTERS</h1>
+              <h1 class="display-4 fw-bold text-primary mb-3">Welcome to VIPERS VENOMS</h1>
               <p class="lead text-muted mb-4">Your complete bowling score management system</p>
             </div>
             

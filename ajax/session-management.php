@@ -334,14 +334,14 @@ case 'get_players_data':
     $query1Start = microtime(true);
     
     if ($selectedDate === 'all') {
-        // For "All Time" - show all Speedsters players (even those without scores yet)
-        // For Solo mode, prioritize Speedsters team; for Team mode, show all teams
+        // For "All Time" - show all VipersVenoms players (even those without scores yet)
+        // For Solo mode, prioritize VipersVenoms team; for Team mode, show all teams
         if ($sessionType === 'Solo') {
-            // Solo: Show only Speedsters players
+            // Solo: Show only VipersVenoms players
             $stmt = $pdo->prepare("
                 SELECT 
                     u.user_id, u.username, u.first_name, u.last_name, u.email, u.phone, 
-                    u.skill_level, u.user_role, u.status, u.team_name, u.created_at,
+                    u.skill_level, u.user_role, u.status, u.team_name, u.profile_picture, u.created_at,
                     COALESCE(ROUND(AVG(gs.player_score), 1), 0) as avg_score,
                     COUNT(gs.score_id) as games_played,
                     COALESCE(MAX(gs.player_score), 0) as best_score,
@@ -353,7 +353,7 @@ case 'get_players_data':
                 LEFT JOIN game_scores gs ON u.user_id = gs.user_id AND gs.status = 'Completed' AND gs.game_mode = ?
                 WHERE (u.user_role = 'Player' OR u.user_role = 'Admin') 
                     AND u.status = 'Active'
-                    AND u.team_name = 'Speedsters'
+                    AND u.team_name = 'VipersVenoms'
                 GROUP BY u.user_id
                 ORDER BY u.first_name, u.last_name
             ");
@@ -362,7 +362,7 @@ case 'get_players_data':
             $stmt = $pdo->prepare("
                 SELECT 
                     u.user_id, u.username, u.first_name, u.last_name, u.email, u.phone, 
-                    u.skill_level, u.user_role, u.status, u.team_name, u.created_at,
+                    u.skill_level, u.user_role, u.status, u.team_name, u.profile_picture, u.created_at,
                     COALESCE(ROUND(AVG(gs.player_score), 1), 0) as avg_score,
                     COUNT(gs.score_id) as games_played,
                     COALESCE(MAX(gs.player_score), 0) as best_score,

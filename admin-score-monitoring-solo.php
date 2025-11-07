@@ -43,9 +43,10 @@ if ($sessionId) {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Admin - Solo Players Score Monitoring - SPEEDSTERS Bowling System</title>
-  <link rel="shortcut icon" type="image/png" href="./assets/images/logos/speedster main logo.png" />
+  <title>Admin - Solo Players Score Monitoring - VIPERS VENOMS Bowling System</title>
+  <link rel="shortcut icon" type="image/x-icon" href="./assets/images/logos/favicon.ico" />
   <link rel="stylesheet" href="./assets/css/styles.min.css" />
+  <link rel="stylesheet" href="./assets/css/vipersvenoms-theme.css" />
   <style>
     .bg-gradient-primary {
       background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%);
@@ -730,7 +731,7 @@ if ($sessionId) {
                                 <tr>
                                   <td colspan="10" class="text-center text-muted py-4">
                                     <i class="ti ti-users fs-1 mb-3 d-block"></i>
-                                    No Speedsters players found in the database.
+                                    No VipersVenoms players found in the database.
                                   </td>
                                 </tr>
                               <?php endif; ?>
@@ -3536,7 +3537,7 @@ if ($sessionId) {
         `;
       });
       
-      tbody.innerHTML = html || '<tr><td colspan="10" class="text-center text-muted py-4">No Speedsters data available for selected date range</td></tr>';
+      tbody.innerHTML = html || '<tr><td colspan="10" class="text-center text-muted py-4">No VipersVenoms data available for selected date range</td></tr>';
       }).catch(error => {
         console.error('Error getting available lanes:', error);
         // Fallback to default lanes 1-12 if there's an error
@@ -3595,7 +3596,7 @@ if ($sessionId) {
         `;
         });
         
-        tbody.innerHTML = html || '<tr><td colspan="10" class="text-center text-muted py-4">No Speedsters data available for selected date range</td></tr>';
+        tbody.innerHTML = html || '<tr><td colspan="10" class="text-center text-muted py-4">No VipersVenoms data available for selected date range</td></tr>';
       });
     }
 
