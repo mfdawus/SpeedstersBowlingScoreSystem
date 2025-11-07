@@ -21,9 +21,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             $sessionData = [
                 'session_name' => $_POST['session_name'] ?? 'New Session',
                 'session_date' => $_POST['session_date'] ?? date('Y-m-d'),
-                'session_time' => $_POST['session_time'] ?? '14:00',
+                'session_time' => $_POST['session_time'] ?? '21:00',
                 'game_mode' => $_POST['game_mode'] ?? 'Solo',
-                'max_players' => $_POST['max_players'] ?? 20,
+                'max_players' => $_POST['max_players'] ?? 10,
                 'created_by' => $currentUser['user_id'],
                 'notes' => $_POST['notes'] ?? '',
                 'lanes_count' => $_POST['lanes_count'] ?? 8,
@@ -86,7 +86,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 'session_date' => $_POST['session_date'] ?? '',
                 'session_time' => $_POST['session_time'] ?? '',
                 'game_mode' => $_POST['game_mode'] ?? 'Solo',
-                'max_players' => $_POST['max_players'] ?? 20,
+                'max_players' => $_POST['max_players'] ?? 10,
                 'status' => $_POST['status'] ?? 'Scheduled',
                 'notes' => $_POST['notes'] ?? '',
                 'lanes_count' => $_POST['lanes_count'] ?? 8,
@@ -898,7 +898,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 <div class="mb-3">
                   <label for="sessionTime" class="form-label">Session Time</label>
                   <input type="time" class="form-control" id="sessionTime" name="session_time" 
-                         value="14:00" required>
+                         value="21:00" required>
                 </div>
               </div>
             </div>
@@ -907,7 +907,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 <div class="mb-3">
                   <label for="maxPlayers" class="form-label">Max Players</label>
                   <input type="number" class="form-control" id="maxPlayers" name="max_players" 
-                         value="20" min="1" max="50" required>
+                         value="10" min="1" max="50" required>
                 </div>
               </div>
               <div class="col-md-6">

@@ -334,29 +334,54 @@ case 'get_players_data':
     $query1Start = microtime(true);
     
     if ($selectedDate === 'all') {
-        // For "All Time" - show all players with their game-specific averages
-        $stmt = $pdo->prepare("
-            SELECT 
-                u.user_id, u.username, u.first_name, u.last_name, u.email, u.phone, 
-                u.skill_level, u.user_role, u.status, u.team_name, u.created_at,
-                COALESCE(ROUND(AVG(gs.player_score), 1), 0) as avg_score,
-                COUNT(gs.score_id) as games_played,
-                COALESCE(MAX(gs.player_score), 0) as best_score,
-                COALESCE(SUM(gs.strikes), 0) as total_strikes,
-                COALESCE(SUM(gs.spares), 0) as total_spares,
-                MAX(gs.created_at) as last_updated,
-                COALESCE(sp.lane_number, u.lane_number) as lane_number
-            FROM users u
-            LEFT JOIN game_scores gs ON u.user_id = gs.user_id AND gs.status = 'Completed'
-            LEFT JOIN session_participants sp ON u.user_id = sp.user_id AND sp.session_id = gs.session_id
-            WHERE (u.user_role = 'Player' OR u.user_role = 'Admin') AND u.status = 'Active'
-            GROUP BY u.user_id, sp.lane_number
-            ORDER BY u.first_name, u.last_name
-        ");
-        $stmt->execute();
+        // For "All Time" - show all Speedsters players (even those without scores yet)
+        // For Solo mode, prioritize Speedsters team; for Team mode, show all teams
+        if ($sessionType === 'Solo') {
+            // Solo: Show only Speedsters players
+            $stmt = $pdo->prepare("
+                SELECT 
+                    u.user_id, u.username, u.first_name, u.last_name, u.email, u.phone, 
+                    u.skill_level, u.user_role, u.status, u.team_name, u.created_at,
+                    COALESCE(ROUND(AVG(gs.player_score), 1), 0) as avg_score,
+                    COUNT(gs.score_id) as games_played,
+                    COALESCE(MAX(gs.player_score), 0) as best_score,
+                    COALESCE(SUM(gs.strikes), 0) as total_strikes,
+                    COALESCE(SUM(gs.spares), 0) as total_spares,
+                    MAX(gs.created_at) as last_updated,
+                    NULL as lane_number
+                FROM users u
+                LEFT JOIN game_scores gs ON u.user_id = gs.user_id AND gs.status = 'Completed' AND gs.game_mode = ?
+                WHERE (u.user_role = 'Player' OR u.user_role = 'Admin') 
+                    AND u.status = 'Active'
+                    AND u.team_name = 'Speedsters'
+                GROUP BY u.user_id
+                ORDER BY u.first_name, u.last_name
+            ");
+        } else {
+            // Team: Show all players with scores in the selected game mode
+            $stmt = $pdo->prepare("
+                SELECT 
+                    u.user_id, u.username, u.first_name, u.last_name, u.email, u.phone, 
+                    u.skill_level, u.user_role, u.status, u.team_name, u.created_at,
+                    COALESCE(ROUND(AVG(gs.player_score), 1), 0) as avg_score,
+                    COUNT(gs.score_id) as games_played,
+                    COALESCE(MAX(gs.player_score), 0) as best_score,
+                    COALESCE(SUM(gs.strikes), 0) as total_strikes,
+                    COALESCE(SUM(gs.spares), 0) as total_spares,
+                    MAX(gs.created_at) as last_updated,
+                    NULL as lane_number
+                FROM users u
+                LEFT JOIN game_scores gs ON u.user_id = gs.user_id AND gs.status = 'Completed' AND gs.game_mode = ?
+                WHERE (u.user_role = 'Player' OR u.user_role = 'Admin') AND u.status = 'Active'
+                GROUP BY u.user_id
+                HAVING games_played > 0
+                ORDER BY u.first_name, u.last_name
+            ");
+        }
+        $stmt->execute([$sessionType]);
         $players = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
-        // Get game-specific averages for each player
+        // Get game-specific averages for each player, filtered by game mode
         $gameAvgStmt = $pdo->prepare("
             SELECT 
                 user_id, 
@@ -366,14 +391,14 @@ case 'get_players_data':
                 ROUND(AVG(spares), 1) as game_avg_spares,
                 COUNT(*) as game_count
             FROM game_scores 
-            WHERE status = 'Completed' AND user_id = ?
+            WHERE status = 'Completed' AND user_id = ? AND game_mode = ?
             GROUP BY user_id, game_number
             ORDER BY game_number
         ");
         
         // Add game-specific averages to each player
         foreach ($players as &$player) {
-            $gameAvgStmt->execute([$player['user_id']]);
+            $gameAvgStmt->execute([$player['user_id'], $sessionType]);
             $gameAverages = $gameAvgStmt->fetchAll(PDO::FETCH_ASSOC);
             
             // Initialize game averages
@@ -434,17 +459,29 @@ case 'get_players_data':
         error_log("DEBUG: Found session for date $selectedDate: " . json_encode($activeSession));
         
         if ($activeSession) {
-            // Get session participants (always show participants, even if no scores)
+            // Get session participants (players who were selected for this session)
             $players = getSessionParticipantsForScoring($activeSession['session_id']);
-            // Force clear any score data that might be contaminating
-            foreach ($players as &$player) {
-                $player['avg_score'] = 0;
-                $player['average_score'] = 0;
-                $player['total_score'] = 0;
-                $player['best_score'] = 0;
-                $player['games_played'] = 0;
-                $player['total_strikes'] = 0;
-                $player['total_spares'] = 0;
+            
+            // If no participants found, it means this session has no selected participants
+            // This could happen for old sessions or improperly created sessions
+            if (empty($players)) {
+                error_log("WARNING: No session participants found for session " . $activeSession['session_id']);
+                error_log("This session may not have participants selected. Please add participants to this session.");
+                
+                // Return empty array - don't show any players
+                // Admin needs to add participants to this session first
+                $players = [];
+            } else {
+                // Force clear any score data that might be contaminating
+                foreach ($players as &$player) {
+                    $player['avg_score'] = 0;
+                    $player['average_score'] = 0;
+                    $player['total_score'] = 0;
+                    $player['best_score'] = 0;
+                    $player['games_played'] = 0;
+                    $player['total_strikes'] = 0;
+                    $player['total_spares'] = 0;
+                }
             }
         } else {
             // No session found, return empty array

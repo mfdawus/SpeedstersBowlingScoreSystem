@@ -2125,7 +2125,7 @@ $activeSession = getActiveSession();
               </div>
               <div class="col-md-6 mb-3">
                 <label for="sessionTime" class="form-label">Time</label>
-                <input type="time" class="form-control" id="sessionTime" name="session_time" required>
+                <input type="time" class="form-control" id="sessionTime" name="session_time" value="21:00" required>
               </div>
             </div>
             <div class="mb-3">
@@ -2150,7 +2150,7 @@ $activeSession = getActiveSession();
             
             <div class="mb-3">
               <label for="maxPlayers" class="form-label">Max Players</label>
-              <input type="number" class="form-control" id="maxPlayers" name="max_players" value="20" min="1" max="20" required>
+              <input type="number" class="form-control" id="maxPlayers" name="max_players" value="10" min="1" max="20" required>
             </div>
             
             <!-- Lane Configuration Section -->

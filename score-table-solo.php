@@ -297,6 +297,7 @@ $currentUser = getCurrentUser();
                             <tr>
                               <th scope="col">Rank</th>
                               <th scope="col">Player</th>
+                              <th scope="col">Lane</th>
                               <th scope="col">Score</th>
                               <th scope="col">Strikes</th>
                               <th scope="col">Spares</th>
@@ -306,7 +307,7 @@ $currentUser = getCurrentUser();
                           </thead>
                           <tbody id="game1TableBody">
                             <tr>
-                              <td colspan="7" class="text-center py-4">
+                              <td colspan="8" class="text-center py-4">
                                 <div class="loading-spinner"></div>
                                 <span class="ms-2">Loading Game 1 data...</span>
                               </td>
@@ -324,6 +325,7 @@ $currentUser = getCurrentUser();
                             <tr>
                               <th scope="col">Rank</th>
                               <th scope="col">Player</th>
+                              <th scope="col">Lane</th>
                               <th scope="col">Score</th>
                               <th scope="col">Strikes</th>
                               <th scope="col">Spares</th>
@@ -333,7 +335,7 @@ $currentUser = getCurrentUser();
                           </thead>
                           <tbody id="game2TableBody">
                             <tr>
-                              <td colspan="7" class="text-center py-4">
+                              <td colspan="8" class="text-center py-4">
                                 <div class="loading-spinner"></div>
                                 <span class="ms-2">Loading Game 2 data...</span>
                               </td>
@@ -351,6 +353,7 @@ $currentUser = getCurrentUser();
                             <tr>
                               <th scope="col">Rank</th>
                               <th scope="col">Player</th>
+                              <th scope="col">Lane</th>
                               <th scope="col">Score</th>
                               <th scope="col">Strikes</th>
                               <th scope="col">Spares</th>
@@ -360,7 +363,7 @@ $currentUser = getCurrentUser();
                           </thead>
                           <tbody id="game3TableBody">
                             <tr>
-                              <td colspan="7" class="text-center py-4">
+                              <td colspan="8" class="text-center py-4">
                                 <div class="loading-spinner"></div>
                                 <span class="ms-2">Loading Game 3 data...</span>
                               </td>
@@ -378,6 +381,7 @@ $currentUser = getCurrentUser();
                             <tr>
                               <th scope="col">Rank</th>
                               <th scope="col">Player</th>
+                              <th scope="col">Lane</th>
                               <th scope="col">Score</th>
                               <th scope="col">Strikes</th>
                               <th scope="col">Spares</th>
@@ -387,7 +391,7 @@ $currentUser = getCurrentUser();
                           </thead>
                           <tbody id="game4TableBody">
                             <tr>
-                              <td colspan="7" class="text-center py-4">
+                              <td colspan="8" class="text-center py-4">
                                 <div class="loading-spinner"></div>
                                 <span class="ms-2">Loading Game 4 data...</span>
                               </td>
@@ -405,6 +409,7 @@ $currentUser = getCurrentUser();
                             <tr>
                               <th scope="col">Rank</th>
                               <th scope="col">Player</th>
+                              <th scope="col">Lane</th>
                               <th scope="col">Score</th>
                               <th scope="col">Strikes</th>
                               <th scope="col">Spares</th>
@@ -414,7 +419,7 @@ $currentUser = getCurrentUser();
                           </thead>
                           <tbody id="game5TableBody">
                             <tr>
-                              <td colspan="7" class="text-center py-4">
+                              <td colspan="8" class="text-center py-4">
                                 <div class="loading-spinner"></div>
                                 <span class="ms-2">Loading Game 5 data...</span>
                               </td>
@@ -596,7 +601,7 @@ $currentUser = getCurrentUser();
     function updateGameTable(gameNumber) {
       const tbody = document.getElementById(`game${gameNumber}TableBody`);
       if (!currentData || currentData.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-4">No data available for Game ${gameNumber}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center text-muted py-4">No data available for Game ${gameNumber}</td></tr>`;
         return;
       }
 
@@ -607,7 +612,7 @@ $currentUser = getCurrentUser();
       });
 
       if (gamePlayers.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-4">No scores available for Game ${gameNumber}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center text-muted py-4">No scores available for Game ${gameNumber}</td></tr>`;
         return;
       }
 
@@ -645,6 +650,7 @@ $currentUser = getCurrentUser();
                 </div>
               </div>
             </td>
+            <td><span class="badge bg-primary">${player.lane_number || '-'}</span></td>
             <td><span class="fw-bold text-success">${score}</span></td>
             <td>${strikes}</td>
             <td>${spares}</td>

@@ -302,19 +302,20 @@ $currentUser = getCurrentUser();
                             <table class="table table-bordered" id="game1Table">
                               <thead class="table-dark">
                                 <tr>
-                                  <th scope="col" style="width: 25%;">Player</th>
+                                  <th scope="col" style="width: 22%;">Player</th>
                                   <th scope="col" style="width: 8%;">Team Name</th>
+                                  <th scope="col" style="width: 7%;">Lane</th>
                                   <th scope="col" style="width: 10%;">Score</th>
                                   <th scope="col" style="width: 10%;">Strikes</th>
                                   <th scope="col" style="width: 10%;">Spares</th>
                                   <th scope="col" style="width: 10%;">Open Frames</th>
                                   <th scope="col" style="width: 10%;">Status</th>
-                                  <th scope="col" style="width: 17%;">Actions</th>
+                                  <th scope="col" style="width: 13%;">Actions</th>
                             </tr>
                               </thead>
                               <tbody id="game1TableBody">
                                 <tr>
-                                  <td colspan="8" class="text-center py-4">
+                                  <td colspan="9" class="text-center py-4">
                                     <div class="loading-spinner"></div>
                                     <span class="ms-2">Loading Game 1 data...</span>
                               </td>
@@ -342,19 +343,20 @@ $currentUser = getCurrentUser();
                             <table class="table table-bordered" id="game2Table">
                               <thead class="table-dark">
                                 <tr>
-                                  <th scope="col" style="width: 25%;">Player</th>
+                                  <th scope="col" style="width: 22%;">Player</th>
                                   <th scope="col" style="width: 8%;">Team Name</th>
+                                  <th scope="col" style="width: 7%;">Lane</th>
                                   <th scope="col" style="width: 10%;">Score</th>
                                   <th scope="col" style="width: 10%;">Strikes</th>
                                   <th scope="col" style="width: 10%;">Spares</th>
                                   <th scope="col" style="width: 10%;">Open Frames</th>
                                   <th scope="col" style="width: 10%;">Status</th>
-                                  <th scope="col" style="width: 17%;">Actions</th>
+                                  <th scope="col" style="width: 13%;">Actions</th>
                             </tr>
                               </thead>
                               <tbody id="game2TableBody">
                                 <tr>
-                                  <td colspan="8" class="text-center py-4">
+                                  <td colspan="9" class="text-center py-4">
                                     <div class="loading-spinner"></div>
                                     <span class="ms-2">Loading Game 2 data...</span>
                               </td>
@@ -382,19 +384,20 @@ $currentUser = getCurrentUser();
                             <table class="table table-bordered" id="game3Table">
                               <thead class="table-dark">
                                 <tr>
-                                  <th scope="col" style="width: 25%;">Player</th>
+                                  <th scope="col" style="width: 22%;">Player</th>
                                   <th scope="col" style="width: 8%;">Team Name</th>
+                                  <th scope="col" style="width: 7%;">Lane</th>
                                   <th scope="col" style="width: 10%;">Score</th>
                                   <th scope="col" style="width: 10%;">Strikes</th>
                                   <th scope="col" style="width: 10%;">Spares</th>
                                   <th scope="col" style="width: 10%;">Open Frames</th>
                                   <th scope="col" style="width: 10%;">Status</th>
-                                  <th scope="col" style="width: 17%;">Actions</th>
+                                  <th scope="col" style="width: 13%;">Actions</th>
                             </tr>
                           </thead>
                               <tbody id="game3TableBody">
                                 <tr>
-                                  <td colspan="8" class="text-center py-4">
+                                  <td colspan="9" class="text-center py-4">
                                     <div class="loading-spinner"></div>
                                     <span class="ms-2">Loading Game 3 data...</span>
                               </td>
@@ -422,19 +425,20 @@ $currentUser = getCurrentUser();
                             <table class="table table-bordered" id="game4Table">
                               <thead class="table-dark">
                                 <tr>
-                                  <th scope="col" style="width: 25%;">Player</th>
+                                  <th scope="col" style="width: 22%;">Player</th>
                                   <th scope="col" style="width: 8%;">Team Name</th>
+                                  <th scope="col" style="width: 7%;">Lane</th>
                                   <th scope="col" style="width: 10%;">Score</th>
                                   <th scope="col" style="width: 10%;">Strikes</th>
                                   <th scope="col" style="width: 10%;">Spares</th>
                                   <th scope="col" style="width: 10%;">Open Frames</th>
                                   <th scope="col" style="width: 10%;">Status</th>
-                                  <th scope="col" style="width: 17%;">Actions</th>
+                                  <th scope="col" style="width: 13%;">Actions</th>
                             </tr>
                               </thead>
                               <tbody id="game4TableBody">
                                 <tr>
-                                  <td colspan="8" class="text-center py-4">
+                                  <td colspan="9" class="text-center py-4">
                                     <div class="loading-spinner"></div>
                                     <span class="ms-2">Loading Game 4 data...</span>
                               </td>
@@ -462,19 +466,20 @@ $currentUser = getCurrentUser();
                             <table class="table table-bordered" id="game5Table">
                               <thead class="table-dark">
                                 <tr>
-                                  <th scope="col" style="width: 25%;">Player</th>
+                                  <th scope="col" style="width: 22%;">Player</th>
                                   <th scope="col" style="width: 8%;">Team Name</th>
+                                  <th scope="col" style="width: 7%;">Lane</th>
                                   <th scope="col" style="width: 10%;">Score</th>
                                   <th scope="col" style="width: 10%;">Strikes</th>
                                   <th scope="col" style="width: 10%;">Spares</th>
                                   <th scope="col" style="width: 10%;">Open Frames</th>
                                   <th scope="col" style="width: 10%;">Status</th>
-                                  <th scope="col" style="width: 17%;">Actions</th>
+                                  <th scope="col" style="width: 13%;">Actions</th>
                                 </tr>
                               </thead>
                               <tbody id="game5TableBody">
                                 <tr>
-                                  <td colspan="8" class="text-center py-4">
+                                  <td colspan="9" class="text-center py-4">
                                     <div class="loading-spinner"></div>
                                     <span class="ms-2">Loading Game 5 data...</span>
                                   </td>
@@ -667,10 +672,10 @@ $currentUser = getCurrentUser();
           };
         }
         
-        teamStats[teamName].totalScore += player.total_score || 0;
-        teamStats[teamName].totalGames += player.games_played || 0;
-        teamStats[teamName].totalStrikes += player.total_strikes || 0;
-        teamStats[teamName].totalSpares += player.total_spares || 0;
+        teamStats[teamName].totalScore += Number(player.total_score) || 0;
+        teamStats[teamName].totalGames += Number(player.games_played) || 0;
+        teamStats[teamName].totalStrikes += Number(player.total_strikes) || 0;
+        teamStats[teamName].totalSpares += Number(player.total_spares) || 0;
         teamStats[teamName].players.push(player);
         teamStats[teamName].playerNames.push(player.first_name + ' ' + player.last_name);
         
@@ -679,8 +684,8 @@ $currentUser = getCurrentUser();
         teamStats[teamName].playerAvatars += `<img src="assets/images/profile/user-${avatarNum}.jpg" alt="Player" class="player-avatar">`;
         
         // Track best player
-        if ((player.best_score || 0) > teamStats[teamName].bestScore) {
-          teamStats[teamName].bestScore = player.best_score || 0;
+        if ((Number(player.best_score) || 0) > teamStats[teamName].bestScore) {
+          teamStats[teamName].bestScore = Number(player.best_score) || 0;
           teamStats[teamName].bestPlayer = player.first_name + ' ' + player.last_name;
         }
       });
@@ -692,7 +697,7 @@ $currentUser = getCurrentUser();
       teamArray.forEach((team, index) => {
         const rank = index + 1;
         const rankClass = rank === 1 ? 'rank-1' : rank === 2 ? 'rank-2' : rank === 3 ? 'rank-3' : 'rank-other';
-        const avgScore = team.players.length > 0 ? (team.totalScore / team.players.length).toFixed(1) : 0;
+        const avgScore = team.totalGames > 0 ? (team.totalScore / team.totalGames).toFixed(1) : 0;
         
         html += `
           <tr>
@@ -764,6 +769,12 @@ $currentUser = getCurrentUser();
             </td>
             <td class="text-center">
               <span class="badge bg-info">${player.team_name || 'No Team'}</span>
+            </td>
+            <td class="text-center">
+              <select class="form-select form-select-sm" data-user-id="${player.user_id}" onchange="updatePlayerLane(${player.user_id}, this.value)" style="min-width: 80px;">
+                <option value="">Select</option>
+                ${[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(lane => `<option value="${lane}" ${player.lane_number == lane ? 'selected' : ''}>Lane ${lane}</option>`).join('')}
+              </select>
             </td>
             <td>
               <input type="number" class="form-control form-control-sm score-input" 
@@ -845,6 +856,84 @@ $currentUser = getCurrentUser();
     // Session Management Functions
     const ongoingSubmissions = new Set();
     
+    function updatePlayerLane(userId, laneNumber) {
+      if (!userId) {
+        showNotification('Invalid user ID', 'error');
+        return;
+      }
+      
+      // Show loading notification
+      showNotification('Updating lane assignment...', 'info');
+      
+      // Get current session ID
+      const sessionId = window.currentSessionId;
+      
+      if (!sessionId) {
+        showNotification('Unable to determine current session. Please refresh the page.', 'error');
+        return;
+      }
+      
+      // Prepare form data
+      const formData = new FormData();
+      formData.append('action', 'update_player_lane');
+      formData.append('user_id', userId);
+      formData.append('lane_number', laneNumber);
+      formData.append('session_id', sessionId);
+      
+      // Send AJAX request
+      fetch('ajax/session-management.php?v=' + Date.now(), {
+        method: 'POST',
+        body: formData
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          showNotification(`Lane updated successfully! Player assigned to ${laneNumber ? 'Lane ' + laneNumber : 'No lane'}`, 'success');
+          
+          // Update the dropdown to show the new lane number
+          const dropdown = document.querySelector(`select[data-user-id="${userId}"]`);
+          if (dropdown) {
+            dropdown.value = laneNumber;
+            
+            // Add visual feedback
+            dropdown.style.backgroundColor = '#d4edda';
+            dropdown.style.borderColor = '#28a745';
+            setTimeout(() => {
+              dropdown.style.backgroundColor = '';
+              dropdown.style.borderColor = '';
+            }, 2000);
+          }
+          
+          // Auto-refresh the tables to show updated lane numbers
+          const dateFilter = document.getElementById('dateFilter');
+          const selectedDate = dateFilter ? dateFilter.value : 'today';
+          delete dataCache[selectedDate];
+          setTimeout(() => {
+            refreshTable();
+          }, 500);
+        } else {
+          console.error('Lane update failed:', data.message);
+          showNotification('Error updating lane: ' + data.message, 'error');
+          
+          // Revert the select value
+          const select = document.querySelector(`select[data-user-id="${userId}"]`);
+          if (select) {
+            select.value = '';
+          }
+        }
+      })
+      .catch(error => {
+        console.error('Error updating lane:', error);
+        showNotification('Error updating lane: ' + error.message, 'error');
+        
+        // Revert the select value
+        const select = document.querySelector(`select[data-user-id="${userId}"]`);
+        if (select) {
+          select.value = '';
+        }
+      });
+    }
+    
     function savePlayerScore(userId, gameNumber, playerName) {
       console.log('savePlayerScore called:', {userId, gameNumber, playerName});
       
@@ -873,19 +962,13 @@ $currentUser = getCurrentUser();
       };
       
       let hasErrors = false;
+      let errorMessages = [];
       
       inputs.forEach(input => {
         const field = input.getAttribute('data-field');
         const value = input.value.trim();
         
-        if (field === 'score' && value && (value < 0 || value > 300)) {
-          input.classList.add('is-invalid');
-          hasErrors = true;
-          return;
-        } else {
-          input.classList.remove('is-invalid');
-        }
-        
+        // Map the field names correctly
         if (field === 'score') {
           scoreData.player_score = value;
         } else if (field === 'strikes') {
@@ -897,14 +980,138 @@ $currentUser = getCurrentUser();
         }
       });
       
-      if (hasErrors) {
-        showNotification('Please fix invalid score (0-300)', 'error');
-        ongoingSubmissions.delete(submissionKey);
-        return;
+      // Reset all invalid states
+      inputs.forEach(input => input.classList.remove('is-invalid'));
+      
+      // Validate Score (Required)
+      if (!scoreData.player_score || scoreData.player_score === '') {
+        const scoreInput = row.querySelector('[data-field="score"]');
+        if (scoreInput) scoreInput.classList.add('is-invalid');
+        errorMessages.push('Score is required');
+        hasErrors = true;
+      } else {
+        const score = parseInt(scoreData.player_score);
+        if (isNaN(score) || score < 0 || score > 300) {
+          const scoreInput = row.querySelector('[data-field="score"]');
+          if (scoreInput) scoreInput.classList.add('is-invalid');
+          errorMessages.push('Score must be between 0 and 300');
+          hasErrors = true;
+        }
       }
       
-      if (!scoreData.player_score) {
-        showNotification('Please enter a score for ' + playerName, 'warning');
+      // Validate Strikes (Required)
+      if (!scoreData.strikes || scoreData.strikes === '') {
+        const strikesInput = row.querySelector('[data-field="strikes"]');
+        if (strikesInput) strikesInput.classList.add('is-invalid');
+        errorMessages.push('Strikes is required');
+        hasErrors = true;
+      } else {
+        const strikes = parseInt(scoreData.strikes);
+        if (isNaN(strikes) || strikes < 0 || strikes > 12) {
+          const strikesInput = row.querySelector('[data-field="strikes"]');
+          if (strikesInput) strikesInput.classList.add('is-invalid');
+          errorMessages.push('Strikes must be between 0 and 12');
+          hasErrors = true;
+        }
+      }
+      
+      // Validate Spares (Required)
+      if (!scoreData.spares || scoreData.spares === '') {
+        const sparesInput = row.querySelector('[data-field="spares"]');
+        if (sparesInput) sparesInput.classList.add('is-invalid');
+        errorMessages.push('Spares is required');
+        hasErrors = true;
+      } else {
+        const spares = parseInt(scoreData.spares);
+        if (isNaN(spares) || spares < 0 || spares > 10) {
+          const sparesInput = row.querySelector('[data-field="spares"]');
+          if (sparesInput) sparesInput.classList.add('is-invalid');
+          errorMessages.push('Spares must be between 0 and 10');
+          hasErrors = true;
+        }
+      }
+      
+      // Validate Open Frames (Required)
+      if (!scoreData.open_frames || scoreData.open_frames === '') {
+        const openFramesInput = row.querySelector('[data-field="open_frames"]');
+        if (openFramesInput) openFramesInput.classList.add('is-invalid');
+        errorMessages.push('Open Frames is required');
+        hasErrors = true;
+      } else {
+        const openFrames = parseInt(scoreData.open_frames);
+        if (isNaN(openFrames) || openFrames < 0 || openFrames > 10) {
+          const openFramesInput = row.querySelector('[data-field="open_frames"]');
+          if (openFramesInput) openFramesInput.classList.add('is-invalid');
+          errorMessages.push('Open Frames must be between 0 and 10');
+          hasErrors = true;
+        }
+      }
+      
+      // Logical validation: Check frame totals
+      // Note: Total can be up to 12 due to bonus balls in 10th frame
+      // Perfect game = 12 strikes (9 frames + 3 balls in 10th frame)
+      if (!hasErrors) {
+        const score = parseInt(scoreData.player_score) || 0;
+        const strikes = parseInt(scoreData.strikes) || 0;
+        const spares = parseInt(scoreData.spares) || 0;
+        const openFrames = parseInt(scoreData.open_frames) || 0;
+        const total = strikes + spares + openFrames;
+        
+        // Total should be between 10-12 (accounting for 10th frame bonus balls)
+        if (total < 10) {
+          errorMessages.push('Total frames must equal 10 (Strikes + Spares + Open Frames)');
+          hasErrors = true;
+          row.querySelector('[data-field="strikes"]')?.classList.add('is-invalid');
+          row.querySelector('[data-field="spares"]')?.classList.add('is-invalid');
+          row.querySelector('[data-field="open_frames"]')?.classList.add('is-invalid');
+        } else if (total > 12) {
+          errorMessages.push('Total frames cannot exceed 12 (max with 10th frame bonus)');
+          hasErrors = true;
+          row.querySelector('[data-field="strikes"]')?.classList.add('is-invalid');
+          row.querySelector('[data-field="spares"]')?.classList.add('is-invalid');
+          row.querySelector('[data-field="open_frames"]')?.classList.add('is-invalid');
+        }
+        
+        // Score-based validation: Perfect game logic
+        if (score === 300) {
+          if (strikes !== 12 || spares !== 0 || openFrames !== 0) {
+            errorMessages.push('A perfect 300 game must have exactly 12 strikes, 0 spares, and 0 open frames');
+            hasErrors = true;
+            row.querySelector('[data-field="strikes"]')?.classList.add('is-invalid');
+            row.querySelector('[data-field="spares"]')?.classList.add('is-invalid');
+            row.querySelector('[data-field="open_frames"]')?.classList.add('is-invalid');
+          }
+        }
+        
+        // Score-based validation: Maximum possible with spares or opens
+        if (score >= 290 && (spares > 0 || openFrames > 0)) {
+          errorMessages.push('Scores 290+ require all strikes (12 strikes, 0 spares, 0 open frames)');
+          hasErrors = true;
+          row.querySelector('[data-field="strikes"]')?.classList.add('is-invalid');
+          row.querySelector('[data-field="spares"]')?.classList.add('is-invalid');
+          row.querySelector('[data-field="open_frames"]')?.classList.add('is-invalid');
+        }
+        
+        // Logical check: Cannot have more strikes than the score allows
+        if (strikes === 12 && score < 300) {
+          errorMessages.push('12 strikes (perfect game) must result in a score of 300');
+          hasErrors = true;
+          row.querySelector('[data-field="score"]')?.classList.add('is-invalid');
+          row.querySelector('[data-field="strikes"]')?.classList.add('is-invalid');
+        }
+        
+        // Logical check: If all open frames, score should be low
+        if (openFrames === 10 && score > 90) {
+          errorMessages.push('All open frames cannot result in such a high score');
+          hasErrors = true;
+          row.querySelector('[data-field="score"]')?.classList.add('is-invalid');
+          row.querySelector('[data-field="open_frames"]')?.classList.add('is-invalid');
+        }
+      }
+      
+      if (hasErrors) {
+        const errorMsg = errorMessages.join('<br>');
+        showNotification(errorMsg, 'error');
         ongoingSubmissions.delete(submissionKey);
         return;
       }
@@ -958,32 +1165,46 @@ $currentUser = getCurrentUser();
           const data = JSON.parse(text);
           console.log('Parsed data:', data);
           if (data.success) {
-            showNotification(`Score saved for ${playerName}: ${scoreData.player_score}`, 'success');
-            updatePlayerStatus(row, scoreData.player_score, scoreData.strikes, scoreData.spares, scoreData.open_frames);
+            // Check if this was an update or a new save
+            const isUpdate = saveBtn.innerHTML.includes('Update');
+            const actionText = isUpdate ? 'updated' : 'saved';
+            
+            showNotification(`Score ${actionText} for ${playerName}: ${scoreData.player_score}`, 'success');
+            
             // Clear cache to force fresh data fetch
             const dateFilter = document.getElementById('dateFilter');
             const selectedDate = dateFilter ? dateFilter.value : 'today';
             delete dataCache[selectedDate];
             console.log('Cache cleared for date:', selectedDate);
+            
+            // Wait a bit longer for database to update, then do full refresh
+            // This ensures the status shows as "Completed" and rankings are correct
             setTimeout(() => {
               refreshTable();
-            }, 1000);
+            }, 800);
           } else {
             showNotification('Error: ' + data.message, 'error');
+            // Reset button on error
+            saveBtn.innerHTML = originalText;
+            saveBtn.disabled = false;
           }
         } catch (e) {
           console.error('JSON parse error:', e);
           showNotification('Server error: ' + text, 'error');
+          // Reset button on error
+          saveBtn.innerHTML = originalText;
+          saveBtn.disabled = false;
         }
       })
       .catch(error => {
         console.error('Fetch error:', error);
         showNotification('An error occurred while saving score', 'error');
+        // Reset button on error
+        saveBtn.innerHTML = originalText;
+        saveBtn.disabled = false;
       })
       .finally(() => {
         ongoingSubmissions.delete(submissionKey);
-        saveBtn.innerHTML = originalText;
-        saveBtn.disabled = false;
       });
     }
 

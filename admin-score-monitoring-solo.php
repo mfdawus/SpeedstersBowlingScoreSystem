@@ -2297,8 +2297,9 @@ if ($sessionId) {
       try {
         // Update tables gently without disrupting layout
         
-        // Store current data globally
+        // Store current data and selected date globally
         window.currentData = players;
+        window.selectedDate = selectedDate;
         
         // DON'T update table headers to avoid duplicate headers
         // updateTableHeaders(selectedDate);
@@ -2327,6 +2328,18 @@ if ($sessionId) {
         return;
       }
       
+      // Check if table is empty or has "no data" message
+      const hasNoData = tbody.innerHTML.includes('No players found') || 
+                        tbody.innerHTML.includes('Loading') || 
+                        tbody.children.length === 0 ||
+                        tbody.children.length < players.length;
+      
+      // If table is empty or has wrong number of rows, recreate it
+      if (hasNoData) {
+        console.log(`Game ${gameNumber} table needs recreation (has ${tbody.children.length} rows, needs ${players.length})`);
+        updateGameTable(gameNumber, players, window.selectedDate || 'today');
+        return;
+      }
       
       // Update existing rows instead of replacing them
       players.forEach((player, index) => {
@@ -2479,6 +2492,18 @@ if ($sessionId) {
       
       console.log(`Game ${gameNumber} score data:`, gameScore);
       
+      // Update lane number (find the cell that contains the lane number)
+      const cells = row.querySelectorAll('td');
+      if (cells.length > 1) {
+        // The lane number is in the second cell (after player name)
+        const laneCell = cells[1];
+        const laneStrong = laneCell.querySelector('strong');
+        if (laneStrong) {
+          laneStrong.textContent = playerData.lane_number || '-';
+          console.log(`Updated game ${gameNumber} lane to:`, playerData.lane_number || '-');
+        }
+      }
+      
       // Update score input
       const scoreInput = row.querySelector('[data-field="score"]');
       if (scoreInput) {
@@ -2594,6 +2619,13 @@ if ($sessionId) {
               console.log('Updated player data cache for user:', userId, 'to lane:', laneNumber);
             }
           }
+          
+          // Auto-refresh the tables to show updated lane numbers
+          const dateFilter = document.getElementById('dateFilter');
+          const selectedDate = dateFilter ? dateFilter.value : 'today';
+          setTimeout(() => {
+            refreshDataGentle(selectedDate);
+          }, 500);
         } else {
           console.error('Lane update failed:', data.message);
           showNotification('Error updating lane: ' + data.message, 'error');
@@ -2678,19 +2710,11 @@ if ($sessionId) {
       };
       
       let hasErrors = false;
+      let errorMessages = [];
       
       inputs.forEach(input => {
         const field = input.getAttribute('data-field');
         const value = input.value.trim();
-        
-        
-        if (field === 'score' && value && (value < 0 || value > 300)) {
-          input.classList.add('is-invalid');
-          hasErrors = true;
-          return;
-        } else {
-          input.classList.remove('is-invalid');
-        }
         
         // Map the field names correctly
         if (field === 'score') {
@@ -2704,16 +2728,140 @@ if ($sessionId) {
         }
       });
       
+      // Reset all invalid states
+      inputs.forEach(input => input.classList.remove('is-invalid'));
       
-      if (hasErrors) {
-        showNotification('Please fix invalid score (0-300)', 'error');
-        ongoingSubmissions.delete(submissionKey);
-        return;
+      // Validate Score (Required)
+      if (!scoreData.player_score || scoreData.player_score === '') {
+        const scoreInput = row.querySelector('[data-field="score"]');
+        if (scoreInput) scoreInput.classList.add('is-invalid');
+        errorMessages.push('Score is required');
+        hasErrors = true;
+      } else {
+        const score = parseInt(scoreData.player_score);
+        if (isNaN(score) || score < 0 || score > 300) {
+          const scoreInput = row.querySelector('[data-field="score"]');
+          if (scoreInput) scoreInput.classList.add('is-invalid');
+          errorMessages.push('Score must be between 0 and 300');
+          hasErrors = true;
+        }
       }
       
-      if (!scoreData.player_score) {
-        showNotification('Please enter a score for ' + playerName, 'warning');
+      // Validate Strikes (Required)
+      if (!scoreData.strikes || scoreData.strikes === '') {
+        const strikesInput = row.querySelector('[data-field="strikes"]');
+        if (strikesInput) strikesInput.classList.add('is-invalid');
+        errorMessages.push('Strikes is required');
+        hasErrors = true;
+      } else {
+        const strikes = parseInt(scoreData.strikes);
+        if (isNaN(strikes) || strikes < 0 || strikes > 12) {
+          const strikesInput = row.querySelector('[data-field="strikes"]');
+          if (strikesInput) strikesInput.classList.add('is-invalid');
+          errorMessages.push('Strikes must be between 0 and 12');
+          hasErrors = true;
+        }
+      }
+      
+      // Validate Spares (Required)
+      if (!scoreData.spares || scoreData.spares === '') {
+        const sparesInput = row.querySelector('[data-field="spares"]');
+        if (sparesInput) sparesInput.classList.add('is-invalid');
+        errorMessages.push('Spares is required');
+        hasErrors = true;
+      } else {
+        const spares = parseInt(scoreData.spares);
+        if (isNaN(spares) || spares < 0 || spares > 10) {
+          const sparesInput = row.querySelector('[data-field="spares"]');
+          if (sparesInput) sparesInput.classList.add('is-invalid');
+          errorMessages.push('Spares must be between 0 and 10');
+          hasErrors = true;
+        }
+      }
+      
+      // Validate Open Frames (Required)
+      if (!scoreData.open_frames || scoreData.open_frames === '') {
+        const openFramesInput = row.querySelector('[data-field="open_frames"]');
+        if (openFramesInput) openFramesInput.classList.add('is-invalid');
+        errorMessages.push('Open Frames is required');
+        hasErrors = true;
+      } else {
+        const openFrames = parseInt(scoreData.open_frames);
+        if (isNaN(openFrames) || openFrames < 0 || openFrames > 10) {
+          const openFramesInput = row.querySelector('[data-field="open_frames"]');
+          if (openFramesInput) openFramesInput.classList.add('is-invalid');
+          errorMessages.push('Open Frames must be between 0 and 10');
+          hasErrors = true;
+        }
+      }
+      
+      // Logical validation: Check frame totals
+      // Note: Total can be up to 12 due to bonus balls in 10th frame
+      // Perfect game = 12 strikes (9 frames + 3 balls in 10th frame)
+      if (!hasErrors) {
+        const score = parseInt(scoreData.player_score) || 0;
+        const strikes = parseInt(scoreData.strikes) || 0;
+        const spares = parseInt(scoreData.spares) || 0;
+        const openFrames = parseInt(scoreData.open_frames) || 0;
+        const total = strikes + spares + openFrames;
+        
+        // Total should be between 10-12 (accounting for 10th frame bonus balls)
+        if (total < 10) {
+          errorMessages.push('Total frames must equal 10 (Strikes + Spares + Open Frames)');
+          hasErrors = true;
+          row.querySelector('[data-field="strikes"]')?.classList.add('is-invalid');
+          row.querySelector('[data-field="spares"]')?.classList.add('is-invalid');
+          row.querySelector('[data-field="open_frames"]')?.classList.add('is-invalid');
+        } else if (total > 12) {
+          errorMessages.push('Total frames cannot exceed 12 (max with 10th frame bonus)');
+          hasErrors = true;
+          row.querySelector('[data-field="strikes"]')?.classList.add('is-invalid');
+          row.querySelector('[data-field="spares"]')?.classList.add('is-invalid');
+          row.querySelector('[data-field="open_frames"]')?.classList.add('is-invalid');
+        }
+        
+        // Score-based validation: Perfect game logic
+        if (score === 300) {
+          if (strikes !== 12 || spares !== 0 || openFrames !== 0) {
+            errorMessages.push('A perfect 300 game must have exactly 12 strikes, 0 spares, and 0 open frames');
+            hasErrors = true;
+            row.querySelector('[data-field="strikes"]')?.classList.add('is-invalid');
+            row.querySelector('[data-field="spares"]')?.classList.add('is-invalid');
+            row.querySelector('[data-field="open_frames"]')?.classList.add('is-invalid');
+          }
+        }
+        
+        // Score-based validation: Maximum possible with spares or opens
+        if (score >= 290 && (spares > 0 || openFrames > 0)) {
+          errorMessages.push('Scores 290+ require all strikes (12 strikes, 0 spares, 0 open frames)');
+          hasErrors = true;
+          row.querySelector('[data-field="strikes"]')?.classList.add('is-invalid');
+          row.querySelector('[data-field="spares"]')?.classList.add('is-invalid');
+          row.querySelector('[data-field="open_frames"]')?.classList.add('is-invalid');
+        }
+        
+        // Logical check: Cannot have more strikes than the score allows
+        if (strikes === 12 && score < 300) {
+          errorMessages.push('12 strikes (perfect game) must result in a score of 300');
+          hasErrors = true;
+          row.querySelector('[data-field="score"]')?.classList.add('is-invalid');
+          row.querySelector('[data-field="strikes"]')?.classList.add('is-invalid');
+        }
+        
+        // Logical check: If all open frames, score should be low
+        if (openFrames === 10 && score > 90) {
+          errorMessages.push('All open frames cannot result in such a high score');
+          hasErrors = true;
+          row.querySelector('[data-field="score"]')?.classList.add('is-invalid');
+          row.querySelector('[data-field="open_frames"]')?.classList.add('is-invalid');
+        }
+      }
+      
+      if (hasErrors) {
+        const errorMsg = errorMessages.join('<br>');
+        showNotification(errorMsg, 'error');
         ongoingSubmissions.delete(submissionKey);
+        isSavingScore = false;
         return;
       }
       
@@ -2772,13 +2920,24 @@ if ($sessionId) {
           const data = JSON.parse(text);
           console.log('Parsed data:', data);
           if (data.success) {
-            showNotification(`Score saved for ${playerName}: ${scoreData.player_score}`, 'success');
+            // Check if this was an update or a new save
+            const isUpdate = saveBtn.innerHTML.includes('Update');
+            const actionText = isUpdate ? 'updated' : 'saved';
             
-            // Update the UI dynamically instead of refreshing the page
-            updatePlayerStatus(row, scoreData.player_score, scoreData.strikes, scoreData.spares, scoreData.open_frames);
+            showNotification(`Score ${actionText} for ${playerName}: ${scoreData.player_score}`, 'success');
             
-            // Update only the specific row data without full table refresh
-            updateRowDataOnly(row, scoreData, gameNumber);
+            // Clear the cache to force fresh data from database
+            const dateFilter = document.getElementById('dateFilter');
+            const selectedDate = dateFilter ? dateFilter.value : 'today';
+            if (window.dataCache && window.dataCache[selectedDate]) {
+              delete window.dataCache[selectedDate];
+            }
+            
+            // Wait a bit longer for database to update, then do full refresh
+            // This ensures the status shows as "Completed" and rankings are correct
+            setTimeout(() => {
+              loadDataForDateFilter(selectedDate);
+            }, 800);
           } else {
             showNotification('Error: ' + data.message, 'error');
           }
@@ -2807,21 +2966,26 @@ if ($sessionId) {
 
     function updatePlayerStatus(row, score, strikes, spares, openFrames) {
       // Update the status column to show "Completed"
-      const statusCell = row.querySelector('td:nth-child(9)'); // Status column is now 9th
+      // Table structure: Player (1), Lane (2), Score (3), Strikes (4), Spares (5), Open Frames (6), Status (7), Actions (8)
+      const statusCell = row.querySelector('td:nth-child(7)');
       if (statusCell) {
         statusCell.innerHTML = `
           <span class="badge bg-success">Completed</span>
           <br><small class="text-muted">${new Date().toLocaleTimeString()}</small>
         `;
+      } else {
+        console.error('Status cell not found in row');
       }
       
-      // Disable the save button since score is now saved
+      // Change the save button to an "Update" button
       const saveBtn = row.querySelector('button[onclick*="savePlayerScore"]');
       if (saveBtn) {
-        saveBtn.innerHTML = '<i class="ti ti-check me-1"></i>Saved';
-        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<i class="ti ti-pencil me-1"></i>Update';
         saveBtn.classList.remove('btn-success');
-        saveBtn.classList.add('btn-outline-success');
+        saveBtn.classList.add('btn-warning');
+        // Button remains enabled so user can update the score
+      } else {
+        console.error('Save button not found in row');
       }
       
       // Update the Overall Rankings tab if it's visible
@@ -3034,6 +3198,13 @@ if ($sessionId) {
       loadDataForDateFilter(selectedDate);
     });
     
+    // Load data on page load
+    document.addEventListener('DOMContentLoaded', function() {
+      const dateFilter = document.getElementById('dateFilter');
+      const selectedDate = dateFilter ? dateFilter.value : 'today';
+      console.log('Page loaded, loading initial data for:', selectedDate);
+      loadDataForDateFilter(selectedDate);
+    });
 
 
 
@@ -3135,6 +3306,7 @@ if ($sessionId) {
     
     // Cache for loaded data
     const dataCache = {};
+    window.dataCache = dataCache; // Make accessible globally for cache clearing
     
     // Flag to prevent unnecessary refreshes during save operations
     let isSavingScore = false;
@@ -3561,7 +3733,11 @@ if ($sessionId) {
             </td>`;
         } else {
           // Session view - show editable inputs
+          // Add Lane column
           html += `
+            <td class="text-center">
+              <strong class="text-primary">${player.lane_number || '-'}</strong>
+            </td>
             <td>
               <input type="number" class="form-control form-control-sm score-input" 
                      data-user-id="${player.user_id}" data-field="score" data-game="${gameNumber}"
