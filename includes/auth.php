@@ -64,7 +64,7 @@ function isAdmin() {
 // Redirect if not logged in
 function requireLogin() {
     if (!isLoggedIn()) {
-        header('Location: ../authentication-login.php');
+        header('Location: ../index.php?login=required');
         exit();
     }
 }

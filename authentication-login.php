@@ -8,9 +8,29 @@
   <link rel="shortcut icon" type="image/x-icon" href="./assets/images/logos/favicon.ico" />
   <link rel="stylesheet" href="./assets/css/styles.min.css" />
   <link rel="stylesheet" href="./assets/css/vipersvenoms-theme.css" />
+  <style>
+    /* Embedded mode styling */
+    body.embed-mode {
+      background: transparent !important;
+    }
+    body.embed-mode .page-wrapper {
+      background: transparent !important;
+    }
+    body.embed-mode .position-relative {
+      background: transparent !important;
+      min-height: auto !important;
+    }
+    body.embed-mode .card {
+      box-shadow: none !important;
+      border: none !important;
+    }
+    body.embed-mode .logo-img {
+      display: none !important;
+    }
+  </style>
 </head>
 
-<body>
+<body <?php echo (isset($_GET['embed']) && $_GET['embed'] === 'true') ? 'class="embed-mode"' : ''; ?>>
   <!--  Body Wrapper -->
   <div class="page-wrapper" id="main-wrapper" data-layout="vertical" data-navbarbg="skin6" data-sidebartype="full"
     data-sidebar-position="fixed" data-header-position="fixed">
@@ -37,13 +57,30 @@
                         $result = login($username, $password);
                         
                         if ($result['success']) {
-                            // Redirect based on user role
-                            if ($result['user']['user_role'] === 'Admin') {
-                                header('Location: admin-dashboard.php');
+                            // Check if in embed mode
+                            $isEmbed = isset($_GET['embed']) && $_GET['embed'] === 'true';
+                            
+                            if ($isEmbed) {
+                                // Send message to parent window and redirect
+                                $redirectUrl = ($result['user']['user_role'] === 'Admin') ? 'admin-dashboard.php' : 'dashboard.php';
+                                echo '<script>
+                                    if (window.parent && window.parent !== window) {
+                                        window.parent.postMessage("login_success", "*");
+                                    }
+                                    setTimeout(function() {
+                                        window.top.location.href = "' . $redirectUrl . '";
+                                    }, 100);
+                                </script>';
+                                exit();
                             } else {
-                                header('Location: dashboard.php');
+                                // Normal redirect
+                                if ($result['user']['user_role'] === 'Admin') {
+                                    header('Location: admin-dashboard.php');
+                                } else {
+                                    header('Location: dashboard.php');
+                                }
+                                exit();
                             }
-                            exit();
                         } else {
                             $error_message = $result['message'];
                         }

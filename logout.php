@@ -4,7 +4,7 @@ require_once 'includes/auth.php';
 // Logout the user
 logout();
 
-// Redirect to login page
-header('Location: authentication-login.php');
+// Redirect to landing page
+header('Location: index.php');
 exit();
 ?>
