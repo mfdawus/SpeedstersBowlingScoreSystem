@@ -681,8 +681,15 @@ $currentUser = getCurrentUser();
         teamStats[teamName].playerNames.push(player.first_name + ' ' + player.last_name);
         
         // Generate player avatars
-        const avatarNum = (player.user_id % 8) + 1;
-        teamStats[teamName].playerAvatars += `<img src="${(typeof BASE_PATH !== 'undefined' ? BASE_PATH : '') + '/assets/images/profile/user-' + avatarNum}.jpg" alt="Player" class="player-avatar">`;
+        const basePath = (typeof BASE_PATH !== 'undefined') ? BASE_PATH : '';
+        let avatarSrc;
+        if (player.profile_picture && player.profile_picture !== '' && player.profile_picture !== null) {
+          avatarSrc = basePath + '/uploads/profile_pictures/' + player.profile_picture;
+        } else {
+          const avatarNum = ((player.user_id - 1) % 8) + 1;
+          avatarSrc = basePath + '/assets/images/profile/user-' + avatarNum + '.jpg';
+        }
+        teamStats[teamName].playerAvatars += `<img src="${avatarSrc}" alt="Player" class="player-avatar" onerror="this.src='${basePath}/assets/images/profile/user-1.jpg'">`;
         
         // Track best player
         if ((Number(player.best_score) || 0) > teamStats[teamName].bestScore) {
@@ -744,6 +751,16 @@ $currentUser = getCurrentUser();
       tbody.innerHTML = html || '<tr><td colspan="11" class="text-center text-muted py-4">No team data available for selected date range</td></tr>';
     }
     
+    // Helper function to get player avatar
+    function getPlayerProfilePic(player) {
+      const basePath = (typeof BASE_PATH !== 'undefined') ? BASE_PATH : '';
+      if (player.profile_picture && player.profile_picture !== '' && player.profile_picture !== null) {
+        return basePath + '/uploads/profile_pictures/' + player.profile_picture;
+      }
+      const avatarNum = ((player.user_id - 1) % 8) + 1;
+      return basePath + '/assets/images/profile/user-' + avatarNum + '.jpg';
+    }
+    
     function updateGameTable(gameNumber, players) {
       const tbody = document.getElementById(`game${gameNumber}TableBody`);
       if (!tbody) return;
@@ -762,7 +779,7 @@ $currentUser = getCurrentUser();
           <tr>
             <td>
               <div class="d-flex align-items-center">
-                <img src="${(typeof BASE_PATH !== 'undefined' ? BASE_PATH : '') + '/assets/images/profile/user-' + (player.user_id % 8) + 1}.jpg" alt="Player" class="rounded-circle me-2" width="32">
+                <img src="${getPlayerProfilePic(player)}" alt="Player" class="rounded-circle me-2" width="32" onerror="this.src='${(typeof BASE_PATH !== 'undefined' ? BASE_PATH : '') + '/assets/images/profile/user-1.jpg'}'">
                 <div>
                   <strong>${player.first_name} ${player.last_name}</strong>
                 </div>

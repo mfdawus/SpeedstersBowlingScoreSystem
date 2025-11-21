@@ -3499,7 +3499,7 @@ if ($sessionId) {
           <tr data-player-id="${player.user_id}">
             <td>
               <div class="d-flex align-items-center">
-                <img src="${(typeof BASE_PATH !== 'undefined' ? BASE_PATH : '') + '/assets/images/profile/user-' + (player.user_id % 8) + 1}.jpg" alt="Player" class="rounded-circle me-2" width="32">
+                <img src="${(typeof BASE_PATH !== 'undefined' ? BASE_PATH : '') + '/assets/images/profile/user-' + ((player.user_id % 8) + 1)}.jpg" alt="Player" class="rounded-circle me-2" width="32" onerror="this.src='${(typeof BASE_PATH !== 'undefined' ? BASE_PATH : '') + '/assets/images/profile/user-1.jpg'}'">
                 <div>
                   <h6 class="mb-0">${player.first_name} ${player.last_name}</h6>
                   <small class="text-muted">${player.user_role}</small>
@@ -3558,7 +3558,7 @@ if ($sessionId) {
           <tr data-player-id="${player.user_id}">
             <td>
               <div class="d-flex align-items-center">
-                <img src="${(typeof BASE_PATH !== 'undefined' ? BASE_PATH : '') + '/assets/images/profile/user-' + (player.user_id % 8) + 1}.jpg" alt="Player" class="rounded-circle me-2" width="32">
+                <img src="${(typeof BASE_PATH !== 'undefined' ? BASE_PATH : '') + '/assets/images/profile/user-' + ((player.user_id % 8) + 1)}.jpg" alt="Player" class="rounded-circle me-2" width="32" onerror="this.src='${(typeof BASE_PATH !== 'undefined' ? BASE_PATH : '') + '/assets/images/profile/user-1.jpg'}'">
                 <div>
                   <h6 class="mb-0">${player.first_name} ${player.last_name}</h6>
                   <small class="text-muted">${player.user_role}</small>
@@ -3658,6 +3658,16 @@ if ($sessionId) {
       });
     }
     
+    // Helper function to get player avatar
+    function getSoloPlayerProfilePic(player) {
+      const basePath = (typeof BASE_PATH !== 'undefined') ? BASE_PATH : '';
+      if (player.profile_picture && player.profile_picture !== '' && player.profile_picture !== null) {
+        return basePath + '/uploads/profile_pictures/' + player.profile_picture;
+      }
+      const avatarNum = ((player.user_id - 1) % 8) + 1;
+      return basePath + '/assets/images/profile/user-' + avatarNum + '.jpg';
+    }
+    
     function updateGameTable(gameNumber, players, selectedDate = 'today') {
       const tbody = document.querySelector(`#game${gameNumber}Table tbody`);
       if (!tbody) return;
@@ -3682,7 +3692,7 @@ if ($sessionId) {
           <tr data-player-id="${player.user_id}" data-game="${gameNumber}" style="transition: all 0.3s ease;">
             <td>
               <div class="d-flex align-items-center">
-                <img src="${(typeof BASE_PATH !== 'undefined' ? BASE_PATH : '') + '/assets/images/profile/user-' + (player.user_id % 8) + 1}.jpg" alt="Player" class="rounded-circle me-2" width="32">
+                <img src="${getSoloPlayerProfilePic(player)}" alt="Player" class="rounded-circle me-2" width="32" onerror="this.src='${(typeof BASE_PATH !== 'undefined' ? BASE_PATH : '') + '/assets/images/profile/user-1.jpg'}'">
                 <div>
                   <strong>${player.first_name} ${player.last_name}</strong>
                   <br><small class="text-muted">${player.team_name || player.user_role}</small>

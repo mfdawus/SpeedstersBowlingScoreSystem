@@ -39,6 +39,7 @@ try {
             u.skill_level,
             u.status,
             u.user_role,
+            u.profile_picture,
             COALESCE(SUM(gs.player_score), 0) as total_score,
             COALESCE(COUNT(gs.score_id), 0) as games_played,
             COALESCE(ROUND(AVG(gs.player_score), 1), 0) as avg_score,
@@ -90,6 +91,7 @@ try {
             u.skill_level,
             u.status,
             u.user_role,
+            u.profile_picture,
             COALESCE(SUM(gs.player_score), 0) as total_score,
             COALESCE(COUNT(gs.score_id), 0) as games_played,
             COALESCE(ROUND(AVG(gs.player_score), 1), 0) as avg_score,
@@ -112,9 +114,11 @@ try {
     // Get recent activities with date filtering (including admins) - NO SESSION PARTICIPANTS NEEDED
     $stmt = $pdo->prepare("
         SELECT 
+            u.user_id,
             u.first_name,
             u.last_name,
             u.user_role,
+            u.profile_picture,
             gs.player_score,
             gs.game_number,
             gs.created_at,

@@ -652,7 +652,7 @@ $activeSession = getActiveSession();
                                   <td><span class="badge bg-primary"><?php echo $rank; ?></span></td>
                                   <td>
                                     <div class="d-flex align-items-center">
-                                      <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-' . ($rank % 8) + 1; ?>.jpg" alt="Player" class="rounded-circle me-2" width="32" height="32">
+                                      <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-' . ((($rank - 1) % 8) + 1); ?>.jpg" alt="Player" class="rounded-circle me-2" width="32" height="32">
                                       <div>
                                         <h6 class="mb-0"><?php echo htmlspecialchars($player['first_name'] . ' ' . $player['last_name']); ?></h6>
                                         <small class="text-muted">Team: <?php echo htmlspecialchars($player['team_name'] ?? 'No Team'); ?></small>
@@ -746,7 +746,7 @@ $activeSession = getActiveSession();
                                   <td><span class="badge bg-primary"><?php echo $rank; ?></span></td>
                                   <td>
                                     <div class="d-flex align-items-center">
-                                      <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-' . ($rank % 8) + 1; ?>.jpg" alt="Player" class="rounded-circle me-2" width="32" height="32">
+                                      <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-' . ((($rank - 1) % 8) + 1); ?>.jpg" alt="Player" class="rounded-circle me-2" width="32" height="32">
                                       <div>
                                         <h6 class="mb-0"><?php echo htmlspecialchars($player['first_name'] . ' ' . $player['last_name']); ?></h6>
                                         <small class="text-muted"><?php echo ucfirst($player['skill_level']); ?> Player</small>
@@ -1103,6 +1103,20 @@ $activeSession = getActiveSession();
   <script src="https://cdn.jsdelivr.net/npm/iconify-icon@1.0.8/dist/iconify-icon.min.js"></script>
   
   <script>
+    // Helper function to get player avatar (uploaded or template)
+    function getPlayerAvatar(player, index) {
+      const basePath = (typeof BASE_PATH !== 'undefined') ? BASE_PATH : '';
+      
+      // Check if player has an uploaded profile picture
+      if (player.profile_picture && player.profile_picture !== '' && player.profile_picture !== null) {
+        return basePath + '/uploads/profile_pictures/' + player.profile_picture;
+      }
+      
+      // Use template avatar based on user ID or index
+      const avatarNumber = player.user_id ? ((player.user_id - 1) % 8) + 1 : ((index % 8) + 1);
+      return basePath + '/assets/images/profile/user-' + avatarNumber + '.jpg';
+    }
+    
     // Session Management Functions - Define globally first
     function startSession(sessionId) {
       console.log('Starting session:', sessionId);
@@ -1461,7 +1475,7 @@ $activeSession = getActiveSession();
           <td>
             <div class="d-flex align-items-center">
               <div class="player-avatar-container me-3">
-                <img src="${(typeof BASE_PATH !== 'undefined' ? BASE_PATH : '') + '/assets/images/profile/user-' + (index % 8) + 1}.jpg" alt="user" class="player-avatar">
+                <img src="${getPlayerAvatar(player, index)}" alt="user" class="player-avatar" onerror="this.src='${(typeof BASE_PATH !== 'undefined' ? BASE_PATH : '') + '/assets/images/profile/user-1.jpg'}'">
                 ${rank <= 3 ? `<div class="rank-crown rank-${rank}"><i class="ti ti-crown"></i></div>` : ''}
               </div>
               <div>
