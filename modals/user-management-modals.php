@@ -9,7 +9,7 @@
       <div class="modal-body">
         <div class="row">
           <div class="col-md-4 text-center">
-            <img id="viewUserAvatar" src="assets/images/profile/user-1.jpg" alt="User Avatar" class="rounded-circle mb-3" width="100" height="100" style="object-fit: cover;">
+            <img id="viewUserAvatar" src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-1.jpg'; ?>" alt="User Avatar" class="rounded-circle mb-3" width="100" height="100" style="object-fit: cover;">
             <h5 id="viewUserName" class="mb-1"></h5>
             <p id="viewUserTeam" class="text-muted mb-0"></p>
           </div>
@@ -99,7 +99,7 @@
             <div class="col-12">
               <div class="d-flex align-items-center gap-3 p-3 bg-light rounded">
                 <div>
-                  <img src="assets/images/profile/user-1.jpg" alt="Profile Picture" id="editUserAvatar" class="rounded-circle" width="80" height="80" style="object-fit: cover;">
+                  <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-1.jpg'; ?>" alt="Profile Picture" id="editUserAvatar" class="rounded-circle" width="80" height="80" style="object-fit: cover;">
                 </div>
                 <div class="flex-grow-1">
                   <h6 class="mb-2">Profile Picture</h6>

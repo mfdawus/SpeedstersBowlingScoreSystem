@@ -137,9 +137,9 @@ requireMaintenanceBypass('trio', 'Trio Score Table');
                           <td>
                             <div class="d-flex align-items-center">
                               <div class="team-avatars me-3">
-                                <img src="./assets/images/profile/user-1.jpg" alt="Player 1" class="player-avatar">
-                                <img src="./assets/images/profile/user-2.jpg" alt="Player 2" class="player-avatar">
-                                <img src="./assets/images/profile/user-3.jpg" alt="Player 3" class="player-avatar">
+                                <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-1.jpg'; ?>" alt="Player 1" class="player-avatar">
+                                <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-2.jpg'; ?>" alt="Player 2" class="player-avatar">
+                                <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-3.jpg'; ?>" alt="Player 3" class="player-avatar">
                               </div>
                               <div>
                                 <h6 class="mb-0 fw-semibold">Thunder Trio</h6>
@@ -173,9 +173,9 @@ requireMaintenanceBypass('trio', 'Trio Score Table');
                           <td>
                             <div class="d-flex align-items-center">
                               <div class="team-avatars me-3">
-                                <img src="./assets/images/profile/user-4.jpg" alt="Player 1" class="player-avatar">
-                                <img src="./assets/images/profile/user-5.jpg" alt="Player 2" class="player-avatar">
-                                <img src="./assets/images/profile/user-6.jpg" alt="Player 3" class="player-avatar">
+                                <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-4.jpg'; ?>" alt="Player 1" class="player-avatar">
+                                <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-5.jpg'; ?>" alt="Player 2" class="player-avatar">
+                                <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-6.jpg'; ?>" alt="Player 3" class="player-avatar">
                               </div>
                               <div>
                                 <h6 class="mb-0 fw-semibold">Strike Squad</h6>
@@ -209,9 +209,9 @@ requireMaintenanceBypass('trio', 'Trio Score Table');
                           <td>
                             <div class="d-flex align-items-center">
                               <div class="team-avatars me-3">
-                                <img src="./assets/images/profile/user-7.jpg" alt="Player 1" class="player-avatar">
-                                <img src="./assets/images/profile/user-8.jpg" alt="Player 2" class="player-avatar">
-                                <img src="./assets/images/profile/user-1.jpg" alt="Player 3" class="player-avatar">
+                                <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-7.jpg'; ?>" alt="Player 1" class="player-avatar">
+                                <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-8.jpg'; ?>" alt="Player 2" class="player-avatar">
+                                <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-1.jpg'; ?>" alt="Player 3" class="player-avatar">
                               </div>
                               <div>
                                 <h6 class="mb-0 fw-semibold">Pin Crushers</h6>
@@ -245,9 +245,9 @@ requireMaintenanceBypass('trio', 'Trio Score Table');
                           <td>
                             <div class="d-flex align-items-center">
                               <div class="team-avatars me-3">
-                                <img src="./assets/images/profile/user-2.jpg" alt="Player 1" class="player-avatar">
-                                <img src="./assets/images/profile/user-3.jpg" alt="Player 2" class="player-avatar">
-                                <img src="./assets/images/profile/user-4.jpg" alt="Player 3" class="player-avatar">
+                                <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-2.jpg'; ?>" alt="Player 1" class="player-avatar">
+                                <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-3.jpg'; ?>" alt="Player 2" class="player-avatar">
+                                <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-4.jpg'; ?>" alt="Player 3" class="player-avatar">
                               </div>
                               <div>
                                 <h6 class="mb-0 fw-semibold">Lane Legends</h6>
@@ -281,9 +281,9 @@ requireMaintenanceBypass('trio', 'Trio Score Table');
                           <td>
                             <div class="d-flex align-items-center">
                               <div class="team-avatars me-3">
-                                <img src="./assets/images/profile/user-5.jpg" alt="Player 1" class="player-avatar">
-                                <img src="./assets/images/profile/user-6.jpg" alt="Player 2" class="player-avatar">
-                                <img src="./assets/images/profile/user-7.jpg" alt="Player 3" class="player-avatar">
+                                <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-5.jpg'; ?>" alt="Player 1" class="player-avatar">
+                                <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-6.jpg'; ?>" alt="Player 2" class="player-avatar">
+                                <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-7.jpg'; ?>" alt="Player 3" class="player-avatar">
                               </div>
                               <div>
                                 <h6 class="mb-0 fw-semibold">Spare Masters</h6>

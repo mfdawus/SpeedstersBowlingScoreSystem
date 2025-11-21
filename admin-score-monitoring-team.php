@@ -682,7 +682,7 @@ $currentUser = getCurrentUser();
         
         // Generate player avatars
         const avatarNum = (player.user_id % 8) + 1;
-        teamStats[teamName].playerAvatars += `<img src="assets/images/profile/user-${avatarNum}.jpg" alt="Player" class="player-avatar">`;
+        teamStats[teamName].playerAvatars += `<img src="${(typeof BASE_PATH !== 'undefined' ? BASE_PATH : '') + '/assets/images/profile/user-' + avatarNum}.jpg" alt="Player" class="player-avatar">`;
         
         // Track best player
         if ((Number(player.best_score) || 0) > teamStats[teamName].bestScore) {
@@ -762,7 +762,7 @@ $currentUser = getCurrentUser();
           <tr>
             <td>
               <div class="d-flex align-items-center">
-                <img src="assets/images/profile/user-${(player.user_id % 8) + 1}.jpg" alt="Player" class="rounded-circle me-2" width="32">
+                <img src="${(typeof BASE_PATH !== 'undefined' ? BASE_PATH : '') + '/assets/images/profile/user-' + (player.user_id % 8) + 1}.jpg" alt="Player" class="rounded-circle me-2" width="32">
                 <div>
                   <strong>${player.first_name} ${player.last_name}</strong>
                 </div>

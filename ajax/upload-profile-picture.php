@@ -101,11 +101,14 @@ try {
         $_SESSION['profile_picture'] = $newFilename;
     }
     
+    // Use BASE_PATH to work on both localhost subdirectory and production
+    $basePath = defined('BASE_PATH') ? BASE_PATH : '';
+    
     $response = [
         'success' => true,
         'message' => 'Profile picture updated successfully',
         'filename' => $newFilename,
-        'url' => '../uploads/profile_pictures/' . $newFilename
+        'url' => $basePath . '/uploads/profile_pictures/' . $newFilename
     ];
     
 } catch (Exception $e) {

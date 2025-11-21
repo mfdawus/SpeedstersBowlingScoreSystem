@@ -168,8 +168,8 @@ requireMaintenanceBypass('doubles', 'Doubles Score Table');
                               <td>
                                 <div class="d-flex align-items-center">
                                   <div class="d-flex me-2">
-                                    <img src="assets/images/profile/user-1.jpg" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
-                                    <img src="assets/images/profile/user-2.jpg" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
+                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-1.jpg'; ?>" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
+                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-2.jpg'; ?>" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
                                   </div>
                                   <div>
                                     <h6 class="mb-0">Thunder Strikers</h6>
@@ -190,8 +190,8 @@ requireMaintenanceBypass('doubles', 'Doubles Score Table');
                               <td>
                                 <div class="d-flex align-items-center">
                                   <div class="d-flex me-2">
-                                    <img src="assets/images/profile/user-3.jpg" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
-                                    <img src="assets/images/profile/user-4.jpg" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
+                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-3.jpg'; ?>" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
+                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-4.jpg'; ?>" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
                                   </div>
                                   <div>
                                     <h6 class="mb-0">Pin Crushers</h6>
@@ -212,8 +212,8 @@ requireMaintenanceBypass('doubles', 'Doubles Score Table');
                               <td>
                                 <div class="d-flex align-items-center">
                                   <div class="d-flex me-2">
-                                    <img src="assets/images/profile/user-5.jpg" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
-                                    <img src="assets/images/profile/user-6.jpg" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
+                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-5.jpg'; ?>" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
+                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-6.jpg'; ?>" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
                                   </div>
                                   <div>
                                     <h6 class="mb-0">Lane Masters</h6>
@@ -234,8 +234,8 @@ requireMaintenanceBypass('doubles', 'Doubles Score Table');
                               <td>
                                 <div class="d-flex align-items-center">
                                   <div class="d-flex me-2">
-                                    <img src="assets/images/profile/user-7.jpg" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
-                                    <img src="assets/images/profile/user-8.jpg" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
+                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-7.jpg'; ?>" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
+                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-8.jpg'; ?>" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
                                   </div>
                                   <div>
                                     <h6 class="mb-0">Spare Seekers</h6>
@@ -256,8 +256,8 @@ requireMaintenanceBypass('doubles', 'Doubles Score Table');
                               <td>
                                 <div class="d-flex align-items-center">
                                   <div class="d-flex me-2">
-                                    <img src="assets/images/profile/user-1.jpg" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
-                                    <img src="assets/images/profile/user-3.jpg" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
+                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-1.jpg'; ?>" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
+                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-3.jpg'; ?>" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
                                   </div>
                                   <div>
                                     <h6 class="mb-0">Gutter Guards</h6>
@@ -300,8 +300,8 @@ requireMaintenanceBypass('doubles', 'Doubles Score Table');
                               <td>
                                 <div class="d-flex align-items-center">
                                   <div class="d-flex me-2">
-                                    <img src="assets/images/profile/user-1.jpg" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
-                                    <img src="assets/images/profile/user-2.jpg" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
+                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-1.jpg'; ?>" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
+                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-2.jpg'; ?>" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
                                   </div>
                                   <div>
                                     <h6 class="mb-0">Thunder Strikers</h6>
@@ -320,8 +320,8 @@ requireMaintenanceBypass('doubles', 'Doubles Score Table');
                               <td>
                                 <div class="d-flex align-items-center">
                                   <div class="d-flex me-2">
-                                    <img src="assets/images/profile/user-3.jpg" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
-                                    <img src="assets/images/profile/user-4.jpg" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
+                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-3.jpg'; ?>" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
+                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-4.jpg'; ?>" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
                                   </div>
                                   <div>
                                     <h6 class="mb-0">Pin Crushers</h6>
@@ -340,8 +340,8 @@ requireMaintenanceBypass('doubles', 'Doubles Score Table');
                               <td>
                                 <div class="d-flex align-items-center">
                                   <div class="d-flex me-2">
-                                    <img src="assets/images/profile/user-5.jpg" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
-                                    <img src="assets/images/profile/user-6.jpg" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
+                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-5.jpg'; ?>" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
+                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-6.jpg'; ?>" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
                                   </div>
                                   <div>
                                     <h6 class="mb-0">Lane Masters</h6>
@@ -382,8 +382,8 @@ requireMaintenanceBypass('doubles', 'Doubles Score Table');
                               <td>
                                 <div class="d-flex align-items-center">
                                   <div class="d-flex me-2">
-                                    <img src="assets/images/profile/user-3.jpg" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
-                                    <img src="assets/images/profile/user-4.jpg" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
+                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-3.jpg'; ?>" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
+                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-4.jpg'; ?>" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
                                   </div>
                                   <div>
                                     <h6 class="mb-0">Pin Crushers</h6>
@@ -402,8 +402,8 @@ requireMaintenanceBypass('doubles', 'Doubles Score Table');
                               <td>
                                 <div class="d-flex align-items-center">
                                   <div class="d-flex me-2">
-                                    <img src="assets/images/profile/user-1.jpg" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
-                                    <img src="assets/images/profile/user-2.jpg" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
+                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-1.jpg'; ?>" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
+                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-2.jpg'; ?>" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
                                   </div>
                                   <div>
                                     <h6 class="mb-0">Thunder Strikers</h6>
@@ -422,8 +422,8 @@ requireMaintenanceBypass('doubles', 'Doubles Score Table');
                               <td>
                                 <div class="d-flex align-items-center">
                                   <div class="d-flex me-2">
-                                    <img src="assets/images/profile/user-7.jpg" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
-                                    <img src="assets/images/profile/user-8.jpg" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
+                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-7.jpg'; ?>" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
+                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-8.jpg'; ?>" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
                                   </div>
                                   <div>
                                     <h6 class="mb-0">Spare Seekers</h6>
@@ -464,8 +464,8 @@ requireMaintenanceBypass('doubles', 'Doubles Score Table');
                               <td>
                                 <div class="d-flex align-items-center">
                                   <div class="d-flex me-2">
-                                    <img src="assets/images/profile/user-1.jpg" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
-                                    <img src="assets/images/profile/user-2.jpg" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
+                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-1.jpg'; ?>" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
+                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-2.jpg'; ?>" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
                                   </div>
                                   <div>
                                     <h6 class="mb-0">Thunder Strikers</h6>
@@ -484,8 +484,8 @@ requireMaintenanceBypass('doubles', 'Doubles Score Table');
                               <td>
                                 <div class="d-flex align-items-center">
                                   <div class="d-flex me-2">
-                                    <img src="assets/images/profile/user-5.jpg" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
-                                    <img src="assets/images/profile/user-6.jpg" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
+                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-5.jpg'; ?>" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
+                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-6.jpg'; ?>" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
                                   </div>
                                   <div>
                                     <h6 class="mb-0">Lane Masters</h6>
@@ -504,8 +504,8 @@ requireMaintenanceBypass('doubles', 'Doubles Score Table');
                               <td>
                                 <div class="d-flex align-items-center">
                                   <div class="d-flex me-2">
-                                    <img src="assets/images/profile/user-3.jpg" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
-                                    <img src="assets/images/profile/user-4.jpg" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
+                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-3.jpg'; ?>" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
+                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-4.jpg'; ?>" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
                                   </div>
                                   <div>
                                     <h6 class="mb-0">Pin Crushers</h6>
@@ -546,8 +546,8 @@ requireMaintenanceBypass('doubles', 'Doubles Score Table');
                               <td>
                                 <div class="d-flex align-items-center">
                                   <div class="d-flex me-2">
-                                    <img src="assets/images/profile/user-3.jpg" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
-                                    <img src="assets/images/profile/user-4.jpg" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
+                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-3.jpg'; ?>" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
+                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-4.jpg'; ?>" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
                                   </div>
                                   <div>
                                     <h6 class="mb-0">Pin Crushers</h6>
@@ -566,8 +566,8 @@ requireMaintenanceBypass('doubles', 'Doubles Score Table');
                               <td>
                                 <div class="d-flex align-items-center">
                                   <div class="d-flex me-2">
-                                    <img src="assets/images/profile/user-1.jpg" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
-                                    <img src="assets/images/profile/user-2.jpg" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
+                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-1.jpg'; ?>" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
+                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-2.jpg'; ?>" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
                                   </div>
                                   <div>
                                     <h6 class="mb-0">Thunder Strikers</h6>
@@ -586,8 +586,8 @@ requireMaintenanceBypass('doubles', 'Doubles Score Table');
                               <td>
                                 <div class="d-flex align-items-center">
                                   <div class="d-flex me-2">
-                                    <img src="assets/images/profile/user-1.jpg" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
-                                    <img src="assets/images/profile/user-3.jpg" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
+                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-1.jpg'; ?>" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
+                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-3.jpg'; ?>" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
                                   </div>
                                   <div>
                                     <h6 class="mb-0">Gutter Guards</h6>
@@ -628,8 +628,8 @@ requireMaintenanceBypass('doubles', 'Doubles Score Table');
                               <td>
                                 <div class="d-flex align-items-center">
                                   <div class="d-flex me-2">
-                                    <img src="assets/images/profile/user-2.jpg" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
-                                    <img src="assets/images/profile/user-1.jpg" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
+                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-2.jpg'; ?>" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
+                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-1.jpg'; ?>" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
                                   </div>
                                   <div>
                                     <h6 class="mb-0">Thunder Strikers</h6>
@@ -648,8 +648,8 @@ requireMaintenanceBypass('doubles', 'Doubles Score Table');
                               <td>
                                 <div class="d-flex align-items-center">
                                   <div class="d-flex me-2">
-                                    <img src="assets/images/profile/user-1.jpg" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
-                                    <img src="assets/images/profile/user-3.jpg" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
+                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-1.jpg'; ?>" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
+                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-3.jpg'; ?>" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
                                   </div>
                                   <div>
                                     <h6 class="mb-0">Gutter Guards</h6>
@@ -668,8 +668,8 @@ requireMaintenanceBypass('doubles', 'Doubles Score Table');
                               <td>
                                 <div class="d-flex align-items-center">
                                   <div class="d-flex me-2">
-                                    <img src="assets/images/profile/user-4.jpg" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
-                                    <img src="assets/images/profile/user-7.jpg" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
+                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-4.jpg'; ?>" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
+                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-7.jpg'; ?>" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
                                   </div>
                                   <div>
                                     <h6 class="mb-0">Spare Seekers</h6>

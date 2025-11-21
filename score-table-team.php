@@ -498,12 +498,13 @@ $currentUser = getCurrentUser();
 
     // Helper function to get profile picture URL
     function getProfilePictureUrl(player) {
+      const basePath = (typeof BASE_PATH !== 'undefined') ? BASE_PATH : '';
       if (player.profile_picture && player.profile_picture !== '' && player.profile_picture !== null) {
-        return `uploads/profile_pictures/${player.profile_picture}`;
+        return `${basePath}/uploads/profile_pictures/${player.profile_picture}`;
       }
       // Use template avatars (user-1.jpg through user-8.jpg) based on user ID
       const avatarNumber = ((player.user_id || 0) % 8) + 1;
-      return `assets/images/profile/user-${avatarNumber}.jpg`;
+      return `${basePath}/assets/images/profile/user-${avatarNumber}.jpg`;
     }
 
     // Load data from backend
@@ -586,7 +587,7 @@ $currentUser = getCurrentUser();
             <td><span class="rank-badge ${rankClass}">${rank}</span></td>
             <td>
               <div class="d-flex align-items-center">
-                <img src="${getProfilePictureUrl(player)}" alt="Player" class="rounded-circle me-2" width="32" height="32" style="object-fit: cover;">
+                <img src="${getProfilePictureUrl(player)}" alt="Player" class="rounded-circle me-2" width="32" height="32" style="object-fit: cover;" onerror="this.onerror=null; this.src=(typeof BASE_PATH !== 'undefined' ? BASE_PATH : '') + '/assets/images/profile/user-1.jpg';">
                 <div>
                   <h6 class="mb-0 ${isCurrentUser ? 'text-primary' : ''}">${player.first_name} ${player.last_name} ${isCurrentUser ? '<i class="ti ti-user-check ms-1"></i>' : ''}</h6>
                   <small class="text-muted">${player.user_role}</small>
@@ -686,7 +687,7 @@ $currentUser = getCurrentUser();
             <td><span class="rank-badge ${rankClass}">${rank}</span></td>
             <td>
               <div class="d-flex align-items-center">
-                <img src="${getProfilePictureUrl(player)}" alt="Player" class="rounded-circle me-2" width="32" height="32" style="object-fit: cover;">
+                <img src="${getProfilePictureUrl(player)}" alt="Player" class="rounded-circle me-2" width="32" height="32" style="object-fit: cover;" onerror="this.onerror=null; this.src=(typeof BASE_PATH !== 'undefined' ? BASE_PATH : '') + '/assets/images/profile/user-1.jpg';">
                 <div>
                   <h6 class="mb-0 ${isCurrentUser ? 'text-primary' : ''}">${player.first_name} ${player.last_name} ${isCurrentUser ? '<i class="ti ti-user-check ms-1"></i>' : ''}</h6>
                   <small class="text-muted">${player.user_role}</small>

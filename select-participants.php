@@ -504,7 +504,7 @@ error_log("Teams count: " . count($teams));
                                                 <div class="card-body p-3">
                                                     <div class="d-flex align-items-center justify-content-between">
                                                         <div class="d-flex align-items-center">
-                                                            <img src="assets/images/profile/user-<?php echo (($participant['user_id'] % 8) + 1); ?>.jpg" alt="Player" class="player-avatar me-3">
+                                                            <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-' . echo (($participant['user_id'] % 8) + 1); ?>.jpg" alt="Player" class="player-avatar me-3">
                                                             <div>
                                                                 <h6 class="mb-0"><?php echo htmlspecialchars($participant['first_name'] . ' ' . $participant['last_name']); ?></h6>
                                                                 <small class="text-muted"><?php echo htmlspecialchars($participant['team_name']); ?></small>
@@ -692,7 +692,7 @@ error_log("Teams count: " . count($teams));
                 <div class="card participant-card ${isVipersVenoms ? 'vipersvenoms' : ''}" onclick="toggleParticipant(${player.user_id})" data-user-id="${player.user_id}">
                     <div class="card-body p-3">
                         <div class="d-flex align-items-center mb-2">
-                            <img src="assets/images/profile/user-${((player.user_id % 8) + 1)}.jpg" alt="Player" class="player-avatar me-3">
+                            <img src="${(typeof BASE_PATH !== 'undefined' ? BASE_PATH : '') + '/assets/images/profile/user-' + ((player.user_id % 8) + 1)}.jpg" alt="Player" class="player-avatar me-3">
                             <div class="flex-grow-1">
                                 <h6 class="mb-0">${player.first_name} ${player.last_name}</h6>
                                 <small class="text-muted">${player.team_name || 'No Team'}</small>
@@ -774,7 +774,7 @@ error_log("Teams count: " . count($teams));
                     <div class="card-body p-3">
                         <div class="d-flex align-items-center justify-content-between">
                             <div class="d-flex align-items-center">
-                                <img src="assets/images/profile/user-${((player.user_id % 8) + 1)}.jpg" alt="Player" class="player-avatar me-3">
+                                <img src="${(typeof BASE_PATH !== 'undefined' ? BASE_PATH : '') + '/assets/images/profile/user-' + ((player.user_id % 8) + 1)}.jpg" alt="Player" class="player-avatar me-3">
                                 <div>
                                     <h6 class="mb-0">${player.first_name} ${player.last_name}</h6>
                                     <small class="text-muted">${player.team_name || 'No Team'}</small>

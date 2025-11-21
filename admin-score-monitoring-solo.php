@@ -672,7 +672,7 @@ if ($sessionId) {
                                   <tr data-player-id="<?php echo $player['user_id']; ?>">
                               <td>
                                 <div class="d-flex align-items-center">
-                                        <img src="assets/images/profile/user-<?php echo ($player['user_id'] % 8) + 1; ?>.jpg" alt="Player" class="rounded-circle me-2" width="32">
+                                        <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-' . ($player['user_id'] % 8) + 1; ?>.jpg" alt="Player" class="rounded-circle me-2" width="32">
                                   <div>
                                           <h6 class="mb-0"><?php echo htmlspecialchars($player['first_name'] . ' ' . $player['last_name']); ?></h6>
                                           <small class="text-muted"><?php echo htmlspecialchars($player['user_role']); ?></small>
@@ -815,7 +815,7 @@ if ($sessionId) {
                                     <tr>
                               <td>
                                 <div class="d-flex align-items-center">
-                                          <img src="assets/images/profile/user-<?php echo ($player['user_id'] % 8) + 1; ?>.jpg" alt="Player" class="rounded-circle me-2" width="32">
+                                          <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-' . ($player['user_id'] % 8) + 1; ?>.jpg" alt="Player" class="rounded-circle me-2" width="32">
                                   <div>
                                             <strong><?php echo htmlspecialchars($player['first_name'] . ' ' . $player['last_name']); ?></strong>
                                             <br><small class="text-muted"><?php echo htmlspecialchars($player['user_role']); ?></small>
@@ -984,7 +984,7 @@ if ($sessionId) {
                                     <tr>
                               <td>
                                 <div class="d-flex align-items-center">
-                                          <img src="assets/images/profile/user-<?php echo ($player['user_id'] % 8) + 1; ?>.jpg" alt="Player" class="rounded-circle me-2" width="32">
+                                          <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-' . ($player['user_id'] % 8) + 1; ?>.jpg" alt="Player" class="rounded-circle me-2" width="32">
                                   <div>
                                             <strong><?php echo htmlspecialchars($player['first_name'] . ' ' . $player['last_name']); ?></strong>
                                             <br><small class="text-muted"><?php echo htmlspecialchars($player['user_role']); ?></small>
@@ -1153,7 +1153,7 @@ if ($sessionId) {
                                     <tr>
                               <td>
                                 <div class="d-flex align-items-center">
-                                          <img src="assets/images/profile/user-<?php echo ($player['user_id'] % 8) + 1; ?>.jpg" alt="Player" class="rounded-circle me-2" width="32">
+                                          <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-' . ($player['user_id'] % 8) + 1; ?>.jpg" alt="Player" class="rounded-circle me-2" width="32">
                                   <div>
                                             <strong><?php echo htmlspecialchars($player['first_name'] . ' ' . $player['last_name']); ?></strong>
                                             <br><small class="text-muted"><?php echo htmlspecialchars($player['user_role']); ?></small>
@@ -1322,7 +1322,7 @@ if ($sessionId) {
                                     <tr>
                               <td>
                                 <div class="d-flex align-items-center">
-                                          <img src="assets/images/profile/user-<?php echo ($player['user_id'] % 8) + 1; ?>.jpg" alt="Player" class="rounded-circle me-2" width="32">
+                                          <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-' . ($player['user_id'] % 8) + 1; ?>.jpg" alt="Player" class="rounded-circle me-2" width="32">
                                   <div>
                                             <strong><?php echo htmlspecialchars($player['first_name'] . ' ' . $player['last_name']); ?></strong>
                                             <br><small class="text-muted"><?php echo htmlspecialchars($player['user_role']); ?></small>
@@ -1491,7 +1491,7 @@ if ($sessionId) {
                                     <tr>
                                       <td>
                                         <div class="d-flex align-items-center">
-                                          <img src="assets/images/profile/user-<?php echo ($player['user_id'] % 8) + 1; ?>.jpg" alt="Player" class="rounded-circle me-2" width="32">
+                                          <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-' . ($player['user_id'] % 8) + 1; ?>.jpg" alt="Player" class="rounded-circle me-2" width="32">
                                           <div>
                                             <strong><?php echo htmlspecialchars($player['first_name'] . ' ' . $player['last_name']); ?></strong>
                       </div>
@@ -3499,7 +3499,7 @@ if ($sessionId) {
           <tr data-player-id="${player.user_id}">
             <td>
               <div class="d-flex align-items-center">
-                <img src="assets/images/profile/user-${(player.user_id % 8) + 1}.jpg" alt="Player" class="rounded-circle me-2" width="32">
+                <img src="${(typeof BASE_PATH !== 'undefined' ? BASE_PATH : '') + '/assets/images/profile/user-' + (player.user_id % 8) + 1}.jpg" alt="Player" class="rounded-circle me-2" width="32">
                 <div>
                   <h6 class="mb-0">${player.first_name} ${player.last_name}</h6>
                   <small class="text-muted">${player.user_role}</small>
@@ -3558,7 +3558,7 @@ if ($sessionId) {
           <tr data-player-id="${player.user_id}">
             <td>
               <div class="d-flex align-items-center">
-                <img src="assets/images/profile/user-${(player.user_id % 8) + 1}.jpg" alt="Player" class="rounded-circle me-2" width="32">
+                <img src="${(typeof BASE_PATH !== 'undefined' ? BASE_PATH : '') + '/assets/images/profile/user-' + (player.user_id % 8) + 1}.jpg" alt="Player" class="rounded-circle me-2" width="32">
                 <div>
                   <h6 class="mb-0">${player.first_name} ${player.last_name}</h6>
                   <small class="text-muted">${player.user_role}</small>
@@ -3682,7 +3682,7 @@ if ($sessionId) {
           <tr data-player-id="${player.user_id}" data-game="${gameNumber}" style="transition: all 0.3s ease;">
             <td>
               <div class="d-flex align-items-center">
-                <img src="assets/images/profile/user-${(player.user_id % 8) + 1}.jpg" alt="Player" class="rounded-circle me-2" width="32">
+                <img src="${(typeof BASE_PATH !== 'undefined' ? BASE_PATH : '') + '/assets/images/profile/user-' + (player.user_id % 8) + 1}.jpg" alt="Player" class="rounded-circle me-2" width="32">
                 <div>
                   <strong>${player.first_name} ${player.last_name}</strong>
                   <br><small class="text-muted">${player.team_name || player.user_role}</small>

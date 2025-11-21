@@ -6,11 +6,17 @@
 require_once __DIR__ . '/profile-picture-helper.php';
 
 // Get user's profile picture
-$userProfilePicture = './assets/images/profile/user-1.jpg'; // Default
+$basePath = defined('BASE_PATH') ? BASE_PATH : '';
+$userProfilePicture = $basePath . '/assets/images/profile/user-1.jpg'; // Default
 if (isset($_SESSION['user_id'])) {
     $userProfilePicture = getUserProfilePicture($_SESSION['user_id']);
 }
 ?>
+
+<!-- Make BASE_PATH available to JavaScript -->
+<script>
+  const BASE_PATH = '<?php echo defined('BASE_PATH') ? BASE_PATH : ''; ?>';
+</script>
 
 <!--  Header Start -->
 <header class="app-header">   

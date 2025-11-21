@@ -330,7 +330,7 @@ $allUsers = getAllUsersData();
           <div class="row">
             <div class="col-md-4">
               <div class="text-center mb-4">
-                <img id="detailPlayerAvatar" src="assets/images/profile/user-1.jpg" alt="Player" class="rounded-circle mb-3" width="120" height="120" style="object-fit: cover;">
+                <img id="detailPlayerAvatar" src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-1.jpg'; ?>" alt="Player" class="rounded-circle mb-3" width="120" height="120" style="object-fit: cover;">
                 <h4 id="detailPlayerName">Player Name</h4>
                 <span class="badge bg-primary" id="detailPlayerSkill">Skill Level</span>
                 <span class="badge bg-success ms-2" id="detailPlayerStatus">Status</span>
@@ -668,13 +668,14 @@ $allUsers = getAllUsersData();
       }
       
       // Update avatar - use profile picture if available, otherwise template avatar based on user ID
+      const basePath = (typeof BASE_PATH !== 'undefined') ? BASE_PATH : '';
       let profilePicUrl;
       if (user.profile_picture && user.profile_picture !== '' && user.profile_picture !== null) {
-        profilePicUrl = './uploads/profile_pictures/' + user.profile_picture;
+        profilePicUrl = basePath + '/uploads/profile_pictures/' + user.profile_picture;
       } else {
         // Use template avatars (user-1.jpg through user-8.jpg) based on user ID
         const avatarNumber = ((user.user_id - 1) % 8) + 1;
-        profilePicUrl = './assets/images/profile/user-' + avatarNumber + '.jpg';
+        profilePicUrl = basePath + '/assets/images/profile/user-' + avatarNumber + '.jpg';
       }
       
       // Update both avatar elements (if they exist)
@@ -781,13 +782,14 @@ $allUsers = getAllUsersData();
       document.getElementById('editPhone').value = user.phone || '';
       
       // Profile Picture - construct URL directly
-      let profilePicUrl = 'assets/images/profile/user-1.jpg'; // Default
+      const basePath = (typeof BASE_PATH !== 'undefined') ? BASE_PATH : '';
+      let profilePicUrl = basePath + '/assets/images/profile/user-1.jpg'; // Default
       if (user.profile_picture) {
-        profilePicUrl = 'uploads/profile_pictures/' + user.profile_picture;
+        profilePicUrl = basePath + '/uploads/profile_pictures/' + user.profile_picture;
       } else if (user.user_id) {
         // Use template avatar based on user ID
         const avatarNum = ((user.user_id - 1) % 8) + 1;
-        profilePicUrl = 'assets/images/profile/user-' + avatarNum + '.jpg';
+        profilePicUrl = basePath + '/assets/images/profile/user-' + avatarNum + '.jpg';
       }
       document.getElementById('editUserAvatar').src = profilePicUrl;
       

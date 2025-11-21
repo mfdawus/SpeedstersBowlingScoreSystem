@@ -12,7 +12,9 @@
  * @return string The profile picture URL or template avatar
  */
 function getProfilePictureUrl($filename = null, $relative = true, $userId = null) {
-    $baseUrl = $relative ? './uploads/profile_pictures/' : '/uploads/profile_pictures/';
+    // Use BASE_PATH to work on both localhost subdirectory and production
+    $basePath = defined('BASE_PATH') ? BASE_PATH : '';
+    $baseUrl = $basePath . '/uploads/profile_pictures/';
     
     // If filename is provided and file exists, use it
     if (!empty($filename)) {
@@ -28,7 +30,8 @@ function getProfilePictureUrl($filename = null, $relative = true, $userId = null
         $avatarNumber = (($userId - 1) % 8) + 1;
     }
     
-    $defaultAvatar = $relative ? './assets/images/profile/user-' . $avatarNumber . '.jpg' : '/assets/images/profile/user-' . $avatarNumber . '.jpg';
+    // Use BASE_PATH for default avatars
+    $defaultAvatar = $basePath . '/assets/images/profile/user-' . $avatarNumber . '.jpg';
     return $defaultAvatar;
 }
 

@@ -1,0 +1,65 @@
+# Bowling System - Git Ignore File
+# Files and folders to exclude from Git repository
+
+# === Sensitive Files - NEVER COMMIT ===
+# Database credentials (if you create a separate config)
+config/database-credentials.php
+.env
+
+# === User Uploaded Content ===
+# Keep the folder structure but ignore uploaded files
+uploads/profile_pictures/*.jpg
+uploads/profile_pictures/*.jpeg
+uploads/profile_pictures/*.png
+uploads/profile_pictures/*.gif
+uploads/profile_pictures/*.webp
+# BUT keep the index.php security file
+!uploads/profile_pictures/index.php
+!uploads/profile_pictures/.htaccess
+
+# === Node Modules (if using npm) ===
+node_modules/
+package-lock.json
+
+# === IDE and Editor Files ===
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# === Log Files ===
+*.log
+error_log
+debug.log
+
+# === Temporary Files ===
+tmp/
+temp/
+*.tmp
+*.bak
+*.backup
+
+# === System Files ===
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# === PHP Temp Files ===
+*.cache
+cache/
+
+# === Backup Files ===
+*.sql.backup
+*.sql.gz
+backup/
+backups/
+
+# === Test Files (keep out of production) ===
+test-*.php
+debug-*.php
+phpinfo.php

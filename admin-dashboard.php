@@ -652,7 +652,7 @@ $activeSession = getActiveSession();
                                   <td><span class="badge bg-primary"><?php echo $rank; ?></span></td>
                                   <td>
                                     <div class="d-flex align-items-center">
-                                      <img src="assets/images/profile/user-<?php echo ($rank % 8) + 1; ?>.jpg" alt="Player" class="rounded-circle me-2" width="32" height="32">
+                                      <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-' . ($rank % 8) + 1; ?>.jpg" alt="Player" class="rounded-circle me-2" width="32" height="32">
                                       <div>
                                         <h6 class="mb-0"><?php echo htmlspecialchars($player['first_name'] . ' ' . $player['last_name']); ?></h6>
                                         <small class="text-muted">Team: <?php echo htmlspecialchars($player['team_name'] ?? 'No Team'); ?></small>
@@ -746,7 +746,7 @@ $activeSession = getActiveSession();
                                   <td><span class="badge bg-primary"><?php echo $rank; ?></span></td>
                                   <td>
                                     <div class="d-flex align-items-center">
-                                      <img src="assets/images/profile/user-<?php echo ($rank % 8) + 1; ?>.jpg" alt="Player" class="rounded-circle me-2" width="32" height="32">
+                                      <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-' . ($rank % 8) + 1; ?>.jpg" alt="Player" class="rounded-circle me-2" width="32" height="32">
                                       <div>
                                         <h6 class="mb-0"><?php echo htmlspecialchars($player['first_name'] . ' ' . $player['last_name']); ?></h6>
                                         <small class="text-muted"><?php echo ucfirst($player['skill_level']); ?> Player</small>
@@ -822,8 +822,8 @@ $activeSession = getActiveSession();
                                   <td>
                                     <div class="d-flex align-items-center">
                                       <div class="d-flex me-2">
-                                        <img src="assets/images/profile/user-<?php echo ($rank % 8) + 1; ?>.jpg" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
-                                        <img src="assets/images/profile/user-<?php echo (($rank + 1) % 8) + 1; ?>.jpg" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
+                                        <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-' . ($rank % 8) + 1; ?>.jpg" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
+                                        <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-' . (($rank + 1) % 8) + 1; ?>.jpg" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
                                       </div>
                                       <div>
                                         <h6 class="mb-0"><?php echo htmlspecialchars($team['team_name']); ?></h6>
@@ -892,9 +892,9 @@ $activeSession = getActiveSession();
                                   <td>
                                     <div class="d-flex align-items-center">
                                       <div class="d-flex me-2">
-                                        <img src="assets/images/profile/user-<?php echo ($rank % 8) + 1; ?>.jpg" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
-                                        <img src="assets/images/profile/user-<?php echo (($rank + 1) % 8) + 1; ?>.jpg" alt="Player 2" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
-                                        <img src="assets/images/profile/user-<?php echo (($rank + 2) % 8) + 1; ?>.jpg" alt="Player 3" class="rounded-circle border border-2 border-white" width="32">
+                                        <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-' . ($rank % 8) + 1; ?>.jpg" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
+                                        <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-' . (($rank + 1) % 8) + 1; ?>.jpg" alt="Player 2" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
+                                        <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-' . (($rank + 2) % 8) + 1; ?>.jpg" alt="Player 3" class="rounded-circle border border-2 border-white" width="32">
                                       </div>
                                       <div>
                                         <h6 class="mb-0"><?php echo htmlspecialchars($team['team_name']); ?></h6>
@@ -963,10 +963,10 @@ $activeSession = getActiveSession();
                                   <td>
                                     <div class="d-flex align-items-center">
                                       <div class="d-flex me-2">
-                                        <img src="assets/images/profile/user-<?php echo ($rank % 8) + 1; ?>.jpg" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
-                                        <img src="assets/images/profile/user-<?php echo (($rank + 1) % 8) + 1; ?>.jpg" alt="Player 2" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
-                                        <img src="assets/images/profile/user-<?php echo (($rank + 2) % 8) + 1; ?>.jpg" alt="Player 3" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
-                                        <img src="assets/images/profile/user-<?php echo (($rank + 3) % 8) + 1; ?>.jpg" alt="Player 4" class="rounded-circle border border-2 border-white" width="32">
+                                        <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-' . ($rank % 8) + 1; ?>.jpg" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
+                                        <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-' . (($rank + 1) % 8) + 1; ?>.jpg" alt="Player 2" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
+                                        <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-' . (($rank + 2) % 8) + 1; ?>.jpg" alt="Player 3" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
+                                        <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-' . (($rank + 3) % 8) + 1; ?>.jpg" alt="Player 4" class="rounded-circle border border-2 border-white" width="32">
                                       </div>
                                       <div>
                                         <h6 class="mb-0"><?php echo htmlspecialchars($team['team_name']); ?></h6>
@@ -1461,7 +1461,7 @@ $activeSession = getActiveSession();
           <td>
             <div class="d-flex align-items-center">
               <div class="player-avatar-container me-3">
-                <img src="./assets/images/profile/user-${(index % 8) + 1}.jpg" alt="user" class="player-avatar">
+                <img src="${(typeof BASE_PATH !== 'undefined' ? BASE_PATH : '') + '/assets/images/profile/user-' + (index % 8) + 1}.jpg" alt="user" class="player-avatar">
                 ${rank <= 3 ? `<div class="rank-crown rank-${rank}"><i class="ti ti-crown"></i></div>` : ''}
               </div>
               <div>

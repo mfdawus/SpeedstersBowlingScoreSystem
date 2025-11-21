@@ -620,7 +620,8 @@ function generatePlayerAvatars($players) {
     $html = '';
     foreach ($players as $index => $player) {
         $avatarNum = ($player['user_id'] % 8) + 1;
-        $html .= '<img src="assets/images/profile/user-' . $avatarNum . '.jpg" alt="Player" class="player-avatar">';
+        $basePath = defined('BASE_PATH') ? BASE_PATH : '';
+        $html .= '<img src="' . $basePath . '/assets/images/profile/user-' . $avatarNum . '.jpg" alt="Player" class="player-avatar">';
     }
     return $html;
 }

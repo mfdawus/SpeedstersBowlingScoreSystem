@@ -105,6 +105,11 @@ if (!$userData || isset($userData['error'])) {
 </head>
 
 <body>
+  <!-- Make BASE_PATH available to JavaScript for profile picture handling -->
+  <script>
+    const BASE_PATH = '<?php echo defined('BASE_PATH') ? BASE_PATH : ''; ?>';
+  </script>
+  
   <!--  Body Wrapper -->
   <div class="page-wrapper" id="main-wrapper" data-layout="vertical" data-navbarbg="skin6" data-sidebartype="full"
     data-sidebar-position="fixed" data-header-position="fixed" style="margin-top: 0; padding-top: 0;">
@@ -546,6 +551,12 @@ if (!$userData || isset($userData['error'])) {
       // Show loading state
       showNotification('Uploading profile picture...', 'info');
       
+      // Add visual loading indicator to the image
+      const profilePicture = document.getElementById('profilePicture');
+      const originalOpacity = profilePicture.style.opacity;
+      profilePicture.style.opacity = '0.5';
+      profilePicture.style.filter = 'blur(2px)';
+      
       // Create FormData and upload
       const formData = new FormData();
       formData.append('profile_picture', file);
@@ -556,30 +567,64 @@ if (!$userData || isset($userData['error'])) {
       })
       .then(response => response.json())
       .then(data => {
+        console.log('Upload response:', data); // Debug log
+        const profilePicture = document.getElementById('profilePicture');
+        
         if (data.success) {
-          // Update profile picture preview
-          const profilePicture = document.getElementById('profilePicture');
-          profilePicture.src = data.url + '?t=' + new Date().getTime(); // Cache buster
+          const timestamp = new Date().getTime();
+          const newImageUrl = data.url + '?t=' + timestamp;
+          console.log('New image URL:', newImageUrl); // Debug log
           
-          // Update header profile picture if it exists
-          const headerProfilePics = document.querySelectorAll('img[src*="profile"]');
-          headerProfilePics.forEach(img => {
-            if (img !== profilePicture) {
-              img.src = data.url + '?t=' + new Date().getTime();
-            }
-          });
+          // Update main profile picture immediately
+          if (profilePicture) {
+            console.log('Updating profile picture element');
+            // Direct update - browser will handle caching with timestamp
+            profilePicture.src = newImageUrl;
+            
+            // Remove loading effect after a short delay to ensure update
+            setTimeout(() => {
+              profilePicture.style.opacity = '1';
+              profilePicture.style.filter = 'none';
+              console.log('Profile picture updated successfully');
+            }, 200);
+          } else {
+            console.error('Profile picture element not found!');
+          }
+          
+          // Update all other profile pictures on the page (like header avatar)
+          setTimeout(() => {
+            const allProfileImages = document.querySelectorAll('img[src*="profile_pictures"], img[src*="profile"], img[alt*="Profile"]');
+            console.log('Found ' + allProfileImages.length + ' profile images to update');
+            allProfileImages.forEach(img => {
+              if (img.id !== 'profilePicture') {
+                console.log('Updating additional profile image:', img);
+                img.src = newImageUrl;
+              }
+            });
+          }, 300);
           
           showNotification(data.message, 'success');
         } else {
+          // Remove loading effect on error
+          if (profilePicture) {
+            profilePicture.style.opacity = '1';
+            profilePicture.style.filter = 'none';
+          }
           showNotification(data.message || 'Failed to upload profile picture', 'error');
         }
       })
       .catch(error => {
         console.error('Upload error:', error);
+        // Remove loading effect
+        const profilePicture = document.getElementById('profilePicture');
+        if (profilePicture) {
+          profilePicture.style.opacity = '1';
+          profilePicture.style.filter = 'none';
+        }
         showNotification('An error occurred while uploading. Please try again.', 'error');
       })
       .finally(() => {
-        // Reset file input
+        // Reset file input so the same file can be uploaded again if needed
         event.target.value = '';
       });
     }
