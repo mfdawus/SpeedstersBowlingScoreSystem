@@ -504,7 +504,7 @@ error_log("Teams count: " . count($teams));
                                                 <div class="card-body p-3">
                                                     <div class="d-flex align-items-center justify-content-between">
                                                         <div class="d-flex align-items-center">
-                                                            <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-' . echo (($participant['user_id'] % 8) + 1); ?>.jpg" alt="Player" class="player-avatar me-3">
+                                                            <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-' . (($participant['user_id'] % 8) + 1) . '.jpg'; ?>" alt="Player" class="player-avatar me-3">
                                                             <div>
                                                                 <h6 class="mb-0"><?php echo htmlspecialchars($participant['first_name'] . ' ' . $participant['last_name']); ?></h6>
                                                                 <small class="text-muted"><?php echo htmlspecialchars($participant['team_name']); ?></small>

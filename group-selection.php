@@ -1,7 +1,46 @@
 <?php
-// Check maintenance bypass for admin users
-require_once 'includes/maintenance-bypass.php';
-requireMaintenanceBypass('group', 'Group Selection');
+// Auth / DB
+require_once 'includes/auth.php';
+require_once 'database.php';
+
+if (!isset($_SESSION['user_id'])) {
+    header('Location: authentication-login.php');
+    exit;
+}
+
+$userId = $_SESSION['user_id'];
+
+// Fetch all Doubles sessions this user is participating in
+$duoSessions = [];
+try {
+    $pdo = getDBConnection();
+    $stmt = $pdo->prepare("
+        SELECT 
+            gs.session_id,
+            gs.session_name,
+            gs.session_date,
+            gs.game_mode,
+            gs.status,
+            gs.max_players,
+            (
+                SELECT COUNT(DISTINCT user_id) 
+                FROM session_participants 
+                WHERE session_id = gs.session_id
+            ) AS participants_count
+        FROM game_sessions gs
+        INNER JOIN session_participants sp 
+            ON gs.session_id = sp.session_id
+        WHERE gs.game_mode = 'Doubles'
+          AND gs.status IN ('Pending', 'Active', 'Scheduled')
+          AND sp.user_id = ?
+        ORDER BY gs.session_date DESC
+    ");
+    $stmt->execute([$userId]);
+    $duoSessions = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (Exception $e) {
+    error_log('Error fetching duo sessions in group-selection.php: ' . $e->getMessage());
+    $duoSessions = [];
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -432,21 +471,32 @@ requireMaintenanceBypass('group', 'Group Selection');
   <script src="./assets/libs/simplebar/dist/simplebar.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/iconify-icon@1.0.8/dist/iconify-icon.min.js"></script>
   
-  <!-- Countdown Timer Script -->
+  <!-- Countdown Timer Script (safe on pages without countdown elements) -->
   <script>
     // Set the target date for the tournament (you can change this)
     const targetDate = new Date('2025-03-15T18:00:00').getTime();
     
     function updateCountdown() {
+      // Safely get elements; if they don't exist, do nothing
+      const daysEl = document.getElementById('days');
+      const hoursEl = document.getElementById('hours');
+      const minutesEl = document.getElementById('minutes');
+      const secondsEl = document.getElementById('seconds');
+
+      if (!daysEl || !hoursEl || !minutesEl || !secondsEl) {
+        // This page doesn't have countdown elements, so skip
+        return;
+      }
+
       const now = new Date().getTime();
       const distance = targetDate - now;
       
       if (distance < 0) {
         // Event has passed
-        document.getElementById('days').innerHTML = '00';
-        document.getElementById('hours').innerHTML = '00';
-        document.getElementById('minutes').innerHTML = '00';
-        document.getElementById('seconds').innerHTML = '00';
+        daysEl.innerHTML = '00';
+        hoursEl.innerHTML = '00';
+        minutesEl.innerHTML = '00';
+        secondsEl.innerHTML = '00';
         return;
       }
       
@@ -455,21 +505,26 @@ requireMaintenanceBypass('group', 'Group Selection');
       const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
       const seconds = Math.floor((distance % (1000 * 60)) / 1000);
       
-      document.getElementById('days').innerHTML = days.toString().padStart(2, '0');
-      document.getElementById('hours').innerHTML = hours.toString().padStart(2, '0');
-      document.getElementById('minutes').innerHTML = minutes.toString().padStart(2, '0');
-      document.getElementById('seconds').innerHTML = seconds.toString().padStart(2, '0');
+      daysEl.innerHTML = days.toString().padStart(2, '0');
+      hoursEl.innerHTML = hours.toString().padStart(2, '0');
+      minutesEl.innerHTML = minutes.toString().padStart(2, '0');
+      secondsEl.innerHTML = seconds.toString().padStart(2, '0');
     }
     
-    // Update countdown every second
-    setInterval(updateCountdown, 1000);
-    
-    // Initial call
+    // Only start countdown if elements exist on the page
+    document.addEventListener('DOMContentLoaded', function () {
+      if (document.getElementById('days') &&
+          document.getElementById('hours') &&
+          document.getElementById('minutes') &&
+          document.getElementById('seconds')) {
     updateCountdown();
+        setInterval(updateCountdown, 1000);
+      }
+    });
   </script>
   
   <script>
-    // Sample groups data organized by skill groups and team types
+    // Sample groups data organized by skill groups and team types (used for Trio/Team demos)
     const availableGroups = {
       duo: {
         A: [
@@ -575,11 +630,19 @@ requireMaintenanceBypass('group', 'Group Selection');
       }
     };
 
+    // Real duo sessions for the logged-in player (from PHP)
+    const duoSessions = <?php echo json_encode($duoSessions); ?> || [];
+
     let selectedTeamType = null;
     let userSkillGroup = null;
     let userScore = null;
     let selectedGroupId = null;
     let filteredGroups = [];
+
+    // Duo session/lobby state
+    let currentSessionId = null;
+    let currentDuoId = null;
+    let duoPollInterval = null;
 
     // Initialize page
     document.addEventListener('DOMContentLoaded', function() {
@@ -647,8 +710,20 @@ requireMaintenanceBypass('group', 'Group Selection');
     }
 
     function findMatchingGroups() {
-      if (!selectedTeamType || !userSkillGroup) {
+      if (!selectedTeamType) {
         alert('Please select a team type first.');
+        return;
+      }
+
+      // Duo flow: show real sessions list
+      if (selectedTeamType === 'duo') {
+        loadDuoSessions();
+        return;
+      }
+
+      // Trio / Team: keep existing demo behaviour
+      if (!userSkillGroup) {
+        alert('Please wait for your skill level to be calculated.');
         return;
       }
       
@@ -667,6 +742,77 @@ requireMaintenanceBypass('group', 'Group Selection');
       
       // Scroll to groups
       document.getElementById('groupsDisplaySection').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    // ==============================
+    // Duo Sessions – real data
+    // ==============================
+    function loadDuoSessions() {
+      const groupsSection = document.getElementById('groupsDisplaySection');
+      const container = document.getElementById('groupsContainer');
+
+      if (!groupsSection || !container) {
+        console.error('groupsDisplaySection or groupsContainer not found');
+        alert('Unable to show sessions right now. Please refresh the page.');
+        return;
+      }
+
+      // Clear previous groups
+      filteredGroups = [];
+      container.innerHTML = '';
+
+      if (!duoSessions || duoSessions.length === 0) {
+        // No sessions this player is in
+        groupsSection.style.display = 'block';
+        container.innerHTML = `
+          <div class="col-12">
+            <div class="card">
+              <div class="card-body text-center py-5">
+                <i class="ti ti-alert-circle fs-1 text-warning mb-3"></i>
+                <h5 class="text-warning mb-2">No Doubles Sessions Found</h5>
+                <p class="text-muted mb-0">
+                  You are not currently registered in any upcoming Doubles sessions.
+                  Please ask the admin to add you to a Doubles session first.
+                </p>
+              </div>
+            </div>
+          </div>
+        `;
+        groupsSection.style.display = 'block';
+        groupsSection.scrollIntoView({ behavior: 'smooth' });
+        return;
+      }
+
+      // Map backend sessions into the generic group format used by populateGroups()
+      filteredGroups = duoSessions.map(session => {
+        const sessionDate = session.session_date ? new Date(session.session_date) : null;
+        const formattedDate = sessionDate ? sessionDate.toLocaleString() : 'Date TBD';
+        const playerCount = parseInt(session.participants_count, 10) || 0;
+        const maxPlayers = parseInt(session.max_players, 10) || 0;
+
+        return {
+          id: session.session_id,
+          session_id: session.session_id,
+          name: session.session_name || 'Doubles Session',
+          description: `Doubles session on ${formattedDate}`,
+          skillGroup: userSkillGroup || '-',
+          avgScore: userScore || '-',
+          playerCount: playerCount,
+          maxPlayers: maxPlayers,
+          // Since you are already a participant in these sessions,
+          // you should always be allowed to enter the lobby,
+          // even if the session is at max capacity.
+          available: true
+        };
+      });
+
+      // Update header
+      document.getElementById('selectedTeamType').textContent = 'Duo Sessions';
+      document.getElementById('userSkillGroup').textContent = userSkillGroup || '-';
+
+      groupsSection.style.display = 'block';
+      populateGroups();
+      groupsSection.scrollIntoView({ behavior: 'smooth' });
     }
 
     function getTeamTypeName(type) {
@@ -763,7 +909,7 @@ requireMaintenanceBypass('group', 'Group Selection');
               
               <button class="btn btn-primary join-button" ${!group.available ? 'disabled' : ''} onclick="event.stopPropagation(); joinGroup(${group.id})">
                 <i class="ti ti-user-plus me-1"></i>
-                ${group.available ? 'Join Group' : 'Group Full'}
+                ${group.available ? (selectedTeamType === 'duo' ? 'Join Session' : 'Join Group') : 'Group Full'}
               </button>
             </div>
           </div>
@@ -788,31 +934,437 @@ requireMaintenanceBypass('group', 'Group Selection');
     }
 
     function showSelectedGroupSummary(groupId) {
-      const group = availableGroups.find(g => g.id === groupId);
-      if (group) {
-        document.getElementById('selectedGroupName').textContent = group.name;
-        document.getElementById('selectedGroupDescription').textContent = group.description;
-        document.getElementById('selectedGroupSkill').textContent = group.skillLevel.charAt(0).toUpperCase() + group.skillLevel.slice(1);
-        document.getElementById('selectedGroupCount').textContent = group.playerCount;
-        document.getElementById('selectedGroupMax').textContent = group.maxPlayers;
-        document.getElementById('selectedGroupAvg').textContent = group.avgScore;
-        
-        document.getElementById('selectedGroupSummary').style.display = 'block';
+      let group = null;
+
+      // For Duo sessions, use filteredGroups (real data)
+      if (selectedTeamType === 'duo') {
+        group = filteredGroups.find(g => g.id === groupId || g.session_id === groupId);
+      } else if (selectedTeamType && userSkillGroup && 
+                 availableGroups[selectedTeamType] && 
+                 availableGroups[selectedTeamType][userSkillGroup]) {
+        // For Trio / Team, use sample groups
+        group = availableGroups[selectedTeamType][userSkillGroup].find(g => g.id === groupId);
       }
+
+      if (!group) {
+        console.warn('showSelectedGroupSummary: group not found for id', groupId);
+        return;
+      }
+
+      // Normalise fields between duo sessions and sample groups
+      const skill = group.skillGroup || userSkillGroup || '-';
+      const playerCount = group.playerCount ?? 0;
+      const maxPlayers = group.maxPlayers ?? 0;
+      const avgScore = group.avgScore ?? '-';
+
+      document.getElementById('selectedGroupName').textContent = group.name || 'Group';
+      document.getElementById('selectedGroupDescription').textContent = group.description || '';
+      document.getElementById('selectedGroupSkill').textContent = skill;
+      document.getElementById('selectedGroupCount').textContent = playerCount;
+      document.getElementById('selectedGroupMax').textContent = maxPlayers;
+      document.getElementById('selectedGroupAvg').textContent = avgScore;
+      
+      document.getElementById('selectedGroupSummary').style.display = 'block';
     }
 
     function joinGroup(groupId) {
-      const group = availableGroups.find(g => g.id === groupId);
-      if (group && group.available) {
-        showNotification(`Successfully joined ${group.name}!`, 'success');
-        // Update group count
-        group.playerCount++;
-        if (group.playerCount >= group.maxPlayers) {
-          group.available = false;
+      // For Duo: groupId corresponds to session_id from filteredGroups or duoSessions
+      if (selectedTeamType === 'duo') {
+        // Try to find session in filteredGroups first
+        let session = filteredGroups.find(g => g.id === groupId || g.session_id === groupId);
+        
+        // If not found, try duoSessions array directly
+        if (!session && duoSessions && duoSessions.length > 0) {
+          session = duoSessions.find(s => s.session_id == groupId);
         }
-        populateGroups();
-        document.getElementById('selectedGroupSummary').style.display = 'none';
+        
+        if (!session) {
+          alert('Session information not found. Please refresh the page.');
+          return;
+        }
+
+        // Use session_id from the found session
+        const sessionId = session.session_id || session.id || groupId;
+
+        // Call backend to join the duo lobby for this session
+        const formData = new FormData();
+        formData.append('action', 'join_lobby');
+        formData.append('session_id', sessionId);
+
+        fetch('ajax/duo-management.php', {
+          method: 'POST',
+          body: formData
+        })
+          .then(res => res.json())
+          .then(data => {
+            // Three cases where we should still open the lobby:
+            // 1) Joined successfully
+            // 2) Already in a duo for this session
+            // 3) Already joined the lobby earlier
+            if (data.success || data.already_paired || data.already_joined) {
+              if (data.success) {
+                showNotification('Joined duo session lobby successfully.', 'success');
+              } else if (data.already_paired) {
+                showNotification('You are already in a duo for this session. Opening lobby...', 'info');
+              } else if (data.already_joined) {
+                showNotification('You have already joined this lobby. Opening lobby...', 'info');
+              }
+              showDuoLobby(session);
+            } else {
+              const message = data.message || 'Failed to join duo lobby.';
+              showNotification(message, 'error');
+            }
+          })
+          .catch(err => {
+            console.error('Error joining duo lobby:', err);
+            showNotification('Connection error while joining duo lobby.', 'error');
+          });
+        return;
       }
+
+      // Trio / Team demo behaviour (kept simple)
+      showNotification('Joining Trio/Team groups is demo-only in this version.', 'info');
+    }
+
+    function showDuoLobby(session) {
+      currentSessionId = session.session_id;
+
+      const groupsSection = document.getElementById('groupsDisplaySection');
+      if (groupsSection) {
+        groupsSection.style.display = 'none';
+      }
+
+      let lobbySection = document.getElementById('duoLobbySection');
+      if (!lobbySection) {
+        lobbySection = document.createElement('div');
+        lobbySection.id = 'duoLobbySection';
+        document.querySelector('.container-fluid').appendChild(lobbySection);
+      }
+
+      const sessionDate = session.session_date ? new Date(session.session_date) : null;
+      const formattedDate = sessionDate ? sessionDate.toLocaleString() : 'Date TBD';
+
+      lobbySection.innerHTML = `
+        <div class="row mt-4">
+          <div class="col-12">
+            <div class="card">
+              <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                  <i class="ti ti-users me-2"></i>
+                  Duo Lobby – ${session.name || 'Doubles Session'}
+                </h5>
+              </div>
+              <div class="card-body">
+                <p class="text-muted">
+                  Session date: <strong>${formattedDate}</strong><br>
+                  Players in session: <strong>${session.playerCount}/${session.maxPlayers}</strong>
+                </p>
+
+                <div class="text-center mb-4">
+                  <h6>Your latest average (5 games)</h6>
+                  <div class="d-inline-block px-4 py-2 bg-light rounded">
+                    <span style="font-size: 32px; font-weight: bold;" id="duoUserAverage">
+                      ${userScore || '-'}
+                    </span>
+                  </div>
+                  <p class="text-muted small mt-2">
+                    This value is used to form your duo pairing.
+                  </p>
+                </div>
+
+                <div id="duoStatusArea" class="mb-3">
+                  <div class="alert alert-info mb-2" id="duoStatusMessage">
+                    Waiting for admin to form duos for this session...
+                  </div>
+                  <div id="duoPartnerInfo" style="display:none;"></div>
+                </div>
+
+                <div id="laneVotingArea" class="mb-3" style="display:none;">
+                  <h6>Lane Voting</h6>
+                  <p class="text-muted small mb-2" id="laneVotingHelpText">
+                    One player from your duo can randomize your lane. Once chosen, the lane is locked for your team.
+                  </p>
+                  <div class="d-flex gap-2">
+                    <button id="randomLaneBtn" class="btn btn-outline-primary" onclick="voteForRandomLane()">
+                      Randomize Lane
+                    </button>
+                  </div>
+                  <p class="text-muted small mt-2" id="laneStatusText"></p>
+                </div>
+
+                <button class="btn btn-outline-secondary" onclick="location.reload()">
+                  <i class="ti ti-arrow-left me-1"></i>
+                  Back to Session List
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      lobbySection.scrollIntoView({ behavior: 'smooth' });
+
+      // Start polling for duo + lane status
+      startDuoPolling();
+    }
+
+    function startDuoPolling() {
+      if (!currentSessionId) return;
+
+      if (duoPollInterval) {
+        clearInterval(duoPollInterval);
+      }
+
+      // Check immediately, then poll every 5 seconds
+      checkMyDuoStatus();
+      duoPollInterval = setInterval(checkMyDuoStatus, 5000);
+    }
+
+    function checkMyDuoStatus() {
+      if (!currentSessionId) return;
+
+      // First, try to auto-pair if possible (system-driven, not admin)
+      autoPairIfPossible();
+
+      fetch('ajax/duo-management.php?action=get_my_duo&session_id=' + encodeURIComponent(currentSessionId))
+        .then(res => res.json())
+        .then(data => {
+          const statusEl = document.getElementById('duoStatusMessage');
+          const partnerInfoEl = document.getElementById('duoPartnerInfo');
+          const laneArea = document.getElementById('laneVotingArea');
+          const laneStatusText = document.getElementById('laneStatusText');
+          const laneHelpText = document.getElementById('laneVotingHelpText');
+          const randomLaneBtn = document.getElementById('randomLaneBtn');
+
+          if (!statusEl || !partnerInfoEl || !laneArea) {
+            // Lobby might have been left / page reloaded
+            return;
+          }
+
+          if (!data.success) {
+            statusEl.className = 'alert alert-danger mb-2';
+            statusEl.textContent = data.message || 'Error checking duo status.';
+            return;
+          }
+
+          if (!data.in_duo) {
+            statusEl.className = 'alert alert-info mb-2';
+            // Show how many players are in the lobby
+            const playersInLobby = data.players_in_lobby || 0;
+            const totalPlayers = data.total_players || 8;
+            statusEl.innerHTML = `
+              <div class="d-flex align-items-center">
+                <div class="spinner-border spinner-border-sm me-2" role="status">
+                  <span class="visually-hidden">Loading...</span>
+                </div>
+                <div>
+                  Waiting for all players to join... (${playersInLobby}/${totalPlayers} players ready)
+                  <br><small class="text-muted">Pairing will happen automatically once everyone has joined.</small>
+                </div>
+              </div>
+            `;
+            partnerInfoEl.style.display = 'none';
+            laneArea.style.display = 'none';
+            return;
+          }
+
+          // We are in a duo
+          const duo = data.duo;
+          currentDuoId = duo.duo_id;
+
+          statusEl.className = 'alert alert-success mb-2';
+          statusEl.innerHTML = `
+            <strong>✓ You have been paired!</strong>
+            <br>
+            <small>Duo Team: <strong>${duo.duo_name || 'Duo 1'}</strong></small>
+          `;
+
+          const youLabel = duo.is_player1 ? 
+            (duo.player1_first_name + ' ' + duo.player1_last_name) :
+            (duo.player2_first_name + ' ' + duo.player2_last_name);
+
+          partnerInfoEl.innerHTML = `
+            <div class="card mb-3">
+              <div class="card-body">
+                <h6 class="card-title mb-3">Duo Team Name</h6>
+                <div class="input-group mb-3">
+                  <input type="text" 
+                         class="form-control" 
+                         id="duoNameInput" 
+                         value="${(duo.duo_name || 'Duo 1').replace(/"/g, '&quot;')}" 
+                         placeholder="Enter duo name"
+                         maxlength="50">
+                  <button class="btn btn-primary" onclick="updateDuoName()">
+                    <i class="ti ti-check me-1"></i>Save
+                  </button>
+                </div>
+                <hr>
+                <p class="mb-1">
+                  <strong>You:</strong> ${youLabel}
+                </p>
+                <p class="mb-1">
+                  <strong>Partner:</strong> ${duo.partner_name}
+                </p>
+              </div>
+            </div>
+          `;
+          partnerInfoEl.style.display = 'block';
+
+          // Lane info and button visibility
+          if (duo.lane_number) {
+            laneArea.style.display = 'block';
+            laneStatusText.textContent = 'Lane assigned: ' + duo.lane_number + '. Lane voting is closed.';
+            if (randomLaneBtn) randomLaneBtn.disabled = true;
+            if (laneHelpText) laneHelpText.textContent = 'Lane has been set for your duo.';
+          } else {
+            laneArea.style.display = 'block';
+            if (duo.is_player1) {
+              // This player is allowed to randomize the lane
+              if (randomLaneBtn) randomLaneBtn.disabled = false;
+              if (laneHelpText) laneHelpText.textContent =
+                'You can randomize the lane once for your duo. Your partner cannot change it.';
+              laneStatusText.textContent = 'No lane assigned yet. Click "Randomize Lane" once.';
+            } else {
+              // Partner will randomize
+              if (randomLaneBtn) randomLaneBtn.disabled = true;
+              if (laneHelpText) laneHelpText.textContent =
+                'Your partner will randomize the lane for your duo.';
+              laneStatusText.textContent = 'Waiting for your partner to randomize the lane.';
+            }
+          }
+        })
+        .catch(err => {
+          console.error('Error checking duo status:', err);
+        });
+    }
+
+    function autoPairIfPossible() {
+      if (!currentSessionId) return;
+
+      const formData = new FormData();
+      formData.append('action', 'auto_pair_now');
+      formData.append('session_id', currentSessionId);
+
+      fetch('ajax/duo-management.php', {
+        method: 'POST',
+        body: formData
+      })
+        .then(res => res.json())
+        .then(data => {
+          // We don't need to show anything here; checkMyDuoStatus()
+          // will pick up any new duos that were created.
+        })
+        .catch(err => {
+          console.error('Error attempting auto pair:', err);
+        });
+    }
+
+    function updateDuoName() {
+      if (!currentDuoId) {
+        alert('Duo not found yet. Please wait for pairing to complete.');
+        return;
+      }
+
+      const duoNameInput = document.getElementById('duoNameInput');
+      if (!duoNameInput) return;
+
+      const newName = duoNameInput.value.trim();
+      if (!newName) {
+        alert('Please enter a duo name.');
+        return;
+      }
+
+      // Disable button while saving
+      const saveBtn = event.target;
+      const originalHTML = saveBtn.innerHTML;
+      saveBtn.disabled = true;
+      saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Saving...';
+
+      const formData = new FormData();
+      formData.append('action', 'update_duo_name');
+      formData.append('duo_id', currentDuoId);
+      formData.append('duo_name', newName);
+
+      fetch('ajax/duo-management.php', {
+        method: 'POST',
+        body: formData
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            // Update the status message immediately
+            const statusEl = document.getElementById('duoStatusMessage');
+            if (statusEl) {
+              statusEl.innerHTML = `
+                <strong>✓ You have been paired!</strong>
+                <br>
+                <small>Duo Team: <strong>${newName}</strong></small>
+              `;
+            }
+            
+            // Show success notification
+            const notification = document.createElement('div');
+            notification.className = 'alert alert-success alert-dismissible fade show position-fixed';
+            notification.style.cssText = 'top: 80px; right: 20px; z-index: 9999; min-width: 300px;';
+            notification.innerHTML = `
+              ✓ Duo name updated to "${newName}"
+              <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            document.body.appendChild(notification);
+            setTimeout(() => notification.remove(), 3000);
+            
+            // Refresh duo status to ensure everything is in sync
+            setTimeout(() => checkMyDuoStatus(), 500);
+          } else {
+            alert(data.message || 'Failed to update duo name.');
+          }
+        })
+        .catch(err => {
+          console.error('Error updating duo name:', err);
+          alert('Error updating duo name.');
+        })
+        .finally(() => {
+          // Re-enable button
+          saveBtn.disabled = false;
+          saveBtn.innerHTML = originalHTML;
+        });
+    }
+
+    function voteForRandomLane() {
+      if (!currentDuoId) {
+        alert('Duo not found yet. Please wait for pairing to complete.');
+        return;
+      }
+
+      // Randomly choose lane 1 or 2
+      const laneNumber = Math.random() < 0.5 ? 1 : 2;
+
+      const formData = new FormData();
+      formData.append('action', 'vote_lane');
+      formData.append('duo_id', currentDuoId);
+      formData.append('lane_number', laneNumber);
+
+      fetch('ajax/duo-management.php', {
+        method: 'POST',
+        body: formData
+      })
+        .then(res => res.json())
+        .then(data => {
+          const laneStatusText = document.getElementById('laneStatusText');
+          if (!laneStatusText) return;
+
+          if (!data.success) {
+            laneStatusText.textContent = data.message || 'Failed to record lane vote.';
+            return;
+          }
+
+          laneStatusText.textContent = data.message || ('Lane chosen: ' + laneNumber + '.');
+          // Immediately refresh duo info to show assigned lane
+          checkMyDuoStatus();
+        })
+        .catch(err => {
+          console.error('Error voting for lane:', err);
+        });
     }
 
     function joinSelectedGroup() {

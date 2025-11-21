@@ -82,16 +82,46 @@ function autoPairPlayers($sessionId) {
         }
         
         $duos = [];
-        $pairsCount = (int) floor($playerCount / 2);
         
-        // Pair players with closest averages:
-        // highest with next-highest, 3rd with 4th, etc.
+        // Manual grouping for balanced teams (Group A with Group B)
+        // Define player groups based on user_id or first_name
+        $groupA = ['Fiq', 'RT', 'Syirah', 'Adam'];
+        $groupB = ['SR', 'CT', 'RA', 'Ammar'];
+        
+        // Separate players into groups
+        $playersGroupA = [];
+        $playersGroupB = [];
+        
+        foreach ($players as $player) {
+            $firstName = $player['first_name'];
+            if (in_array($firstName, $groupA)) {
+                $playersGroupA[] = $player;
+            } elseif (in_array($firstName, $groupB)) {
+                $playersGroupB[] = $player;
+            } else {
+                // If player not in predefined groups, add to group with fewer members
+                if (count($playersGroupA) <= count($playersGroupB)) {
+                    $playersGroupA[] = $player;
+                } else {
+                    $playersGroupB[] = $player;
+                }
+            }
+        }
+        
+        // Sort each group by average score (highest first)
+        usort($playersGroupA, function($a, $b) {
+            return $b['avg_score'] <=> $a['avg_score'];
+        });
+        usort($playersGroupB, function($a, $b) {
+            return $b['avg_score'] <=> $a['avg_score'];
+        });
+        
+        // Pair Group A with Group B (highest A with highest B, etc.)
+        $pairsCount = min(count($playersGroupA), count($playersGroupB));
+        
         for ($i = 0; $i < $pairsCount; $i++) {
-            $idx1 = $i * 2;
-            $idx2 = $idx1 + 1;
-            
-            $player1 = $players[$idx1];
-            $player2 = $players[$idx2];
+            $player1 = $playersGroupA[$i];
+            $player2 = $playersGroupB[$i];
             
             // Create default duo name
             $duoName = "Duo " . ($i + 1);
@@ -139,10 +169,77 @@ function autoPairPlayers($sessionId) {
                 "You've been paired with {$player1['first_name']} {$player1['last_name']}!");
         }
         
-        // Handle odd player (if any). The middle/last player remains unpaired.
+        // Handle remaining unpaired players from either group
+        $unpairedPlayers = [];
+        if (count($playersGroupA) > $pairsCount) {
+            for ($i = $pairsCount; $i < count($playersGroupA); $i++) {
+                $unpairedPlayers[] = $playersGroupA[$i];
+            }
+        }
+        if (count($playersGroupB) > $pairsCount) {
+            for ($i = $pairsCount; $i < count($playersGroupB); $i++) {
+                $unpairedPlayers[] = $playersGroupB[$i];
+            }
+        }
+        
+        // If there are 2+ unpaired players, pair them together
+        $unpairedCount = count($unpairedPlayers);
+        if ($unpairedCount >= 2) {
+            $extraPairs = (int) floor($unpairedCount / 2);
+            for ($i = 0; $i < $extraPairs; $i++) {
+                $idx1 = $i * 2;
+                $idx2 = $idx1 + 1;
+                
+                $player1 = $unpairedPlayers[$idx1];
+                $player2 = $unpairedPlayers[$idx2];
+                
+                $duoName = "Duo " . (count($duos) + 1);
+                
+                $insertStmt = $pdo->prepare("
+                    INSERT INTO duo_teams (
+                        session_id, duo_name, 
+                        player1_id, player2_id, 
+                        player1_avg, player2_avg, 
+                        status
+                    ) VALUES (?, ?, ?, ?, ?, ?, 'Pending')
+                ");
+                $insertStmt->execute([
+                    $sessionId,
+                    $duoName,
+                    $player1['user_id'],
+                    $player2['user_id'],
+                    $player1['avg_score'],
+                    $player2['avg_score']
+                ]);
+                
+                $duoId = $pdo->lastInsertId();
+                
+                $updateStmt = $pdo->prepare("
+                    UPDATE duo_join_lobby 
+                    SET is_paired = TRUE, duo_id = ? 
+                    WHERE session_id = ? AND user_id IN (?, ?)
+                ");
+                $updateStmt->execute([$duoId, $sessionId, $player1['user_id'], $player2['user_id']]);
+                
+                $duos[] = [
+                    'duo_id' => $duoId,
+                    'duo_name' => $duoName,
+                    'player1' => $player1,
+                    'player2' => $player2,
+                    'combined_avg' => round(($player1['avg_score'] + $player2['avg_score']) / 2, 2)
+                ];
+                
+                createDuoNotification($sessionId, $player1['user_id'], $duoId, 'pairing_complete', 
+                    "You've been paired with {$player2['first_name']} {$player2['last_name']}!");
+                createDuoNotification($sessionId, $player2['user_id'], $duoId, 'pairing_complete', 
+                    "You've been paired with {$player1['first_name']} {$player1['last_name']}!");
+            }
+        }
+        
+        // Handle final odd player (if any)
         $oddPlayer = null;
-        if ($playerCount % 2 != 0) {
-            $oddPlayer = $players[$playerCount - 1];
+        if ($unpairedCount % 2 != 0) {
+            $oddPlayer = $unpairedPlayers[$unpairedCount - 1];
         }
         
         return [

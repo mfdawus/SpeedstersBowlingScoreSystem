@@ -2,9 +2,48 @@
 require_once 'includes/auth.php';
 requireAdmin(); // Ensure only admins can access this page
 
-// Check maintenance bypass for admin users
-require_once 'includes/maintenance-bypass.php';
-requireMaintenanceBypass('doubles-admin', 'Doubles Score Monitoring (Admin)');
+require_once 'database.php';
+require_once 'includes/duo-helper.php';
+
+// Setup DB
+$pdo = getDBConnection();
+
+// Determine which Doubles session to show (latest by default, or via ?session_id=)
+$selectedSessionId = isset($_GET['session_id']) ? (int)$_GET['session_id'] : 0;
+$selectedSession   = null;
+
+if ($selectedSessionId > 0) {
+  $stmt = $pdo->prepare("
+      SELECT session_id, session_name, session_date
+      FROM game_sessions
+      WHERE session_id = ? AND game_mode = 'Doubles'
+      LIMIT 1
+  ");
+  $stmt->execute([$selectedSessionId]);
+  $selectedSession = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+}
+
+if (!$selectedSession) {
+  // Fallback to latest Doubles session
+  $stmt = $pdo->prepare("
+      SELECT session_id, session_name, session_date
+      FROM game_sessions
+      WHERE game_mode = 'Doubles'
+      ORDER BY session_date DESC
+      LIMIT 1
+  ");
+  $stmt->execute();
+  $selectedSession = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+  if ($selectedSession) {
+    $selectedSessionId = (int)$selectedSession['session_id'];
+  }
+}
+
+// Load duo teams for this session
+$adminDuoTeams = [];
+if ($selectedSession) {
+  $adminDuoTeams = getDuosBySession($selectedSessionId);
+}
 ?>
 <!doctype html>
 <html lang="en">
@@ -12,10 +51,39 @@ requireMaintenanceBypass('doubles-admin', 'Doubles Score Monitoring (Admin)');
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <title>Admin - Doubles Teams Score Monitoring - VIPERS VENOMS Bowling System</title>
   <link rel="shortcut icon" type="image/x-icon" href="./assets/images/logos/favicon.ico" />
   <link rel="stylesheet" href="./assets/css/styles.min.css" />
   <link rel="stylesheet" href="./assets/css/vipersvenoms-theme.css" />
+  
+  <!-- Define functions early so onclick handlers can find them -->
+  <script>
+    // PHP data for JS - defined early
+    const SELECTED_SESSION_ID = <?php echo (int)$selectedSessionId; ?>;
+    const BASE_PATH = '<?php echo defined('BASE_PATH') ? BASE_PATH : ''; ?>';
+    
+    // Initialize placeholder functions immediately to prevent "not defined" errors
+    // These will be replaced by full implementations below
+    window.saveTeamScore = function(duoId, gameNumber) {
+      // Placeholder - will be replaced by full implementation
+    };
+    
+    window.saveAllScores = function(gameNumber) {
+      // Placeholder - will be replaced by full implementation
+    };
+    
+    window.refreshTable = function() {
+      location.reload();
+    };
+    
+    window.showNotification = function(message, type) {
+      // Placeholder - will be replaced by full implementation
+    };
+  </script>
+  
   <style>
     .bg-gradient-primary {
       background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%);
@@ -27,6 +95,14 @@ requireMaintenanceBypass('doubles-admin', 'Doubles Score Monitoring (Admin)');
     .admin-card:hover {
       transform: translateY(-2px);
       box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .score-input {
+      min-width: 80px;
+      transition: all 0.2s ease;
+    }
+    .score-input:focus {
+      transform: none;
+      box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
     }
     .rank-badge {
       width: 40px;
@@ -42,36 +118,6 @@ requireMaintenanceBypass('doubles-admin', 'Doubles Score Monitoring (Admin)');
     .rank-2 { background: linear-gradient(135deg, #C0C0C0 0%, #A9A9A9 100%); }
     .rank-3 { background: linear-gradient(135deg, #CD7F32 0%, #B8860B 100%); }
     .rank-other { background: linear-gradient(135deg, #6c757d 0%, #495057 100%); }
-    .player-avatar {
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      object-fit: cover;
-    }
-    .team-avatars {
-      display: flex;
-      align-items: center;
-    }
-    .team-avatars img:first-child {
-      margin-right: -10px;
-      border: 2px solid white;
-    }
-    .score-highlight {
-      font-weight: bold;
-      font-size: 1.1rem;
-    }
-    .score-excellent { color: #28a745; }
-    .score-good { color: #17a2b8; }
-    .score-average { color: #ffc107; }
-    .score-below { color: #dc3545; }
-    .admin-actions {
-      display: flex;
-      gap: 5px;
-    }
-    .admin-badge {
-      background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
-      color: #333;
-    }
   </style>
 </head>
 
@@ -105,73 +151,34 @@ requireMaintenanceBypass('doubles-admin', 'Doubles Score Monitoring (Admin)');
             </div>
           </div>
 
-          <!-- Admin Statistics Overview -->
+          <!-- Session Info Banner -->
+          <?php if ($selectedSession): ?>
           <div class="row mb-4">
-            <div class="col-lg-3 col-md-6 mb-4">
-              <div class="card admin-card">
-                <div class="card-body">
-                  <div class="d-flex align-items-center">
+            <div class="col-12">
+              <div class="alert alert-info d-flex align-items-center">
+                <i class="ti ti-info-circle me-2 fs-4"></i>
                     <div class="flex-grow-1">
-                      <h6 class="card-title text-muted mb-1">Total Doubles Teams</h6>
-                      <h3 class="mb-0 text-primary">89</h3>
-                      <small class="text-muted">+5 new this week</small>
-                    </div>
-                    <div class="ms-3">
-                      <i class="ti ti-users fs-1 text-muted"></i>
+                  <strong>Current Session:</strong> <?php echo htmlspecialchars($selectedSession['session_name']); ?> 
+                  - <?php echo date('M j, Y', strtotime($selectedSession['session_date'])); ?>
+                  <br>
+                  <small>
+                    🎳 Doubles Mode | 
+                    👥 <?php echo count($adminDuoTeams); ?> duo teams
+                  </small>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
-            <div class="col-lg-3 col-md-6 mb-4">
-              <div class="card admin-card">
-                <div class="card-body">
-                  <div class="d-flex align-items-center">
-                    <div class="flex-grow-1">
-                      <h6 class="card-title text-muted mb-1">Active Today</h6>
-                      <h3 class="mb-0 text-success">34</h3>
-                      <small class="text-muted">+8 vs yesterday</small>
-                    </div>
-                    <div class="ms-3">
-                      <i class="ti ti-users-check fs-1 text-success"></i>
+          <?php else: ?>
+          <div class="row mb-4">
+            <div class="col-12">
+              <div class="alert alert-warning">
+                <i class="ti ti-alert-triangle me-2"></i>
+                <strong>No Doubles Session Found</strong> - Please create a Doubles session before monitoring scores.
                     </div>
                   </div>
                 </div>
-              </div>
-            </div>
-            <div class="col-lg-3 col-md-6 mb-4">
-              <div class="card admin-card">
-                <div class="card-body">
-                  <div class="d-flex align-items-center">
-                    <div class="flex-grow-1">
-                      <h6 class="card-title text-muted mb-1">Avg Team Score</h6>
-                      <h3 class="mb-0 text-warning">467.8</h3>
-                      <small class="text-muted">+12.3 vs last week</small>
-                    </div>
-                    <div class="ms-3">
-                      <i class="ti ti-target fs-1 text-warning"></i>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div class="col-lg-3 col-md-6 mb-4">
-              <div class="card admin-card">
-                <div class="card-body">
-                  <div class="d-flex align-items-center">
-                    <div class="flex-grow-1">
-                      <h6 class="card-title text-muted mb-1">Games Today</h6>
-                      <h3 class="mb-0 text-info">78</h3>
-                      <small class="text-muted">+15% vs yesterday</small>
-                    </div>
-                    <div class="ms-3">
-                      <i class="ti ti-bowling fs-1 text-info"></i>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+          <?php endif; ?>
 
           <!-- Page Content -->
           <div class="row">
@@ -181,30 +188,39 @@ requireMaintenanceBypass('doubles-admin', 'Doubles Score Monitoring (Admin)');
                   <div class="d-flex align-items-center justify-content-between mb-4">
                     <div>
                       <h5 class="card-title fw-semibold mb-1">Doubles Teams Score Monitoring</h5>
-                      <span class="fw-normal text-muted">Admin view with enhanced team management features</span>
+                      <span class="fw-normal text-muted">Enter scores for each duo team by game</span>
                     </div>
                     <div class="d-flex gap-2">
-                      <button class="btn btn-success btn-sm" onclick="exportData()">
-                        <i class="ti ti-download me-1"></i>
-                        Export
-                      </button>
-                      <button class="btn btn-warning btn-sm" onclick="bulkEdit()">
-                        <i class="ti ti-edit me-1"></i>
-                        Bulk Edit
-                      </button>
-                      <button class="btn btn-info btn-sm" onclick="manageTeams()">
-                        <i class="ti ti-users-plus me-1"></i>
-                        Manage Teams
-                      </button>
-                      <select class="form-select form-select-sm" id="dateFilter" style="width: auto;">
-                        <option value="today">Today</option>
-                        <option value="yesterday">Yesterday</option>
-                        <option value="week">This Week</option>
-                        <option value="month">This Month</option>
-                        <option value="all">All Time</option>
-                        <option value="custom">Custom Date</option>
+                      <select class="form-select form-select-sm" id="sessionFilter" style="width: auto;" onchange="changeSession(this.value)">
+                        <?php 
+                        // Get all Doubles sessions
+                        try {
+                          $stmt = $pdo->prepare("
+                            SELECT session_id, session_name, session_date, status
+                            FROM game_sessions 
+                            WHERE game_mode = 'Doubles'
+                            ORDER BY session_date DESC
+                            LIMIT 20
+                          ");
+                          $stmt->execute();
+                          $allSessions = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                          
+                          foreach ($allSessions as $sess) {
+                            $selected = ($sess['session_id'] == $selectedSessionId) ? 'selected' : '';
+                            $statusBadge = $sess['status'] == 'Active' ? '🟢' : ($sess['status'] == 'Completed' ? '✅' : '⏳');
+                            $formattedDate = date('M j, Y', strtotime($sess['session_date']));
+                            echo '<option value="' . $sess['session_id'] . '" ' . $selected . '>';
+                            echo $statusBadge . ' ' . htmlspecialchars($sess['session_name']) . ' - ' . $formattedDate;
+                            echo '</option>';
+                          }
+                        } catch (Exception $e) {
+                          echo '<option value="">Error loading sessions</option>';
+                        }
+                        ?>
                       </select>
-                      <input type="date" class="form-control form-control-sm" id="customDate" style="width: auto; display: none;">
+                      <button class="btn btn-success btn-sm" onclick="adminAutoPair()" title="Auto-assign duos based on balanced grouping">
+                        <i class="ti ti-users-group me-1"></i>Auto Pair Duos
+                      </button>
                       <button class="btn btn-primary btn-sm" onclick="refreshTable()">
                         <i class="ti ti-refresh"></i>
                       </button>
@@ -243,370 +259,302 @@ requireMaintenanceBypass('doubles-admin', 'Doubles Score Monitoring (Admin)');
                         Game 5
                       </button>
                     </li>
+                    <li class="nav-item" role="presentation">
+                      <button class="nav-link" id="game6-tab" data-bs-toggle="tab" data-bs-target="#game6" type="button" role="tab">
+                        Game 6
+                      </button>
+                    </li>
                   </ul>
 
                   <div class="tab-content" id="gameTabContent">
-                    <!-- Overall Tab -->
+                    <!-- Overall Rankings Tab -->
                     <div class="tab-pane fade show active" id="overall" role="tabpanel">
+                      <div class="card">
+                        <div class="card-header">
+                          <h5 class="card-title mb-0">Overall Duo Rankings</h5>
+                        </div>
+                        <div class="card-body">
                       <div class="table-responsive">
-                        <table class="table table-hover">
-                          <thead>
+                            <table class="table table-hover table-bordered">
+                              <thead class="table-dark">
                             <tr>
                               <th scope="col">Rank</th>
-                              <th scope="col">Team</th>
+                                  <th scope="col">Duo Team</th>
                               <th scope="col">Players</th>
+                                  <th scope="col">Lane</th>
                               <th scope="col">Total Score</th>
                               <th scope="col">Avg/Game</th>
                               <th scope="col">Games Played</th>
                               <th scope="col">Best Game</th>
-                              <th scope="col">Combined Strikes</th>
+                                  <th scope="col">Total Strikes</th>
+                                  <th scope="col">Total Spares</th>
                               <th scope="col">Status</th>
-                              <th scope="col">Last Updated</th>
-                              <th scope="col">Admin Actions</th>
+                                  <th scope="col">Actions</th>
                             </tr>
                           </thead>
-                          <tbody>
-                            <tr>
-                              <td><span class="badge bg-primary">1</span></td>
+                              <tbody id="overallTableBody">
+                                <?php if (!empty($adminDuoTeams)): ?>
+                                  <?php 
+                                  $rank = 1;
+                                  foreach ($adminDuoTeams as $duo): 
+                                    $basePath = defined('BASE_PATH') ? BASE_PATH : '';
+                                    $p1Pic = !empty($duo['player1_picture'])
+                                        ? $basePath . '/uploads/profile_pictures/' . $duo['player1_picture']
+                                        : $basePath . '/assets/images/profile/user-1.jpg';
+                                    $p2Pic = !empty($duo['player2_picture'])
+                                        ? $basePath . '/uploads/profile_pictures/' . $duo['player2_picture']
+                                        : $basePath . '/assets/images/profile/user-2.jpg';
+                                    
+                                    // Get all scores for this duo
+                                    $duoScores = getDuoScores($duo['duo_id']);
+                                    $totalScore = 0;
+                                    $gamesPlayed = 0;
+                                    $bestGame = 0;
+                                    $totalStrikes = 0;
+                                    $totalSpares = 0;
+                                    
+                                    foreach ($duoScores as $scoreData) {
+                                      if (!empty($scoreData['combined_score']) && $scoreData['combined_score'] > 0) {
+                                        $totalScore += $scoreData['combined_score'];
+                                        $gamesPlayed++;
+                                        if ($scoreData['combined_score'] > $bestGame) {
+                                          $bestGame = $scoreData['combined_score'];
+                                        }
+                                        $totalStrikes += $scoreData['total_strikes'];
+                                        $totalSpares += $scoreData['total_spares'];
+                                      }
+                                    }
+                                    
+                                    $avgScore = $gamesPlayed > 0 ? round($totalScore / $gamesPlayed, 1) : 0;
+                                    $rankClass = $rank === 1 ? 'rank-1' : ($rank === 2 ? 'rank-2' : ($rank === 3 ? 'rank-3' : 'rank-other'));
+                                  ?>
+                                    <tr>
+                                      <td><span class="rank-badge <?php echo $rankClass; ?>"><?php echo $rank; ?></span></td>
                               <td>
                                 <div class="d-flex align-items-center">
-                                  <div class="d-flex me-2">
-                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-1.jpg'; ?>" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
-                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-2.jpg'; ?>" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
-                                  </div>
-                                  <div>
-                                    <h6 class="mb-0">Thunder Strikers</h6>
-                                    <small class="text-muted">Pro Team</small>
+                                          <img src="<?php echo htmlspecialchars($p1Pic); ?>" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
+                                          <img src="<?php echo htmlspecialchars($p2Pic); ?>" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
+                                          <div class="ms-2">
+                                            <strong><?php echo htmlspecialchars($duo['duo_name']); ?></strong>
                                   </div>
                                 </div>
                               </td>
-                              <td>John & Sarah</td>
-                              <td><span class="fw-bold text-success">2,443</span></td>
-                              <td>244.3</td>
-                              <td>5</td>
-                              <td><span class="text-warning">547</span></td>
-                              <td>87</td>
-                              <td><span class="badge bg-success">Active</span></td>
-                              <td><small class="text-muted">2 hours ago</small></td>
-                              <td>
-                                <div class="admin-actions">
-                                  <button class="btn btn-sm btn-outline-primary" onclick="viewTeamDetails('team1')" title="View Details">
-                                    <i class="ti ti-eye"></i>
-                                  </button>
-                                  <button class="btn btn-sm btn-outline-warning" onclick="editTeamScore('team1')" title="Edit Score">
-                                    <i class="ti ti-edit"></i>
-                                  </button>
-                                  <button class="btn btn-sm btn-outline-info" onclick="viewTeamHistory('team1')" title="View History">
-                                    <i class="ti ti-history"></i>
-                                  </button>
-                                  <button class="btn btn-sm btn-outline-secondary" onclick="manageTeamMembers('team1')" title="Manage Team">
-                                    <i class="ti ti-users"></i>
-                                  </button>
-                                </div>
+                                      <td>
+                                        <small>
+                                          <?php echo htmlspecialchars(trim($duo['player1_first_name'] . ' ' . $duo['player1_last_name'])); ?>
+                                          <br>
+                                          <?php echo htmlspecialchars(trim($duo['player2_first_name'] . ' ' . $duo['player2_last_name'])); ?>
+                                        </small>
                               </td>
-                            </tr>
-                            <tr>
-                              <td><span class="badge bg-secondary">2</span></td>
-                              <td>
-                                <div class="d-flex align-items-center">
-                                  <div class="d-flex me-2">
-                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-3.jpg'; ?>" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
-                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-4.jpg'; ?>" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
-                                  </div>
-                                  <div>
-                                    <h6 class="mb-0">Pin Crushers</h6>
-                                    <small class="text-muted">Elite Team</small>
-                                  </div>
-                                </div>
+                                      <td class="text-center">
+                                        <input type="number" 
+                                               class="form-control form-control-sm" 
+                                               value="<?php echo $duo['lane_number'] ?: ''; ?>" 
+                                               min="1" 
+                                               max="10"
+                                               style="width: 60px;"
+                                               onchange="updateLane(<?php echo $duo['duo_id']; ?>, this.value)"
+                                               placeholder="Lane">
                               </td>
-                              <td>Mike & Lisa</td>
-                              <td><span class="fw-bold text-success">2,312</span></td>
-                              <td>231.2</td>
-                              <td>5</td>
-                              <td><span class="text-warning">523</span></td>
-                              <td>80</td>
-                              <td><span class="badge bg-success">Active</span></td>
-                              <td><small class="text-muted">1 hour ago</small></td>
-                              <td>
-                                <div class="admin-actions">
-                                  <button class="btn btn-sm btn-outline-primary" onclick="viewTeamDetails('team2')" title="View Details">
-                                    <i class="ti ti-eye"></i>
+                                      <td><span class="fw-bold text-success fs-5"><?php echo $totalScore; ?></span></td>
+                                      <td><span class="text-info"><?php echo $avgScore; ?></span></td>
+                                      <td><?php echo $gamesPlayed; ?>/6</td>
+                                      <td><span class="text-warning fw-bold"><?php echo $bestGame; ?></span></td>
+                                      <td><?php echo $totalStrikes; ?></td>
+                                      <td><?php echo $totalSpares; ?></td>
+                                      <td>
+                                        <?php if ($gamesPlayed >= 6): ?>
+                                          <span class="badge bg-success">Completed</span>
+                                        <?php elseif ($gamesPlayed > 0): ?>
+                                          <span class="badge bg-warning">In Progress</span>
+                                        <?php else: ?>
+                                          <span class="badge bg-secondary">Pending</span>
+                                        <?php endif; ?>
+                              </td>
+                                      <td>
+                                        <button class="btn btn-sm btn-primary" onclick="viewDuoDetails(<?php echo $duo['duo_id']; ?>)">
+                                          <i class="ti ti-eye"></i> View
                                   </button>
-                                  <button class="btn btn-sm btn-outline-warning" onclick="editTeamScore('team2')" title="Edit Score">
-                                    <i class="ti ti-edit"></i>
-                                  </button>
-                                  <button class="btn btn-sm btn-outline-info" onclick="viewTeamHistory('team2')" title="View History">
-                                    <i class="ti ti-history"></i>
-                                  </button>
-                                  <button class="btn btn-sm btn-outline-secondary" onclick="manageTeamMembers('team2')" title="Manage Team">
-                                    <i class="ti ti-users"></i>
-                                  </button>
-                                </div>
                               </td>
                             </tr>
-                            <tr>
-                              <td><span class="badge bg-warning">3</span></td>
-                              <td>
-                                <div class="d-flex align-items-center">
-                                  <div class="d-flex me-2">
-                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-5.jpg'; ?>" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
-                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-6.jpg'; ?>" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
-                                  </div>
-                                  <div>
-                                    <h6 class="mb-0">Lane Masters</h6>
-                                    <small class="text-muted">Advanced Team</small>
-                                  </div>
-                                </div>
-                              </td>
-                              <td>Tom & Emma</td>
-                              <td><span class="fw-bold text-success">2,178</span></td>
-                              <td>217.8</td>
-                              <td>5</td>
-                              <td><span class="text-warning">498</span></td>
-                              <td>75</td>
-                              <td><span class="badge bg-warning">Pending</span></td>
-                              <td><small class="text-muted">30 min ago</small></td>
-                              <td>
-                                <div class="admin-actions">
-                                  <button class="btn btn-sm btn-outline-primary" onclick="viewTeamDetails('team3')" title="View Details">
-                                    <i class="ti ti-eye"></i>
-                                  </button>
-                                  <button class="btn btn-sm btn-outline-warning" onclick="editTeamScore('team3')" title="Edit Score">
-                                    <i class="ti ti-edit"></i>
-                                  </button>
-                                  <button class="btn btn-sm btn-outline-info" onclick="viewTeamHistory('team3')" title="View History">
-                                    <i class="ti ti-history"></i>
-                                  </button>
-                                  <button class="btn btn-sm btn-outline-secondary" onclick="manageTeamMembers('team3')" title="Manage Team">
-                                    <i class="ti ti-users"></i>
-                                  </button>
-                                </div>
+                                  <?php 
+                                    $rank++;
+                                  endforeach; ?>
+                                <?php else: ?>
+                                  <tr>
+                                    <td colspan="12" class="text-center text-muted py-4">
+                                      No duo teams found for this session.
                               </td>
                             </tr>
-                            <tr>
-                              <td><span class="badge bg-info">4</span></td>
-                              <td>
-                                <div class="d-flex align-items-center">
-                                  <div class="d-flex me-2">
-                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-7.jpg'; ?>" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
-                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-8.jpg'; ?>" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
-                                  </div>
-                                  <div>
-                                    <h6 class="mb-0">Spare Seekers</h6>
-                                    <small class="text-muted">Intermediate Team</small>
-                                  </div>
-                                </div>
-                              </td>
-                              <td>Alex & Maria</td>
-                              <td><span class="fw-bold text-success">2,045</span></td>
-                              <td>204.5</td>
-                              <td>5</td>
-                              <td><span class="text-warning">472</span></td>
-                              <td>70</td>
-                              <td><span class="badge bg-success">Active</span></td>
-                              <td><small class="text-muted">15 min ago</small></td>
-                              <td>
-                                <div class="admin-actions">
-                                  <button class="btn btn-sm btn-outline-primary" onclick="viewTeamDetails('team4')" title="View Details">
-                                    <i class="ti ti-eye"></i>
-                                  </button>
-                                  <button class="btn btn-sm btn-outline-warning" onclick="editTeamScore('team4')" title="Edit Score">
-                                    <i class="ti ti-edit"></i>
-                                  </button>
-                                  <button class="btn btn-sm btn-outline-info" onclick="viewTeamHistory('team4')" title="View History">
-                                    <i class="ti ti-history"></i>
-                                  </button>
-                                  <button class="btn btn-sm btn-outline-secondary" onclick="manageTeamMembers('team4')" title="Manage Team">
-                                    <i class="ti ti-users"></i>
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                            <tr>
-                              <td><span class="badge bg-dark">5</span></td>
-                              <td>
-                                <div class="d-flex align-items-center">
-                                  <div class="d-flex me-2">
-                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-1.jpg'; ?>" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
-                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-3.jpg'; ?>" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
-                                  </div>
-                                  <div>
-                                    <h6 class="mb-0">Gutter Guards</h6>
-                                    <small class="text-muted">Beginner Team</small>
-                                  </div>
-                                </div>
-                              </td>
-                              <td>David & Anna</td>
-                              <td><span class="fw-bold text-success">1,956</span></td>
-                              <td>195.6</td>
-                              <td>5</td>
-                              <td><span class="text-warning">445</span></td>
-                              <td>65</td>
-                              <td><span class="badge bg-danger">Inactive</span></td>
-                              <td><small class="text-muted">5 min ago</small></td>
-                              <td>
-                                <div class="admin-actions">
-                                  <button class="btn btn-sm btn-outline-primary" onclick="viewTeamDetails('team5')" title="View Details">
-                                    <i class="ti ti-eye"></i>
-                                  </button>
-                                  <button class="btn btn-sm btn-outline-warning" onclick="editTeamScore('team5')" title="Edit Score">
-                                    <i class="ti ti-edit"></i>
-                                  </button>
-                                  <button class="btn btn-sm btn-outline-info" onclick="viewTeamHistory('team5')" title="View History">
-                                    <i class="ti ti-history"></i>
-                                  </button>
-                                  <button class="btn btn-sm btn-outline-secondary" onclick="manageTeamMembers('team5')" title="Manage Team">
-                                    <i class="ti ti-users"></i>
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
+                                <?php endif; ?>
                           </tbody>
                         </table>
+                          </div>
+                        </div>
                       </div>
                     </div>
 
-                    <!-- Game 1 Tab -->
-                    <div class="tab-pane fade" id="game1" role="tabpanel">
+                    <?php for ($gameNum = 1; $gameNum <= 6; $gameNum++): ?>
+                    <!-- Game <?php echo $gameNum; ?> Tab -->
+                    <div class="tab-pane fade" id="game<?php echo $gameNum; ?>" role="tabpanel">
+                      <div class="card">
+                        <div class="card-header">
+                          <div class="d-flex align-items-center justify-content-between">
+                            <h5 class="card-title mb-0">Game <?php echo $gameNum; ?> Score Entry</h5>
+                            <button class="btn btn-success btn-sm" onclick="saveAllScores(<?php echo $gameNum; ?>)">
+                              <i class="ti ti-device-floppy me-1"></i>Save All Scores
+                            </button>
+                          </div>
+                        </div>
+                        <div class="card-body">
                       <div class="table-responsive">
-                        <table class="table table-hover">
-                          <thead>
-                            <tr>
-                              <th scope="col">Rank</th>
-                              <th scope="col">Team</th>
-                              <th scope="col">Players</th>
-                              <th scope="col">Score</th>
-                              <th scope="col">Player 1 Score</th>
-                              <th scope="col">Player 2 Score</th>
-                              <th scope="col">Combined Strikes</th>
-                              <th scope="col">Time</th>
-                              <th scope="col">Admin Actions</th>
+                            <table class="table table-bordered" id="game<?php echo $gameNum; ?>Table">
+                              <thead class="table-dark">
+                                <tr>
+                                  <th scope="col" style="width: 20%;">Duo Team</th>
+                                  <th scope="col" style="width: 15%;">Players</th>
+                                  <th scope="col" style="width: 6%;">Lane</th>
+                                  <th scope="col" style="width: 10%;">Score</th>
+                                  <th scope="col" style="width: 8%;">Strikes</th>
+                                  <th scope="col" style="width: 8%;">Spares</th>
+                                  <th scope="col" style="width: 10%;">Open Frames</th>
+                                  <th scope="col" style="width: 10%;">Status</th>
+                                  <th scope="col" style="width: 13%;">Actions</th>
                             </tr>
                           </thead>
                           <tbody>
-                            <tr>
-                              <td><span class="badge bg-primary">1</span></td>
+                                <?php if (!empty($adminDuoTeams)): ?>
+                                  <?php foreach ($adminDuoTeams as $duo): ?>
+                                    <?php
+                                      // Get existing team score for this duo and game (sum of both players)
+                                      $stmt = $pdo->prepare("
+                                        SELECT 
+                                          SUM(player_score) as team_score,
+                                          SUM(strikes) as total_strikes,
+                                          SUM(spares) as total_spares,
+                                          SUM(open_frames) as total_open_frames,
+                                          MAX(created_at) as last_updated
+                                        FROM game_scores
+                                        WHERE duo_id = ? AND game_number = ? AND status = 'Completed'
+                                        GROUP BY duo_id, game_number
+                                      ");
+                                      $stmt->execute([$duo['duo_id'], $gameNum]);
+                                      $scoreData = $stmt->fetch(PDO::FETCH_ASSOC);
+                                      
+                                      $teamScore = $scoreData ? $scoreData['team_score'] : '';
+                                      $teamStrikes = $scoreData ? $scoreData['total_strikes'] : '';
+                                      $teamSpares = $scoreData ? $scoreData['total_spares'] : '';
+                                      $teamOpenFrames = $scoreData ? $scoreData['total_open_frames'] : '';
+                                      $hasScores = !empty($scoreData) && !empty($scoreData['team_score']);
+                                      $lastUpdated = $scoreData ? $scoreData['last_updated'] : null;
+                                    ?>
+                                    <tr>
                               <td>
                                 <div class="d-flex align-items-center">
                                   <div class="d-flex me-2">
-                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-1.jpg'; ?>" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
-                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-2.jpg'; ?>" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
+                                            <?php
+                                              $basePath = defined('BASE_PATH') ? BASE_PATH : '';
+                                              $p1Pic = !empty($duo['player1_picture'])
+                                                ? $basePath . '/uploads/profile_pictures/' . $duo['player1_picture']
+                                                : $basePath . '/assets/images/profile/user-1.jpg';
+                                              $p2Pic = !empty($duo['player2_picture'])
+                                                ? $basePath . '/uploads/profile_pictures/' . $duo['player2_picture']
+                                                : $basePath . '/assets/images/profile/user-2.jpg';
+                                            ?>
+                                            <img src="<?php echo htmlspecialchars($p1Pic); ?>" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
+                                            <img src="<?php echo htmlspecialchars($p2Pic); ?>" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
                                   </div>
                                   <div>
-                                    <h6 class="mb-0">Thunder Strikers</h6>
+                                            <strong><?php echo htmlspecialchars($duo['duo_name']); ?></strong>
                                   </div>
                                 </div>
                               </td>
-                              <td>John & Sarah</td>
-                              <td><span class="fw-bold text-success">547</span></td>
-                              <td>279</td>
-                              <td>268</td>
-                              <td>19</td>
-                              <td><small class="text-muted">9:30 AM</small></td>
-                              <td>
-                                <div class="admin-actions">
-                                  <button class="btn btn-sm btn-outline-warning" onclick="editGameScore('team1', 1)" title="Edit Score">
-                                    <i class="ti ti-edit"></i>
+                                      <td>
+                                        <small>
+                                          <?php echo htmlspecialchars(trim($duo['player1_first_name'] . ' ' . $duo['player1_last_name'])); ?>
+                                          <br>
+                                          <?php echo htmlspecialchars(trim($duo['player2_first_name'] . ' ' . $duo['player2_last_name'])); ?>
+                                        </small>
+                              </td>
+                                      <td class="text-center">
+                                        <span class="badge bg-primary">Lane <?php echo $duo['lane_number'] ?: '-'; ?></span>
+                              </td>
+                                      <td>
+                                        <input type="number" 
+                                               class="form-control form-control-sm score-input" 
+                                               data-duo-id="<?php echo $duo['duo_id']; ?>" 
+                                               data-player1-id="<?php echo $duo['player1_id']; ?>"
+                                               data-player2-id="<?php echo $duo['player2_id']; ?>"
+                                               data-field="score" 
+                                               data-game="<?php echo $gameNum; ?>"
+                                               value="<?php echo $teamScore; ?>" 
+                                               min="0" 
+                                               max="600" 
+                                               placeholder="0-600">
+                              </td>
+                                      <td>
+                                        <input type="number" 
+                                               class="form-control form-control-sm score-input" 
+                                               data-duo-id="<?php echo $duo['duo_id']; ?>" 
+                                               data-field="strikes" 
+                                               data-game="<?php echo $gameNum; ?>"
+                                               value="<?php echo $teamStrikes; ?>" 
+                                               min="0" 
+                                               max="24" 
+                                               placeholder="0-24">
+                              </td>
+                                      <td>
+                                        <input type="number" 
+                                               class="form-control form-control-sm score-input" 
+                                               data-duo-id="<?php echo $duo['duo_id']; ?>" 
+                                               data-field="spares" 
+                                               data-game="<?php echo $gameNum; ?>"
+                                               value="<?php echo $teamSpares; ?>" 
+                                               min="0" 
+                                               max="20" 
+                                               placeholder="0-20">
+                              </td>
+                                      <td>
+                                        <input type="number" 
+                                               class="form-control form-control-sm score-input" 
+                                               data-duo-id="<?php echo $duo['duo_id']; ?>" 
+                                               data-field="open_frames" 
+                                               data-game="<?php echo $gameNum; ?>"
+                                               value="<?php echo $teamOpenFrames; ?>" 
+                                               min="0" 
+                                               max="20" 
+                                               placeholder="0-20">
+                              </td>
+                                      <td class="text-center">
+                                        <?php if ($hasScores): ?>
+                                          <span class="badge bg-success">Completed</span>
+                                          <br><small class="text-muted"><?php echo date('g:i A', strtotime($lastUpdated)); ?></small>
+                                        <?php else: ?>
+                                          <span class="badge bg-warning">Pending</span>
+                                        <?php endif; ?>
+                              </td>
+                                      <td class="text-center">
+                                        <button class="btn btn-success btn-sm" onclick="saveTeamScore(<?php echo $duo['duo_id']; ?>, <?php echo $gameNum; ?>)" title="Save Team Score">
+                                          <i class="ti ti-device-floppy me-1"></i>Save
                                   </button>
-                                  <button class="btn btn-sm btn-outline-danger" onclick="deleteGameScore('team1', 1)" title="Delete Score">
-                                    <i class="ti ti-trash"></i>
-                                  </button>
-                                </div>
                               </td>
                             </tr>
-                            <tr>
-                              <td><span class="badge bg-secondary">2</span></td>
-                              <td>
-                                <div class="d-flex align-items-center">
-                                  <div class="d-flex me-2">
-                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-3.jpg'; ?>" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
-                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-4.jpg'; ?>" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
-                                  </div>
-                                  <div>
-                                    <h6 class="mb-0">Pin Crushers</h6>
-                                  </div>
-                                </div>
-                              </td>
-                              <td>Mike & Lisa</td>
-                              <td><span class="fw-bold text-success">523</span></td>
-                              <td>255</td>
-                              <td>268</td>
-                              <td>17</td>
-                              <td><small class="text-muted">9:45 AM</small></td>
-                              <td>
-                                <div class="admin-actions">
-                                  <button class="btn btn-sm btn-outline-warning" onclick="editGameScore('team2', 1)" title="Edit Score">
-                                    <i class="ti ti-edit"></i>
-                                  </button>
-                                  <button class="btn btn-sm btn-outline-danger" onclick="deleteGameScore('team2', 1)" title="Delete Score">
-                                    <i class="ti ti-trash"></i>
-                                  </button>
-                                </div>
+                                  <?php endforeach; ?>
+                                <?php else: ?>
+                                  <tr>
+                                    <td colspan="9" class="text-center text-muted py-4">
+                                      <i class="ti ti-users fs-1 mb-3 d-block"></i>
+                                      No duo teams found for this session.
                               </td>
                             </tr>
-                            <tr>
-                              <td><span class="badge bg-warning">3</span></td>
-                              <td>
-                                <div class="d-flex align-items-center">
-                                  <div class="d-flex me-2">
-                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-5.jpg'; ?>" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
-                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-6.jpg'; ?>" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
-                                  </div>
-                                  <div>
-                                    <h6 class="mb-0">Lane Masters</h6>
-                                  </div>
-                                </div>
-                              </td>
-                              <td>Tom & Emma</td>
-                              <td><span class="fw-bold text-success">498</span></td>
-                              <td>242</td>
-                              <td>256</td>
-                              <td>15</td>
-                              <td><small class="text-muted">10:00 AM</small></td>
-                              <td>
-                                <div class="admin-actions">
-                                  <button class="btn btn-sm btn-outline-warning" onclick="editGameScore('team3', 1)" title="Edit Score">
-                                    <i class="ti ti-edit"></i>
-                                  </button>
-                                  <button class="btn btn-sm btn-outline-danger" onclick="deleteGameScore('team3', 1)" title="Delete Score">
-                                    <i class="ti ti-trash"></i>
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
+                                <?php endif; ?>
                           </tbody>
                         </table>
                       </div>
                     </div>
-
-                    <!-- Additional game tabs would follow similar pattern -->
-                    <div class="tab-pane fade" id="game2" role="tabpanel">
-                      <div class="alert alert-info">
-                        <i class="ti ti-info-circle me-2"></i>
-                        Game 2 data would be loaded here with similar admin functionality.
                       </div>
                     </div>
-
-                    <div class="tab-pane fade" id="game3" role="tabpanel">
-                      <div class="alert alert-info">
-                        <i class="ti ti-info-circle me-2"></i>
-                        Game 3 data would be loaded here with similar admin functionality.
-                      </div>
-                    </div>
-
-                    <div class="tab-pane fade" id="game4" role="tabpanel">
-                      <div class="alert alert-info">
-                        <i class="ti ti-info-circle me-2"></i>
-                        Game 4 data would be loaded here with similar admin functionality.
-                      </div>
-                    </div>
-
-                    <div class="tab-pane fade" id="game5" role="tabpanel">
-                      <div class="alert alert-info">
-                        <i class="ti ti-info-circle me-2"></i>
-                        Game 5 data would be loaded here with similar admin functionality.
-                      </div>
-                    </div>
+                    <?php endfor; ?>
                   </div>
                 </div>
               </div>
@@ -625,115 +573,147 @@ requireMaintenanceBypass('doubles-admin', 'Doubles Score Monitoring (Admin)');
   <script src="https://cdn.jsdelivr.net/npm/iconify-icon@1.0.8/dist/iconify-icon.min.js"></script>
   
   <script>
-    // Admin-specific functions for doubles teams
-    function viewTeamDetails(teamId) {
-      showNotification('Opening detailed view for team: ' + teamId, 'info');
-      // Here you would open a detailed team modal or navigate to team details page
-    }
-
-    function editTeamScore(teamId) {
-      showNotification('Opening score editor for team: ' + teamId, 'info');
-      // Here you would open the team score editing interface
-    }
-
-    function viewTeamHistory(teamId) {
-      showNotification('Loading score history for team: ' + teamId, 'info');
-      // Here you would load and display team's complete score history
-    }
-
-    function manageTeamMembers(teamId) {
-      showNotification('Opening team member management for: ' + teamId, 'info');
-      // Here you would open team member management interface
-    }
-
-    function editGameScore(teamId, gameNumber) {
-      showNotification('Editing Game ' + gameNumber + ' score for team: ' + teamId, 'warning');
-      // Here you would open a quick edit modal for the specific game score
-    }
-
-    function deleteGameScore(teamId, gameNumber) {
-      if (confirm('Are you sure you want to delete Game ' + gameNumber + ' score for team: ' + teamId + '?')) {
-        showNotification('Score deleted successfully!', 'success');
-        // Here you would make the actual deletion
-      }
-    }
-
-    function exportData() {
-      showNotification('Exporting doubles teams data...', 'info');
-      // Here you would generate and download the data export
-    }
-
-    function bulkEdit() {
-      showNotification('Opening bulk edit interface for teams...', 'info');
-      // Here you would open a bulk editing interface
-    }
-
-    function manageTeams() {
-      showNotification('Opening team management interface...', 'info');
-      // Here you would open team creation/management interface
-    }
-
-    // Date filter functionality
-    document.getElementById('dateFilter').addEventListener('change', function() {
-      const selectedDate = this.value;
-      const customDateInput = document.getElementById('customDate');
+    // ===== ADMIN DOUBLES SCORE MONITORING SCRIPT - FULL IMPLEMENTATION =====
+    // Last Updated: <?php echo date('Y-m-d H:i:s'); ?>
+    // Version: 2.0 - Team-based score entry
+    
+    // Override placeholder with full implementation
+    window.saveTeamScore = function(duoId, gameNumber) {
       
-      if (selectedDate === 'custom') {
-        customDateInput.style.display = 'inline-block';
-        customDateInput.focus();
-      } else {
-        customDateInput.style.display = 'none';
-        console.log('Date filter changed to:', selectedDate);
-        showNotification('Loading data for ' + selectedDate + '...', 'info');
+      if (!SELECTED_SESSION_ID) {
+        showNotification('No active Doubles session selected.', 'danger');
+        return;
       }
-    });
 
-    // Custom date input functionality
-    document.getElementById('customDate').addEventListener('change', function() {
-      const selectedDate = this.value;
-      if (selectedDate) {
-        const formattedDate = new Date(selectedDate).toLocaleDateString('en-US', {
-          weekday: 'long',
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric'
+      const table = document.getElementById(`game${gameNumber}Table`);
+      if (!table) {
+        console.error('Table not found:', `game${gameNumber}Table`);
+        showNotification('Table not found', 'danger');
+        return;
+      }
+      
+      const row = table.querySelector(`input[data-duo-id="${duoId}"][data-game="${gameNumber}"]`).closest('tr');
+      if (!row) {
+        console.error('Row not found for duo:', duoId);
+        showNotification('Row not found', 'danger');
+        return;
+      }
+      
+      const scoreInput = row.querySelector('[data-field="score"]');
+      const strikesInput = row.querySelector('[data-field="strikes"]');
+      const sparesInput = row.querySelector('[data-field="spares"]');
+      const openFramesInput = row.querySelector('[data-field="open_frames"]');
+      
+      const teamScore = parseInt(scoreInput.value || '0', 10);
+      const teamStrikes = parseInt(strikesInput.value || '0', 10);
+      const teamSpares = parseInt(sparesInput.value || '0', 10);
+      const teamOpenFrames = parseInt(openFramesInput.value || '0', 10);
+      
+      const player1Id = parseInt(scoreInput.getAttribute('data-player1-id'), 10);
+      const player2Id = parseInt(scoreInput.getAttribute('data-player2-id'), 10);
+
+
+      // Validation
+      if (!teamScore || teamScore <= 0) {
+        showNotification('Please enter a team score.', 'warning');
+        return;
+      }
+      
+      if (!player1Id || !player2Id) {
+        console.error('Missing player IDs:', player1Id, player2Id);
+        showNotification('Missing player information', 'danger');
+        return;
+      }
+
+      // Split the team score equally between both players (or you can adjust this logic)
+      const player1Score = Math.floor(teamScore / 2);
+      const player2Score = teamScore - player1Score;
+      
+      // Split strikes, spares, open frames equally
+      const player1Strikes = Math.floor(teamStrikes / 2);
+      const player2Strikes = teamStrikes - player1Strikes;
+      
+      const player1Spares = Math.floor(teamSpares / 2);
+      const player2Spares = teamSpares - player1Spares;
+      
+      const player1OpenFrames = Math.floor(teamOpenFrames / 2);
+      const player2OpenFrames = teamOpenFrames - player1OpenFrames;
+
+      const requests = [];
+      const url = BASE_PATH + '/ajax/duo-management.php';
+
+      // Save for player 1
+      requests.push(fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          action: 'save_duo_score',
+          duo_id: duoId,
+          user_id: player1Id,
+          game_number: gameNumber,
+          player_score: player1Score,
+          strikes: player1Strikes,
+          spares: player1Spares,
+          open_frames: player1OpenFrames,
+          session_id: SELECTED_SESSION_ID
+        })
+      }));
+
+      // Save for player 2
+      requests.push(fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          action: 'save_duo_score',
+          duo_id: duoId,
+          user_id: player2Id,
+          game_number: gameNumber,
+          player_score: player2Score,
+          strikes: player2Strikes,
+          spares: player2Spares,
+          open_frames: player2OpenFrames,
+          session_id: SELECTED_SESSION_ID
+        })
+      }));
+
+      Promise.all(requests)
+        .then(responses => Promise.all(responses.map(r => r.json())))
+        .then(results => {
+          const anyError = results.find(r => !r.success);
+          if (anyError) {
+            console.error('Error saving duo scores:', anyError);
+            showNotification(anyError.message || 'Failed to save team score.', 'danger');
+            return;
+          }
+
+          showNotification('Team score saved successfully!', 'success');
+          
+          // Update status
+          const statusCell = row.querySelector('td:nth-child(8)');
+          if (statusCell) {
+            statusCell.innerHTML = `
+              <span class="badge bg-success">Completed</span>
+              <br><small class="text-muted">${new Date().toLocaleTimeString()}</small>
+            `;
+          }
+        })
+        .catch(err => {
+          console.error('Error in saveTeamScore:', err);
+          showNotification('Error while saving team score.', 'danger');
         });
-        console.log('Custom date selected:', selectedDate);
-        showNotification('Loading data for ' + formattedDate + '...', 'info');
-      }
-    });
+    };
 
-    // Refresh table functionality
-    function refreshTable() {
-      const refreshBtn = document.querySelector('button[onclick="refreshTable()"]');
-      const icon = refreshBtn.querySelector('i');
-      
-      // Add spinning animation
-      icon.classList.add('ti-spin');
-      
-      // Simulate loading
-      setTimeout(() => {
-        icon.classList.remove('ti-spin');
-        showNotification('Admin doubles table refreshed successfully!', 'success');
-      }, 1000);
-    }
+    window.saveAllScores = function(gameNumber) {
+      showNotification('Saving all scores for Game ' + gameNumber + '...', 'info');
+      // Implement bulk save if needed
+    };
 
-    // Tab switching with data loading simulation
-    document.querySelectorAll('[data-bs-toggle="tab"]').forEach(tab => {
-      tab.addEventListener('shown.bs.tab', function(e) {
-        const targetId = e.target.getAttribute('data-bs-target');
-        console.log('Switched to admin doubles tab:', targetId);
-        
-        // Simulate loading data for specific game
-        if (targetId !== '#overall') {
-          const gameNumber = targetId.replace('#game', '');
-          showNotification('Loading Game ' + gameNumber + ' admin doubles data...', 'info');
-        }
-      });
-    });
+    window.refreshTable = function() {
+      location.reload();
+    };
 
     // Notification function
-    function showNotification(message, type = 'info') {
+    window.showNotification = function(message, type = 'info') {
       const notification = document.createElement('div');
       notification.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
       notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
@@ -749,50 +729,148 @@ requireMaintenanceBypass('doubles-admin', 'Doubles Score Monitoring (Admin)');
           notification.remove();
         }
       }, 3000);
-    }
+    };
 
-    // Auto-refresh table every 30 seconds
-    setInterval(() => {
-      if (!document.hidden) {
-        console.log('Auto-refreshing admin doubles table...');
+    // Change session
+    window.changeSession = function(sessionId) {
+      if (sessionId) {
+        // Show loading indicator
+        showNotification('Loading session data...', 'info');
+        // Redirect to new session
+        window.location.href = 'admin-score-monitoring-doubles.php?session_id=' + sessionId;
       }
-    }, 30000);
-  </script>
-  
-  <!-- Countdown Timer Script -->
-  <script>
-    // Set the target date for the tournament (you can change this)
-    const targetDate = new Date('2025-03-15T18:00:00').getTime();
-    
-    function updateCountdown() {
-      const now = new Date().getTime();
-      const distance = targetDate - now;
+    };
+
+    // Admin manually trigger auto-pairing
+    window.adminAutoPair = function() {
+      if (!SELECTED_SESSION_ID) {
+        showNotification('No session selected', 'warning');
+        return;
+      }
+
+      if (!confirm('This will automatically pair all unpaired players in the lobby based on balanced grouping (Group A + Group B). Continue?')) {
+        return;
+      }
+
+      const url = BASE_PATH + '/ajax/duo-management.php';
+      fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          action: 'admin_force_pair',
+          session_id: SELECTED_SESSION_ID
+        })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          showNotification(data.message || 'Duos paired successfully!', 'success');
+          setTimeout(() => {
+            location.reload();
+          }, 1500);
+        } else {
+          showNotification(data.message || 'Failed to pair duos', 'danger');
+        }
+      })
+      .catch(err => {
+        console.error('Error auto-pairing:', err);
+        showNotification('Error auto-pairing duos', 'danger');
+      });
+    };
+
+    // Update lane number for a duo
+    window.updateLane = function(duoId, laneNumber) {
       
-      if (distance < 0) {
-        // Event has passed
-        document.getElementById('days').innerHTML = '00';
-        document.getElementById('hours').innerHTML = '00';
-        document.getElementById('minutes').innerHTML = '00';
-        document.getElementById('seconds').innerHTML = '00';
+      if (!laneNumber || laneNumber < 1) {
+        showNotification('Please enter a valid lane number', 'warning');
         return;
       }
       
-      const days = Math.floor(distance / (1000 * 60 * 60 * 24));
-      const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-      const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-      const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+      const url = BASE_PATH + '/ajax/duo-management.php';
+      fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          action: 'update_duo_lane',
+          duo_id: duoId,
+          lane_number: laneNumber
+        })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          showNotification('Lane updated successfully!', 'success');
+        } else {
+          showNotification(data.message || 'Failed to update lane', 'danger');
+        }
+      })
+      .catch(err => {
+        console.error('Error updating lane:', err);
+        showNotification('Error updating lane', 'danger');
+      });
+    };
+
+    // View duo details (navigate to specific game tabs)
+    window.viewDuoDetails = function(duoId) {
+      // Switch to Game 1 tab
+      const game1Tab = document.getElementById('game1-tab');
+      if (game1Tab) {
+        game1Tab.click();
+        showNotification('Viewing duo details in Game tabs', 'info');
+      }
+    };
+
+    // Initialize tabs and session filter on page load
+    document.addEventListener('DOMContentLoaded', function() {
+      // Initialize Bootstrap tabs if available
+      if (typeof bootstrap !== 'undefined' && bootstrap.Tab) {
+        const tabTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tab"]'));
+        tabTriggerList.forEach(function(tabTriggerEl) {
+          new bootstrap.Tab(tabTriggerEl);
+        });
+      }
       
-      document.getElementById('days').innerHTML = days.toString().padStart(2, '0');
-      document.getElementById('hours').innerHTML = hours.toString().padStart(2, '0');
-      document.getElementById('minutes').innerHTML = minutes.toString().padStart(2, '0');
-      document.getElementById('seconds').innerHTML = seconds.toString().padStart(2, '0');
-    }
-    
-    // Update countdown every second
-    setInterval(updateCountdown, 1000);
-    
-    // Initial call
-    updateCountdown();
+      // Manual tab switching (works even without Bootstrap)
+      document.querySelectorAll('[data-bs-toggle="tab"]').forEach(function(tab) {
+        tab.addEventListener('click', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          const targetId = this.getAttribute('data-bs-target');
+          if (targetId) {
+            // Hide all panes
+            document.querySelectorAll('.tab-pane').forEach(p => {
+              p.classList.remove('show', 'active');
+            });
+            // Remove active from nav links
+            document.querySelectorAll('.nav-link').forEach(l => {
+              l.classList.remove('active');
+            });
+            // Show target and activate
+            const target = document.querySelector(targetId);
+            if (target) {
+              target.classList.add('show', 'active');
+              this.classList.add('active');
+              // Scroll to top of tab content
+              target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } else {
+              showNotification('Tab content not found: ' + targetId, 'warning');
+            }
+          }
+        });
+      });
+      
+      // Ensure session filter works
+      const sessionFilter = document.getElementById('sessionFilter');
+      if (sessionFilter) {
+        sessionFilter.addEventListener('change', function() {
+          const sessionId = this.value;
+          if (sessionId) {
+            window.location.href = 'admin-score-monitoring-doubles.php?session_id=' + sessionId;
+          }
+        });
+      }
+    });
+
   </script>
   
   <?php include 'includes/admin-popup.php'; ?>

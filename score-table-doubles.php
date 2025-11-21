@@ -1,7 +1,159 @@
 <?php
-// Check maintenance bypass for admin users
-require_once 'includes/maintenance-bypass.php';
-requireMaintenanceBypass('doubles', 'Doubles Score Table');
+require_once 'includes/auth.php';
+require_once 'database.php';
+
+// Require login
+requireLogin();
+
+// Get current user
+$currentUser = getCurrentUser();
+
+$pdo = getDBConnection();
+
+// Determine which Doubles session to show
+$selectedSessionId = isset($_GET['session_id']) ? (int)$_GET['session_id'] : 0;
+
+if ($selectedSessionId <= 0) {
+    // Get latest Doubles session
+    $stmt = $pdo->prepare("
+        SELECT session_id, session_name, session_date
+        FROM game_sessions
+        WHERE game_mode = 'Doubles'
+        ORDER BY session_date DESC
+        LIMIT 1
+    ");
+    $stmt->execute();
+    $latest = $stmt->fetch(PDO::FETCH_ASSOC);
+    if ($latest) {
+        $selectedSessionId = (int)$latest['session_id'];
+        $selectedSession = $latest;
+    } else {
+        $selectedSession = null;
+    }
+} else {
+    $stmt = $pdo->prepare("
+        SELECT session_id, session_name, session_date
+        FROM game_sessions
+        WHERE session_id = ? AND game_mode = 'Doubles'
+        LIMIT 1
+    ");
+    $stmt->execute([$selectedSessionId]);
+    $selectedSession = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+}
+
+// Load duo teams for this session
+$duoTableData = [];
+if ($selectedSession) {
+    // Fetch duos
+    $duoStmt = $pdo->prepare("
+        SELECT 
+            dt.duo_id,
+            dt.duo_name,
+            dt.session_id,
+            dt.lane_number,
+            dt.status,
+            u1.first_name AS p1_first,
+            u1.last_name AS p1_last,
+            u1.profile_picture AS p1_pic,
+            u2.first_name AS p2_first,
+            u2.last_name AS p2_last,
+            u2.profile_picture AS p2_pic
+        FROM duo_teams dt
+        JOIN users u1 ON dt.player1_id = u1.user_id
+        JOIN users u2 ON dt.player2_id = u2.user_id
+        WHERE dt.session_id = ?
+        ORDER BY dt.duo_id ASC
+    ");
+    $duoStmt->execute([$selectedSessionId]);
+    $duos = $duoStmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Initialize structure
+    foreach ($duos as $d) {
+        $duoId = (int)$d['duo_id'];
+        $duoTableData[$duoId] = [
+            'duo_id' => $duoId,
+            'duo_name' => $d['duo_name'],
+            'lane_number' => $d['lane_number'],
+            'status' => $d['status'],
+            'players' => [
+                [
+                    'name' => trim($d['p1_first'] . ' ' . $d['p1_last']),
+                    'pic' => $d['p1_pic'],
+                ],
+                [
+                    'name' => trim($d['p2_first'] . ' ' . $d['p2_last']),
+                    'pic' => $d['p2_pic'],
+                ],
+            ],
+            'games' => [],         // game_number => ['score' => ..., 'strikes' => ..., 'time' => ...]
+            'total_score' => 0,
+            'games_played' => 0,
+            'best_game' => 0,
+            'combined_strikes' => 0,
+            'last_updated' => null,
+        ];
+    }
+
+    if (!empty($duoTableData)) {
+        // Fetch team scores from game_scores (games 1-6) - aggregate by duo and game
+        $scoreStmt = $pdo->prepare("
+            SELECT 
+                duo_id,
+                game_number,
+                SUM(player_score) as team_score,
+                SUM(strikes) as team_strikes,
+                SUM(spares) as team_spares,
+                SUM(open_frames) as team_open_frames,
+                MAX(created_at) as created_at
+            FROM game_scores
+            WHERE session_id = ?
+              AND duo_id IS NOT NULL
+              AND status = 'Completed'
+              AND game_number BETWEEN 1 AND 6
+            GROUP BY duo_id, game_number
+        ");
+        $scoreStmt->execute([$selectedSessionId]);
+        $scores = $scoreStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        foreach ($scores as $s) {
+            $duoId = (int)$s['duo_id'];
+            if (!isset($duoTableData[$duoId])) {
+                continue;
+            }
+            $g = (int)$s['game_number'];
+            $score = (int)$s['team_score'];
+            $strikes = (int)$s['team_strikes'];
+            $spares = (int)$s['team_spares'];
+            $openFrames = (int)$s['team_open_frames'];
+            $time = $s['created_at'];
+
+            $duo = &$duoTableData[$duoId];
+            $duo['games'][$g] = [
+                'score' => $score,
+                'strikes' => $strikes,
+                'spares' => $spares,
+                'open_frames' => $openFrames,
+                'time' => $time,
+            ];
+            $duo['total_score'] += $score;
+            $duo['combined_strikes'] += $strikes;
+            $duo['games_played'] = count($duo['games']);
+            if ($score > $duo['best_game']) {
+                $duo['best_game'] = $score;
+            }
+            if (!$duo['last_updated'] || $time > $duo['last_updated']) {
+                $duo['last_updated'] = $time;
+            }
+        }
+        unset($duo); // break reference
+    }
+}
+
+// Build ranking list for overall tab (sorted by total_score DESC)
+$overallRanking = array_values($duoTableData);
+usort($overallRanking, function ($a, $b) {
+    return $b['total_score'] <=> $a['total_score'];
+});
 ?>
 <!doctype html>
 <html lang="en">
@@ -53,6 +205,45 @@ requireMaintenanceBypass('doubles', 'Doubles Score Table');
     .score-good { color: #17a2b8; }
     .score-average { color: #ffc107; }
     .score-below { color: #dc3545; }
+    .loading-spinner {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #3498db;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    /* Table stability improvements */
+    .table-responsive {
+      min-height: 200px;
+      transition: all 0.3s ease;
+    }
+    .table tbody tr {
+      transition: all 0.3s ease;
+    }
+    .table tbody tr:hover {
+      transform: none;
+    }
+    /* Prevent layout shifts during updates */
+    .table tbody {
+      position: relative;
+    }
+    .table tbody tr[data-duo-id] {
+      will-change: transform, opacity;
+    }
+    /* Smooth transitions for score updates */
+    .score-update {
+      animation: scoreUpdate 0.5s ease-in-out;
+    }
+    @keyframes scoreUpdate {
+      0% { background-color: rgba(40, 167, 69, 0.1); }
+      100% { background-color: transparent; }
+    }
   </style>
 </head>
 
@@ -91,19 +282,47 @@ requireMaintenanceBypass('doubles', 'Doubles Score Table');
                 <div class="card-body">
                   <div class="d-flex align-items-center justify-content-between mb-4">
                     <div>
-                      <h5 class="card-title fw-semibold mb-1">Doubles Score Table</h5>
-                      <span class="fw-normal text-muted">Two-player team rankings and scores</span>
+                      <h5 class="card-title fw-semibold mb-1">
+                        <?php echo $selectedSession ? htmlspecialchars($selectedSession['session_name']) : 'Doubles Score Table'; ?>
+                      </h5>
+                      <span class="fw-normal text-muted">
+                        <?php 
+                        if ($selectedSession) {
+                          echo date('l, F j, Y', strtotime($selectedSession['session_date']));
+                        } else {
+                          echo 'Two-player team rankings and scores';
+                        }
+                        ?>
+                      </span>
                     </div>
                     <div class="d-flex gap-2">
-                      <select class="form-select form-select-sm" id="dateFilter" style="width: auto;">
-                        <option value="today">Today</option>
-                        <option value="yesterday">Yesterday</option>
-                        <option value="week">This Week</option>
-                        <option value="month">This Month</option>
-                        <option value="all">All Time</option>
-                        <option value="custom">Custom Date</option>
+                      <select class="form-select form-select-sm" id="sessionFilter" style="width: auto;" onchange="changeSession(this.value)">
+                        <?php 
+                        // Get all Doubles sessions
+                        try {
+                          $stmt = $pdo->prepare("
+                            SELECT session_id, session_name, session_date, status
+                            FROM game_sessions 
+                            WHERE game_mode = 'Doubles'
+                            ORDER BY session_date DESC
+                            LIMIT 20
+                          ");
+                          $stmt->execute();
+                          $allSessions = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                          
+                          foreach ($allSessions as $sess) {
+                            $selected = ($sess['session_id'] == $selectedSessionId) ? 'selected' : '';
+                            $statusBadge = $sess['status'] == 'Active' ? '🟢' : ($sess['status'] == 'Completed' ? '✅' : '⏳');
+                            $formattedDate = date('M j, Y', strtotime($sess['session_date']));
+                            echo '<option value="' . $sess['session_id'] . '" ' . $selected . '>';
+                            echo $statusBadge . ' ' . htmlspecialchars($sess['session_name']) . ' - ' . $formattedDate;
+                            echo '</option>';
+                          }
+                        } catch (Exception $e) {
+                          echo '<option value="">Error loading sessions</option>';
+                        }
+                        ?>
                       </select>
-                      <input type="date" class="form-control form-control-sm" id="customDate" style="width: auto; display: none;">
                       <button class="btn btn-primary btn-sm" onclick="refreshTable()">
                         <i class="ti ti-refresh"></i>
                       </button>
@@ -142,6 +361,11 @@ requireMaintenanceBypass('doubles', 'Doubles Score Table');
                         Game 5
                       </button>
                     </li>
+                    <li class="nav-item" role="presentation">
+                      <button class="nav-link" id="game6-tab" data-bs-toggle="tab" data-bs-target="#game6" type="button" role="tab">
+                        Game 6
+                      </button>
+                    </li>
                   </ul>
 
                   <div class="tab-content" id="gameTabContent">
@@ -154,7 +378,9 @@ requireMaintenanceBypass('doubles', 'Doubles Score Table');
                               <th scope="col">Rank</th>
                               <th scope="col">Team</th>
                               <th scope="col">Players</th>
+                              <th scope="col">Lane</th>
                               <th scope="col">Total Score</th>
+                              <th scope="col">Pin Diff</th>
                               <th scope="col">Avg/Game</th>
                               <th scope="col">Games Played</th>
                               <th scope="col">Best Game</th>
@@ -163,123 +389,111 @@ requireMaintenanceBypass('doubles', 'Doubles Score Table');
                             </tr>
                           </thead>
                           <tbody>
-                            <tr>
-                              <td><span class="badge bg-primary">1</span></td>
+                            <?php if (!$selectedSession || empty($overallRanking)): ?>
+                              <tr>
+                                <td colspan="11" class="text-center text-muted py-4">
+                                  No doubles results available yet.
+                              </td>
+                            </tr>
+                            <?php else: ?>
+                              <?php 
+                              $rank = 1;
+                              $firstPlaceScore = !empty($overallRanking) ? $overallRanking[0]['total_score'] : 0;
+                              ?>
+                              <?php foreach ($overallRanking as $duo): ?>
+                                <?php
+                                  $rankClass = $rank === 1 ? 'rank-1' : ($rank === 2 ? 'rank-2' : ($rank === 3 ? 'rank-3' : 'rank-other'));
+                                  $pinDiff = $duo['total_score'] - $firstPlaceScore;
+                                ?>
+                                <tr>
+                                  <td><span class="rank-badge <?php echo $rankClass; ?>"><?php echo $rank; ?></span></td>
                               <td>
                                 <div class="d-flex align-items-center">
                                   <div class="d-flex me-2">
-                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-1.jpg'; ?>" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
-                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-2.jpg'; ?>" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
+                                        <?php
+                                          $basePath = defined('BASE_PATH') ? BASE_PATH : '';
+                                          $p1Pic = !empty($duo['players'][0]['pic'])
+                                            ? $basePath . '/uploads/profile_pictures/' . $duo['players'][0]['pic']
+                                            : $basePath . '/assets/images/profile/user-1.jpg';
+                                          $p2Pic = !empty($duo['players'][1]['pic'])
+                                            ? $basePath . '/uploads/profile_pictures/' . $duo['players'][1]['pic']
+                                            : $basePath . '/assets/images/profile/user-2.jpg';
+                                        ?>
+                                        <img src="<?php echo htmlspecialchars($p1Pic); ?>" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
+                                        <img src="<?php echo htmlspecialchars($p2Pic); ?>" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
                                   </div>
                                   <div>
-                                    <h6 class="mb-0">Thunder Strikers</h6>
-                                    <small class="text-muted">Pro Team</small>
+                                        <h6 class="mb-0"><?php echo htmlspecialchars($duo['duo_name'] ?: 'Duo #' . $duo['duo_id']); ?></h6>
                                   </div>
                                 </div>
                               </td>
-                              <td>John & Sarah</td>
-                              <td><span class="fw-bold text-success">2,443</span></td>
-                              <td>244.3</td>
-                              <td>5</td>
-                              <td><span class="text-warning">547</span></td>
-                              <td>87</td>
-                              <td><small class="text-muted">2 hours ago</small></td>
-                            </tr>
-                            <tr>
-                              <td><span class="badge bg-secondary">2</span></td>
-                              <td>
-                                <div class="d-flex align-items-center">
-                                  <div class="d-flex me-2">
-                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-3.jpg'; ?>" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
-                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-4.jpg'; ?>" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
-                                  </div>
-                                  <div>
-                                    <h6 class="mb-0">Pin Crushers</h6>
-                                    <small class="text-muted">Elite Team</small>
-                                  </div>
-                                </div>
+                                  <td>
+                                    <small>
+                                      <?php echo htmlspecialchars($duo['players'][0]['name']); ?>
+                                      <br>
+                                      <?php echo htmlspecialchars($duo['players'][1]['name']); ?>
+                                    </small>
                               </td>
-                              <td>Mike & Lisa</td>
-                              <td><span class="fw-bold text-success">2,312</span></td>
-                              <td>231.2</td>
-                              <td>5</td>
-                              <td><span class="text-warning">523</span></td>
-                              <td>80</td>
-                              <td><small class="text-muted">1 hour ago</small></td>
-                            </tr>
-                            <tr>
-                              <td><span class="badge bg-warning">3</span></td>
-                              <td>
-                                <div class="d-flex align-items-center">
-                                  <div class="d-flex me-2">
-                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-5.jpg'; ?>" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
-                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-6.jpg'; ?>" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
-                                  </div>
-                                  <div>
-                                    <h6 class="mb-0">Lane Masters</h6>
-                                    <small class="text-muted">Advanced Team</small>
-                                  </div>
-                                </div>
+                                  <td><span class="badge bg-primary">Lane <?php echo $duo['lane_number'] ?: '-'; ?></span></td>
+                                  <td><span class="fw-bold text-success"><?php echo (int)$duo['total_score']; ?></span></td>
+                                  <td>
+                                    <?php if ($pinDiff === 0): ?>
+                                      <span class="badge bg-success">Leader</span>
+                                    <?php else: ?>
+                                      <span class="text-danger"><?php echo $pinDiff; ?></span>
+                                    <?php endif; ?>
                               </td>
-                              <td>Tom & Emma</td>
-                              <td><span class="fw-bold text-success">2,178</span></td>
-                              <td>217.8</td>
-                              <td>5</td>
-                              <td><span class="text-warning">498</span></td>
-                              <td>75</td>
-                              <td><small class="text-muted">30 min ago</small></td>
-                            </tr>
-                            <tr>
-                              <td><span class="badge bg-info">4</span></td>
-                              <td>
-                                <div class="d-flex align-items-center">
-                                  <div class="d-flex me-2">
-                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-7.jpg'; ?>" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
-                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-8.jpg'; ?>" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
-                                  </div>
-                                  <div>
-                                    <h6 class="mb-0">Spare Seekers</h6>
-                                    <small class="text-muted">Intermediate Team</small>
-                                  </div>
-                                </div>
+                                  <td>
+                                    <?php
+                                      $avg = $duo['games_played'] > 0
+                                        ? round($duo['total_score'] / $duo['games_played'], 1)
+                                        : 0;
+                                      echo $avg;
+                                    ?>
                               </td>
-                              <td>Alex & Maria</td>
-                              <td><span class="fw-bold text-success">2,045</span></td>
-                              <td>204.5</td>
-                              <td>5</td>
-                              <td><span class="text-warning">472</span></td>
-                              <td>70</td>
-                              <td><small class="text-muted">15 min ago</small></td>
+                                  <td><?php echo (int)$duo['games_played']; ?>/6</td>
+                                  <td><span class="text-warning"><?php echo (int)$duo['best_game']; ?></span></td>
+                                  <td><?php echo (int)$duo['combined_strikes']; ?></td>
+                                  <td>
+                                    <small class="text-muted">
+                                      <?php echo $duo['last_updated'] ? date('g:i A', strtotime($duo['last_updated'])) : '-'; ?>
+                                    </small>
+                                  </td>
                             </tr>
-                            <tr>
-                              <td><span class="badge bg-dark">5</span></td>
-                              <td>
-                                <div class="d-flex align-items-center">
-                                  <div class="d-flex me-2">
-                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-1.jpg'; ?>" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
-                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-3.jpg'; ?>" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
-                                  </div>
-                                  <div>
-                                    <h6 class="mb-0">Gutter Guards</h6>
-                                    <small class="text-muted">Beginner Team</small>
-                                  </div>
-                                </div>
-                              </td>
-                              <td>David & Anna</td>
-                              <td><span class="fw-bold text-success">1,956</span></td>
-                              <td>195.6</td>
-                              <td>5</td>
-                              <td><span class="text-warning">445</span></td>
-                              <td>65</td>
-                              <td><small class="text-muted">5 min ago</small></td>
-                            </tr>
+                                <?php $rank++; ?>
+                              <?php endforeach; ?>
+                            <?php endif; ?>
                           </tbody>
                         </table>
                       </div>
                     </div>
 
-                    <!-- Game 1 Tab -->
-                    <div class="tab-pane fade" id="game1" role="tabpanel">
+                    <?php
+                    // Function to render game tab
+                    function renderGameTab($gameNumber, $duoTableData) {
+                      // Get scores for this game
+                      $gameScores = [];
+                      foreach ($duoTableData as $duo) {
+                        if (isset($duo['games'][$gameNumber])) {
+                          $gameScores[] = [
+                            'duo' => $duo,
+                            'score' => $duo['games'][$gameNumber]['score'],
+                            'strikes' => $duo['games'][$gameNumber]['strikes'],
+                            'spares' => $duo['games'][$gameNumber]['spares'],
+                            'open_frames' => $duo['games'][$gameNumber]['open_frames'],
+                            'time' => $duo['games'][$gameNumber]['time']
+                          ];
+                        }
+                      }
+                      
+                      // Sort by score DESC
+                      usort($gameScores, function($a, $b) {
+                        return $b['score'] <=> $a['score'];
+                      });
+                      
+                      $basePath = defined('BASE_PATH') ? BASE_PATH : '';
+                      ?>
+                      <div class="tab-pane fade" id="game<?php echo $gameNumber; ?>" role="tabpanel">
                       <div class="table-responsive">
                         <table class="table table-hover">
                           <thead>
@@ -287,78 +501,86 @@ requireMaintenanceBypass('doubles', 'Doubles Score Table');
                               <th scope="col">Rank</th>
                               <th scope="col">Team</th>
                               <th scope="col">Players</th>
+                                <th scope="col">Lane</th>
                               <th scope="col">Score</th>
-                              <th scope="col">Player 1 Score</th>
-                              <th scope="col">Player 2 Score</th>
-                              <th scope="col">Combined Strikes</th>
+                                <th scope="col">Pin Diff</th>
+                                <th scope="col">Strikes</th>
+                                <th scope="col">Spares</th>
+                                <th scope="col">Open Frames</th>
                               <th scope="col">Time</th>
                             </tr>
                           </thead>
                           <tbody>
-                            <tr>
-                              <td><span class="badge bg-primary">1</span></td>
+                              <?php if (empty($gameScores)): ?>
+                                <tr>
+                                  <td colspan="10" class="text-center text-muted py-4">
+                                    No scores available for Game <?php echo $gameNumber; ?> yet.
+                              </td>
+                            </tr>
+                              <?php else:
+                                $rank = 1;
+                                $firstScore = $gameScores[0]['score'];
+                                foreach ($gameScores as $entry):
+                                  $duo = $entry['duo'];
+                                  $rankClass = $rank === 1 ? 'rank-1' : ($rank === 2 ? 'rank-2' : ($rank === 3 ? 'rank-3' : 'rank-other'));
+                                  $pinDiff = $entry['score'] - $firstScore;
+                                  $p1Pic = !empty($duo['players'][0]['pic'])
+                                    ? $basePath . '/uploads/profile_pictures/' . $duo['players'][0]['pic']
+                                    : $basePath . '/assets/images/profile/user-1.jpg';
+                                  $p2Pic = !empty($duo['players'][1]['pic'])
+                                    ? $basePath . '/uploads/profile_pictures/' . $duo['players'][1]['pic']
+                                    : $basePath . '/assets/images/profile/user-2.jpg';
+                              ?>
+                                <tr>
+                                  <td><span class="rank-badge <?php echo $rankClass; ?>"><?php echo $rank; ?></span></td>
                               <td>
                                 <div class="d-flex align-items-center">
                                   <div class="d-flex me-2">
-                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-1.jpg'; ?>" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
-                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-2.jpg'; ?>" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
+                                        <img src="<?php echo htmlspecialchars($p1Pic); ?>" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
+                                        <img src="<?php echo htmlspecialchars($p2Pic); ?>" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
                                   </div>
                                   <div>
-                                    <h6 class="mb-0">Thunder Strikers</h6>
+                                        <h6 class="mb-0"><?php echo htmlspecialchars($duo['duo_name'] ?: 'Duo #' . $duo['duo_id']); ?></h6>
                                   </div>
                                 </div>
                               </td>
-                              <td>John & Sarah</td>
-                              <td><span class="fw-bold text-success">547</span></td>
-                              <td>279</td>
-                              <td>268</td>
-                              <td>19</td>
-                              <td><small class="text-muted">9:30 AM</small></td>
-                            </tr>
-                            <tr>
-                              <td><span class="badge bg-secondary">2</span></td>
-                              <td>
-                                <div class="d-flex align-items-center">
-                                  <div class="d-flex me-2">
-                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-3.jpg'; ?>" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
-                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-4.jpg'; ?>" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
-                                  </div>
-                                  <div>
-                                    <h6 class="mb-0">Pin Crushers</h6>
-                                  </div>
-                                </div>
+                                  <td>
+                                    <small>
+                                      <?php echo htmlspecialchars($duo['players'][0]['name']); ?>
+                                      <br>
+                                      <?php echo htmlspecialchars($duo['players'][1]['name']); ?>
+                                    </small>
                               </td>
-                              <td>Mike & Lisa</td>
-                              <td><span class="fw-bold text-success">523</span></td>
-                              <td>255</td>
-                              <td>268</td>
-                              <td>17</td>
-                              <td><small class="text-muted">9:45 AM</small></td>
+                                  <td><span class="badge bg-primary">Lane <?php echo $duo['lane_number'] ?: '-'; ?></span></td>
+                                  <td><span class="fw-bold text-success"><?php echo $entry['score']; ?></span></td>
+                                  <td>
+                                    <?php if ($pinDiff === 0): ?>
+                                      <span class="badge bg-success">Leader</span>
+                                    <?php else: ?>
+                                      <span class="text-danger"><?php echo $pinDiff; ?></span>
+                                    <?php endif; ?>
+                                  </td>
+                                  <td><?php echo $entry['strikes']; ?></td>
+                                  <td><?php echo $entry['spares']; ?></td>
+                                  <td><?php echo $entry['open_frames']; ?></td>
+                                  <td><small class="text-muted"><?php echo date('g:i A', strtotime($entry['time'])); ?></small></td>
                             </tr>
-                            <tr>
-                              <td><span class="badge bg-warning">3</span></td>
-                              <td>
-                                <div class="d-flex align-items-center">
-                                  <div class="d-flex me-2">
-                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-5.jpg'; ?>" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
-                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-6.jpg'; ?>" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
-                                  </div>
-                                  <div>
-                                    <h6 class="mb-0">Lane Masters</h6>
-                                  </div>
-                                </div>
-                              </td>
-                              <td>Tom & Emma</td>
-                              <td><span class="fw-bold text-success">498</span></td>
-                              <td>242</td>
-                              <td>256</td>
-                              <td>15</td>
-                              <td><small class="text-muted">10:00 AM</small></td>
-                            </tr>
+                              <?php 
+                                $rank++;
+                                endforeach;
+                              endif; ?>
                           </tbody>
                         </table>
                       </div>
                     </div>
+                      <?php
+                    }
+                    
+                    // Render Game 1-5 tabs
+                    for ($gameNum = 1; $gameNum <= 5; $gameNum++) {
+                      renderGameTab($gameNum, $duoTableData);
+                    }
+                    ?>
 
                     <!-- Game 2 Tab -->
                     <div class="tab-pane fade" id="game2" role="tabpanel">
@@ -687,6 +909,110 @@ requireMaintenanceBypass('doubles', 'Doubles Score Table');
                         </table>
                       </div>
                     </div>
+
+                    <!-- Game 6 Tab -->
+                    <div class="tab-pane fade" id="game6" role="tabpanel">
+                      <div class="table-responsive">
+                        <table class="table table-hover">
+                          <thead>
+                            <tr>
+                              <th scope="col">Rank</th>
+                              <th scope="col">Team</th>
+                              <th scope="col">Players</th>
+                              <th scope="col">Lane</th>
+                              <th scope="col">Score</th>
+                              <th scope="col">Pin Diff</th>
+                              <th scope="col">Strikes</th>
+                              <th scope="col">Spares</th>
+                              <th scope="col">Open Frames</th>
+                              <th scope="col">Time</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <?php
+                            // Get Game 6 scores
+                            $game6Scores = [];
+                            foreach ($duoTableData as $duo) {
+                              if (isset($duo['games'][6])) {
+                                $game6Scores[] = [
+                                  'duo' => $duo,
+                                  'score' => $duo['games'][6]['score'],
+                                  'strikes' => $duo['games'][6]['strikes'],
+                                  'spares' => $duo['games'][6]['spares'],
+                                  'open_frames' => $duo['games'][6]['open_frames'],
+                                  'time' => $duo['games'][6]['time']
+                                ];
+                              }
+                            }
+                            
+                            // Sort by score DESC
+                            usort($game6Scores, function($a, $b) {
+                              return $b['score'] <=> $a['score'];
+                            });
+                            
+                            if (empty($game6Scores)): ?>
+                              <tr>
+                                <td colspan="10" class="text-center text-muted py-4">
+                                  No scores available for Game 6 yet.
+                                </td>
+                              </tr>
+                            <?php else:
+                              $rank = 1;
+                              $firstScore = $game6Scores[0]['score'];
+                              foreach ($game6Scores as $entry):
+                                $duo = $entry['duo'];
+                                $rankClass = $rank === 1 ? 'rank-1' : ($rank === 2 ? 'rank-2' : ($rank === 3 ? 'rank-3' : 'rank-other'));
+                                $pinDiff = $entry['score'] - $firstScore;
+                                $basePath = defined('BASE_PATH') ? BASE_PATH : '';
+                                $p1Pic = !empty($duo['players'][0]['pic'])
+                                  ? $basePath . '/uploads/profile_pictures/' . $duo['players'][0]['pic']
+                                  : $basePath . '/assets/images/profile/user-1.jpg';
+                                $p2Pic = !empty($duo['players'][1]['pic'])
+                                  ? $basePath . '/uploads/profile_pictures/' . $duo['players'][1]['pic']
+                                  : $basePath . '/assets/images/profile/user-2.jpg';
+                            ?>
+                              <tr>
+                                <td><span class="rank-badge <?php echo $rankClass; ?>"><?php echo $rank; ?></span></td>
+                                <td>
+                                  <div class="d-flex align-items-center">
+                                    <div class="d-flex me-2">
+                                      <img src="<?php echo htmlspecialchars($p1Pic); ?>" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
+                                      <img src="<?php echo htmlspecialchars($p2Pic); ?>" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
+                  </div>
+                                    <div>
+                                      <h6 class="mb-0"><?php echo htmlspecialchars($duo['duo_name'] ?: 'Duo #' . $duo['duo_id']); ?></h6>
+                                    </div>
+                                  </div>
+                                </td>
+                                <td>
+                                  <small>
+                                    <?php echo htmlspecialchars($duo['players'][0]['name']); ?>
+                                    <br>
+                                    <?php echo htmlspecialchars($duo['players'][1]['name']); ?>
+                                  </small>
+                                </td>
+                                <td><span class="badge bg-primary">Lane <?php echo $duo['lane_number'] ?: '-'; ?></span></td>
+                                <td><span class="fw-bold text-success"><?php echo $entry['score']; ?></span></td>
+                                <td>
+                                  <?php if ($pinDiff === 0): ?>
+                                    <span class="badge bg-success">Leader</span>
+                                  <?php else: ?>
+                                    <span class="text-danger"><?php echo $pinDiff; ?></span>
+                                  <?php endif; ?>
+                                </td>
+                                <td><?php echo $entry['strikes']; ?></td>
+                                <td><?php echo $entry['spares']; ?></td>
+                                <td><?php echo $entry['open_frames']; ?></td>
+                                <td><small class="text-muted"><?php echo date('g:i A', strtotime($entry['time'])); ?></small></td>
+                              </tr>
+                            <?php 
+                              $rank++;
+                              endforeach;
+                            endif; ?>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -743,50 +1069,16 @@ requireMaintenanceBypass('doubles', 'Doubles Score Table');
 
   <!-- Score Table Functionality -->
   <script>
-    // Date filter functionality
-    document.getElementById('dateFilter').addEventListener('change', function() {
-      const selectedDate = this.value;
-      const customDateInput = document.getElementById('customDate');
-      
-      if (selectedDate === 'custom') {
-        customDateInput.style.display = 'inline-block';
-        customDateInput.focus();
-      } else {
-        customDateInput.style.display = 'none';
-        console.log('Date filter changed to:', selectedDate);
-        // Here you would typically make an AJAX call to get filtered data
-        showNotification('Loading data for ' + selectedDate + '...', 'info');
+    // Change session
+    function changeSession(sessionId) {
+      if (sessionId) {
+        window.location.href = 'score-table-doubles.php?session_id=' + sessionId;
       }
-    });
-
-    // Custom date input functionality
-    document.getElementById('customDate').addEventListener('change', function() {
-      const selectedDate = this.value;
-      if (selectedDate) {
-        const formattedDate = new Date(selectedDate).toLocaleDateString('en-US', {
-          weekday: 'long',
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric'
-        });
-        console.log('Custom date selected:', selectedDate);
-        showNotification('Loading data for ' + formattedDate + '...', 'info');
-      }
-    });
+    }
 
     // Refresh table functionality
     function refreshTable() {
-      const refreshBtn = document.querySelector('button[onclick="refreshTable()"]');
-      const icon = refreshBtn.querySelector('i');
-      
-      // Add spinning animation
-      icon.classList.add('ti-spin');
-      
-      // Simulate loading
-      setTimeout(() => {
-        icon.classList.remove('ti-spin');
-        showNotification('Table refreshed successfully!', 'success');
-      }, 1000);
+      location.reload();
     }
 
     // Tab switching with data loading simulation

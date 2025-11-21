@@ -32,7 +32,7 @@ try {
     // Define admin-only actions
     // NOTE: auto_pair_now is intentionally NOT admin-only so that
     // the system/player flow can trigger automatic pairing.
-    $adminActions = ['create_duo_session', 'override_lane', 'bulk_save_scores'];
+    $adminActions = ['create_duo_session', 'override_lane', 'bulk_save_scores', 'admin_force_pair'];
     
     // Check admin access for admin-only actions
     if (in_array($action, $adminActions) && $userRole !== 'Admin') {
@@ -176,14 +176,46 @@ try {
         // =====================================
         
         case 'auto_pair_now':
-            // Admin triggers auto-pairing
+            // Auto-pairing triggered when all players have joined
             $sessionId = $_POST['session_id'] ?? 0;
             
             if (!$sessionId) {
                 throw new Exception('Session ID required');
             }
             
-            $response = autoPairPlayers($sessionId);
+            // Check if all players have joined
+            $pdo = getDBConnection();
+            $stmt = $pdo->prepare("
+                SELECT COUNT(*) as players_in_lobby
+                FROM duo_join_lobby
+                WHERE session_id = ? AND is_paired = FALSE
+            ");
+            $stmt->execute([$sessionId]);
+            $lobbyCount = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            // Get total expected players
+            $stmt = $pdo->prepare("
+                SELECT max_players
+                FROM game_sessions
+                WHERE session_id = ?
+            ");
+            $stmt->execute([$sessionId]);
+            $sessionInfo = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            $playersInLobby = (int)$lobbyCount['players_in_lobby'];
+            $totalPlayers = (int)($sessionInfo['max_players'] ?? 8);
+            
+            // Only pair if all players have joined
+            if ($playersInLobby >= $totalPlayers) {
+                $response = autoPairPlayers($sessionId);
+            } else {
+                $response = [
+                    'success' => false,
+                    'message' => "Waiting for all players ({$playersInLobby}/{$totalPlayers})",
+                    'players_in_lobby' => $playersInLobby,
+                    'total_players' => $totalPlayers
+                ];
+            }
             break;
             
         case 'get_duos':
@@ -384,10 +416,31 @@ try {
                     'in_duo' => true
                 ];
             } else {
+                // Get player count in lobby
+                $pdo = getDBConnection();
+                $stmt = $pdo->prepare("
+                    SELECT COUNT(*) as players_in_lobby
+                    FROM duo_join_lobby
+                    WHERE session_id = ? AND is_paired = FALSE
+                ");
+                $stmt->execute([$sessionId]);
+                $lobbyCount = $stmt->fetch(PDO::FETCH_ASSOC);
+                
+                // Get total expected players from session
+                $stmt = $pdo->prepare("
+                    SELECT max_players
+                    FROM game_sessions
+                    WHERE session_id = ?
+                ");
+                $stmt->execute([$sessionId]);
+                $sessionInfo = $stmt->fetch(PDO::FETCH_ASSOC);
+                
                 $response = [
                     'success' => true,
                     'in_duo' => false,
-                    'message' => 'Not in a duo for this session'
+                    'message' => 'Not in a duo for this session',
+                    'players_in_lobby' => (int)$lobbyCount['players_in_lobby'],
+                    'total_players' => (int)($sessionInfo['max_players'] ?? 8)
                 ];
             }
             break;
@@ -663,6 +716,46 @@ try {
                 'success' => true,
                 'leaderboard' => $duos
             ];
+            break;
+        
+        case 'update_duo_lane':
+            // Update lane number for a duo (admin only)
+            $duoId = $_POST['duo_id'] ?? 0;
+            $laneNumber = $_POST['lane_number'] ?? 0;
+            
+            if (!$duoId || !$laneNumber) {
+                throw new Exception('Duo ID and lane number required');
+            }
+            
+            $pdo = getDBConnection();
+            $stmt = $pdo->prepare("
+                UPDATE duo_teams 
+                SET lane_number = ? 
+                WHERE duo_id = ?
+            ");
+            $stmt->execute([$laneNumber, $duoId]);
+            
+            $response = [
+                'success' => true,
+                'message' => 'Lane updated successfully'
+            ];
+            break;
+        
+        case 'admin_force_pair':
+            // Admin manually triggers auto-pairing (ignores player count check)
+            $sessionId = $_POST['session_id'] ?? 0;
+            
+            if (!$sessionId) {
+                throw new Exception('Session ID required');
+            }
+            
+            // Force pairing regardless of player count
+            $response = autoPairPlayers($sessionId);
+            
+            if ($response['success']) {
+                $duoCount = is_array($response['duos']) ? count($response['duos']) : 0;
+                $response['message'] = $duoCount . ' duo(s) created successfully!';
+            }
             break;
             
         default:
