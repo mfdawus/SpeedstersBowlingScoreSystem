@@ -39,10 +39,116 @@ if (!$selectedSession) {
   }
 }
 
-// Load duo teams for this session
+// Load duo teams for this session - USE DIRECT QUERY (more reliable on web servers)
 $adminDuoTeams = [];
+$playersInLobby = 0;
+$totalDuosInDB = 0;
+$queryError = null;
+$duoCount = 0;
+
 if ($selectedSession) {
-  $adminDuoTeams = getDuosBySession($selectedSessionId);
+  // ALWAYS use direct query (more reliable than helper function on web servers)
+  try {
+    $directStmt = $pdo->prepare("
+      SELECT 
+        dt.duo_id,
+        dt.duo_name,
+        dt.combined_total_score,
+        dt.lane_number,
+        dt.lane_vote_player1,
+        dt.lane_vote_player2,
+        dt.status,
+        dt.player1_avg,
+        dt.player2_avg,
+        u1.user_id as player1_id,
+        u1.first_name as player1_first_name,
+        u1.last_name as player1_last_name,
+        COALESCE(u1.profile_picture, '') as player1_picture,
+        u2.user_id as player2_id,
+        u2.first_name as player2_first_name,
+        u2.last_name as player2_last_name,
+        COALESCE(u2.profile_picture, '') as player2_picture
+      FROM duo_teams dt
+      INNER JOIN users u1 ON dt.player1_id = u1.user_id
+      INNER JOIN users u2 ON dt.player2_id = u2.user_id
+      WHERE dt.session_id = ?
+      ORDER BY dt.combined_total_score DESC, dt.duo_name
+    ");
+    $directStmt->execute([$selectedSessionId]);
+    $adminDuoTeams = $directStmt->fetchAll(PDO::FETCH_ASSOC);
+    $duoCount = count($adminDuoTeams);
+  } catch (PDOException $e) {
+    $queryError = $e->getMessage();
+    error_log("Error fetching duos: " . $queryError);
+    $adminDuoTeams = [];
+    $duoCount = 0;
+  }
+  
+  // Check how many players are in lobby but not paired
+  try {
+    $lobbyStmt = $pdo->prepare("
+      SELECT COUNT(*) as count 
+      FROM duo_join_lobby 
+      WHERE session_id = ? AND is_paired = FALSE
+    ");
+    $lobbyStmt->execute([$selectedSessionId]);
+    $lobbyResult = $lobbyStmt->fetch(PDO::FETCH_ASSOC);
+    $playersInLobby = (int)$lobbyResult['count'];
+  } catch (PDOException $e) {
+    error_log("Error checking lobby: " . $e->getMessage());
+  }
+  
+  // Debug: Count total duo teams in database for this session
+  $totalDuosInDB = 0;
+  try {
+    $countStmt = $pdo->prepare("SELECT COUNT(*) as count FROM duo_teams WHERE session_id = ?");
+    $countStmt->execute([$selectedSessionId]);
+    $countResult = $countStmt->fetch(PDO::FETCH_ASSOC);
+    $totalDuosInDB = (int)$countResult['count'];
+  } catch (PDOException $e) {
+    error_log("Error counting duos: " . $e->getMessage());
+  }
+  
+  // PERFORMANCE FIX: Fetch ALL scores for ALL duos and ALL games in ONE query
+  // Instead of querying inside loops (N+1 problem)
+  $allScoresByDuoAndGame = [];
+  if (!empty($adminDuoTeams)) {
+    try {
+      $duoIds = array_column($adminDuoTeams, 'duo_id');
+      if (!empty($duoIds)) {
+        $placeholders = implode(',', array_fill(0, count($duoIds), '?'));
+        $scoresStmt = $pdo->prepare("
+          SELECT 
+            duo_id,
+            game_number,
+            COALESCE(SUM(player_score), 0) as team_score,
+            COALESCE(SUM(strikes), 0) as total_strikes,
+            COALESCE(SUM(spares), 0) as total_spares,
+            COALESCE(SUM(open_frames), 0) as total_open_frames,
+            MAX(created_at) as last_updated
+          FROM game_scores
+          WHERE duo_id IN ($placeholders) 
+            AND game_number BETWEEN 1 AND 6 
+            AND status = 'Completed'
+          GROUP BY duo_id, game_number
+        ");
+        $scoresStmt->execute($duoIds);
+        $allScores = $scoresStmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Organize scores by duo_id and game_number for fast lookup
+        foreach ($allScores as $score) {
+          $duoId = (int)$score['duo_id'];
+          $gameNum = (int)$score['game_number'];
+          $allScoresByDuoAndGame[$duoId][$gameNum] = $score;
+        }
+      }
+    } catch (PDOException $e) {
+      error_log("Error fetching all scores: " . $e->getMessage());
+    }
+  }
+} else {
+  $totalDuosInDB = 0;
+  $allScoresByDuoAndGame = [];
 }
 ?>
 <!doctype html>
@@ -63,7 +169,8 @@ if ($selectedSession) {
   <script>
     // PHP data for JS - defined early
     const SELECTED_SESSION_ID = <?php echo (int)$selectedSessionId; ?>;
-    const BASE_PATH = '<?php echo defined('BASE_PATH') ? BASE_PATH : ''; ?>';
+    // BASE_PATH will be declared in includes/header.php (line 201)
+    // Don't declare it here to avoid duplicate declaration error
     
     // Initialize placeholder functions immediately to prevent "not defined" errors
     // These will be replaced by full implementations below
@@ -81,6 +188,51 @@ if ($selectedSession) {
     
     window.showNotification = function(message, type) {
       // Placeholder - will be replaced by full implementation
+    };
+    
+    window.changeSession = function(sessionId) {
+      if (!sessionId) return;
+      // Simple redirect - no blocking operations
+      window.location.href = 'admin-score-monitoring-doubles.php?session_id=' + encodeURIComponent(sessionId);
+    };
+    
+    window.adminAutoPair = function() {
+      alert('Auto-pairing will be available after page loads');
+    };
+    
+    // Simple tab switching - available immediately
+    window.switchTab = function(tabId) {
+      // Hide all tab panes
+      const panes = document.querySelectorAll('.tab-pane');
+      for (let i = 0; i < panes.length; i++) {
+        panes[i].classList.remove('show', 'active');
+        panes[i].style.display = 'none';
+        panes[i].style.opacity = '0';
+        panes[i].setAttribute('aria-hidden', 'true');
+      }
+      
+      // Remove active from all nav links
+      const links = document.querySelectorAll('.nav-link');
+      for (let i = 0; i < links.length; i++) {
+        links[i].classList.remove('active');
+        links[i].setAttribute('aria-selected', 'false');
+      }
+      
+      // Show target tab pane
+      const targetPane = document.getElementById(tabId);
+      if (targetPane) {
+        targetPane.classList.add('show', 'active');
+        targetPane.style.display = 'block';
+        targetPane.style.opacity = '1';
+        targetPane.setAttribute('aria-hidden', 'false');
+      }
+      
+      // Activate corresponding nav link
+      const targetLink = document.querySelector('[data-bs-target="#' + tabId + '"]');
+      if (targetLink) {
+        targetLink.classList.add('active');
+        targetLink.setAttribute('aria-selected', 'true');
+      }
     };
   </script>
   
@@ -118,6 +270,35 @@ if ($selectedSession) {
     .rank-2 { background: linear-gradient(135deg, #C0C0C0 0%, #A9A9A9 100%); }
     .rank-3 { background: linear-gradient(135deg, #CD7F32 0%, #B8860B 100%); }
     .rank-other { background: linear-gradient(135deg, #6c757d 0%, #495057 100%); }
+    
+    /* Force tab panes to be visible when active */
+    .tab-pane.show.active {
+      display: block !important;
+      opacity: 1 !important;
+      visibility: visible !important;
+      height: auto !important;
+    }
+    .tab-pane:not(.show):not(.active) {
+      display: none !important;
+      opacity: 0 !important;
+      visibility: hidden !important;
+    }
+    /* Override Bootstrap fade transition if it's causing issues */
+    .tab-pane.fade {
+      transition: opacity 0.15s linear;
+    }
+    .tab-pane.fade.show {
+      opacity: 1 !important;
+      display: block !important;
+    }
+    /* Ensure card content inside tabs is visible */
+    .tab-pane.show.active .card,
+    .tab-pane.show.active .card-body,
+    .tab-pane.show.active .table-responsive,
+    .tab-pane.show.active table {
+      display: block !important;
+      visibility: visible !important;
+    }
   </style>
 </head>
 
@@ -166,18 +347,18 @@ if ($selectedSession) {
                     👥 <?php echo count($adminDuoTeams); ?> duo teams
                   </small>
                     </div>
+                    </div>
                   </div>
                 </div>
-              </div>
           <?php else: ?>
           <div class="row mb-4">
             <div class="col-12">
               <div class="alert alert-warning">
                 <i class="ti ti-alert-triangle me-2"></i>
                 <strong>No Doubles Session Found</strong> - Please create a Doubles session before monitoring scores.
+              </div>
+            </div>
                     </div>
-                  </div>
-                </div>
           <?php endif; ?>
 
           <!-- Page Content -->
@@ -230,37 +411,37 @@ if ($selectedSession) {
                   <!-- Game Selection Tabs -->
                   <ul class="nav nav-tabs mb-3" id="gameTabs" role="tablist">
                     <li class="nav-item" role="presentation">
-                      <button class="nav-link active" id="overall-tab" data-bs-toggle="tab" data-bs-target="#overall" type="button" role="tab">
+                      <button class="nav-link active" id="overall-tab" data-bs-toggle="tab" data-bs-target="#overall" type="button" role="tab" onclick="switchTab('overall'); return false;">
                         Overall Rankings
                       </button>
                     </li>
                     <li class="nav-item" role="presentation">
-                      <button class="nav-link" id="game1-tab" data-bs-toggle="tab" data-bs-target="#game1" type="button" role="tab">
+                      <button class="nav-link" id="game1-tab" data-bs-toggle="tab" data-bs-target="#game1" type="button" role="tab" onclick="switchTab('game1'); return false;">
                         Game 1
                       </button>
                     </li>
                     <li class="nav-item" role="presentation">
-                      <button class="nav-link" id="game2-tab" data-bs-toggle="tab" data-bs-target="#game2" type="button" role="tab">
+                      <button class="nav-link" id="game2-tab" data-bs-toggle="tab" data-bs-target="#game2" type="button" role="tab" onclick="switchTab('game2'); return false;">
                         Game 2
                       </button>
                     </li>
                     <li class="nav-item" role="presentation">
-                      <button class="nav-link" id="game3-tab" data-bs-toggle="tab" data-bs-target="#game3" type="button" role="tab">
+                      <button class="nav-link" id="game3-tab" data-bs-toggle="tab" data-bs-target="#game3" type="button" role="tab" onclick="switchTab('game3'); return false;">
                         Game 3
                       </button>
                     </li>
                     <li class="nav-item" role="presentation">
-                      <button class="nav-link" id="game4-tab" data-bs-toggle="tab" data-bs-target="#game4" type="button" role="tab">
+                      <button class="nav-link" id="game4-tab" data-bs-toggle="tab" data-bs-target="#game4" type="button" role="tab" onclick="switchTab('game4'); return false;">
                         Game 4
                       </button>
                     </li>
                     <li class="nav-item" role="presentation">
-                      <button class="nav-link" id="game5-tab" data-bs-toggle="tab" data-bs-target="#game5" type="button" role="tab">
+                      <button class="nav-link" id="game5-tab" data-bs-toggle="tab" data-bs-target="#game5" type="button" role="tab" onclick="switchTab('game5'); return false;">
                         Game 5
                       </button>
                     </li>
                     <li class="nav-item" role="presentation">
-                      <button class="nav-link" id="game6-tab" data-bs-toggle="tab" data-bs-target="#game6" type="button" role="tab">
+                      <button class="nav-link" id="game6-tab" data-bs-toggle="tab" data-bs-target="#game6" type="button" role="tab" onclick="switchTab('game6'); return false;">
                         Game 6
                       </button>
                     </li>
@@ -298,12 +479,12 @@ if ($selectedSession) {
                                   $rank = 1;
                                   foreach ($adminDuoTeams as $duo): 
                                     $basePath = defined('BASE_PATH') ? BASE_PATH : '';
-                                    $p1Pic = !empty($duo['player1_picture'])
+                                    $p1Pic = (!empty($duo['player1_picture']) && $duo['player1_picture'] !== 'default-avatar.png')
                                         ? $basePath . '/uploads/profile_pictures/' . $duo['player1_picture']
-                                        : $basePath . '/assets/images/profile/user-1.jpg';
-                                    $p2Pic = !empty($duo['player2_picture'])
+                                        : $basePath . '/assets/images/profile/user-' . (($duo['player1_id'] % 8) + 1) . '.jpg';
+                                    $p2Pic = (!empty($duo['player2_picture']) && $duo['player2_picture'] !== 'default-avatar.png')
                                         ? $basePath . '/uploads/profile_pictures/' . $duo['player2_picture']
-                                        : $basePath . '/assets/images/profile/user-2.jpg';
+                                        : $basePath . '/assets/images/profile/user-' . (($duo['player2_id'] % 8) + 1) . '.jpg';
                                     
                                     // Get all scores for this duo
                                     $duoScores = getDuoScores($duo['duo_id']);
@@ -389,9 +570,9 @@ if ($selectedSession) {
                                 <?php endif; ?>
                           </tbody>
                         </table>
-                          </div>
-                        </div>
-                      </div>
+                                  </div>
+                                  </div>
+                                </div>
                     </div>
 
                     <?php for ($gameNum = 1; $gameNum <= 6; $gameNum++): ?>
@@ -403,9 +584,9 @@ if ($selectedSession) {
                             <h5 class="card-title mb-0">Game <?php echo $gameNum; ?> Score Entry</h5>
                             <button class="btn btn-success btn-sm" onclick="saveAllScores(<?php echo $gameNum; ?>)">
                               <i class="ti ti-device-floppy me-1"></i>Save All Scores
-                            </button>
-                          </div>
-                        </div>
+                                  </button>
+                                </div>
+                      </div>
                         <div class="card-body">
                       <div class="table-responsive">
                             <table class="table table-bordered" id="game<?php echo $gameNum; ?>Table">
@@ -426,27 +607,26 @@ if ($selectedSession) {
                                 <?php if (!empty($adminDuoTeams)): ?>
                                   <?php foreach ($adminDuoTeams as $duo): ?>
                                     <?php
-                                      // Get existing team score for this duo and game (sum of both players)
-                                      $stmt = $pdo->prepare("
-                                        SELECT 
-                                          SUM(player_score) as team_score,
-                                          SUM(strikes) as total_strikes,
-                                          SUM(spares) as total_spares,
-                                          SUM(open_frames) as total_open_frames,
-                                          MAX(created_at) as last_updated
-                                        FROM game_scores
-                                        WHERE duo_id = ? AND game_number = ? AND status = 'Completed'
-                                        GROUP BY duo_id, game_number
-                                      ");
-                                      $stmt->execute([$duo['duo_id'], $gameNum]);
-                                      $scoreData = $stmt->fetch(PDO::FETCH_ASSOC);
+                                      // PERFORMANCE FIX: Use pre-fetched scores instead of querying
+                                      $duoId = (int)$duo['duo_id'];
+                                      $scoreData = $allScoresByDuoAndGame[$duoId][$gameNum] ?? null;
                                       
-                                      $teamScore = $scoreData ? $scoreData['team_score'] : '';
-                                      $teamStrikes = $scoreData ? $scoreData['total_strikes'] : '';
-                                      $teamSpares = $scoreData ? $scoreData['total_spares'] : '';
-                                      $teamOpenFrames = $scoreData ? $scoreData['total_open_frames'] : '';
-                                      $hasScores = !empty($scoreData) && !empty($scoreData['team_score']);
-                                      $lastUpdated = $scoreData ? $scoreData['last_updated'] : null;
+                                      // Handle NULL values - if no scores exist, scoreData will be null
+                                      if ($scoreData && $scoreData['team_score'] > 0) {
+                                        $teamScore = (int)$scoreData['team_score'];
+                                        $teamStrikes = (int)$scoreData['total_strikes'];
+                                        $teamSpares = (int)$scoreData['total_spares'];
+                                        $teamOpenFrames = (int)$scoreData['total_open_frames'];
+                                        $hasScores = true;
+                                        $lastUpdated = $scoreData['last_updated'];
+                                      } else {
+                                        $teamScore = '';
+                                        $teamStrikes = '';
+                                        $teamSpares = '';
+                                        $teamOpenFrames = '';
+                                        $hasScores = false;
+                                        $lastUpdated = null;
+                                      }
                                     ?>
                                     <tr>
                               <td>
@@ -454,12 +634,12 @@ if ($selectedSession) {
                                   <div class="d-flex me-2">
                                             <?php
                                               $basePath = defined('BASE_PATH') ? BASE_PATH : '';
-                                              $p1Pic = !empty($duo['player1_picture'])
+                                              $p1Pic = (!empty($duo['player1_picture']) && $duo['player1_picture'] !== 'default-avatar.png')
                                                 ? $basePath . '/uploads/profile_pictures/' . $duo['player1_picture']
-                                                : $basePath . '/assets/images/profile/user-1.jpg';
-                                              $p2Pic = !empty($duo['player2_picture'])
+                                                : $basePath . '/assets/images/profile/user-' . (($duo['player1_id'] % 8) + 1) . '.jpg';
+                                              $p2Pic = (!empty($duo['player2_picture']) && $duo['player2_picture'] !== 'default-avatar.png')
                                                 ? $basePath . '/uploads/profile_pictures/' . $duo['player2_picture']
-                                                : $basePath . '/assets/images/profile/user-2.jpg';
+                                                : $basePath . '/assets/images/profile/user-' . (($duo['player2_id'] % 8) + 1) . '.jpg';
                                             ?>
                                             <img src="<?php echo htmlspecialchars($p1Pic); ?>" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
                                             <img src="<?php echo htmlspecialchars($p2Pic); ?>" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
@@ -487,7 +667,7 @@ if ($selectedSession) {
                                                data-player2-id="<?php echo $duo['player2_id']; ?>"
                                                data-field="score" 
                                                data-game="<?php echo $gameNum; ?>"
-                                               value="<?php echo $teamScore; ?>" 
+                                               value="<?php echo $hasScores ? $teamScore : ''; ?>" 
                                                min="0" 
                                                max="600" 
                                                placeholder="0-600">
@@ -498,7 +678,7 @@ if ($selectedSession) {
                                                data-duo-id="<?php echo $duo['duo_id']; ?>" 
                                                data-field="strikes" 
                                                data-game="<?php echo $gameNum; ?>"
-                                               value="<?php echo $teamStrikes; ?>" 
+                                               value="<?php echo $hasScores ? $teamStrikes : ''; ?>" 
                                                min="0" 
                                                max="24" 
                                                placeholder="0-24">
@@ -509,7 +689,7 @@ if ($selectedSession) {
                                                data-duo-id="<?php echo $duo['duo_id']; ?>" 
                                                data-field="spares" 
                                                data-game="<?php echo $gameNum; ?>"
-                                               value="<?php echo $teamSpares; ?>" 
+                                               value="<?php echo $hasScores ? $teamSpares : ''; ?>" 
                                                min="0" 
                                                max="20" 
                                                placeholder="0-20">
@@ -520,7 +700,7 @@ if ($selectedSession) {
                                                data-duo-id="<?php echo $duo['duo_id']; ?>" 
                                                data-field="open_frames" 
                                                data-game="<?php echo $gameNum; ?>"
-                                               value="<?php echo $teamOpenFrames; ?>" 
+                                               value="<?php echo $hasScores ? $teamOpenFrames : ''; ?>" 
                                                min="0" 
                                                max="20" 
                                                placeholder="0-20">
@@ -542,9 +722,26 @@ if ($selectedSession) {
                                   <?php endforeach; ?>
                                 <?php else: ?>
                                   <tr>
-                                    <td colspan="9" class="text-center text-muted py-4">
-                                      <i class="ti ti-users fs-1 mb-3 d-block"></i>
-                                      No duo teams found for this session.
+                                    <td colspan="9" class="text-center text-muted py-5">
+                                      <i class="ti ti-users fs-1 mb-3 d-block text-warning"></i>
+                                      <h5 class="mb-2">No duo teams found for this session.</h5>
+                                      <?php if ($playersInLobby > 0): ?>
+                                        <div class="alert alert-info mt-3 mb-3">
+                                          <strong><?php echo $playersInLobby; ?> player(s)</strong> are waiting in the lobby to be paired.
+                                          <br><strong>Click the "Auto Pair Duos" button above</strong> to create duo teams automatically.
+                                  </div>
+                                      <?php else: ?>
+                                        <p class="mb-0">No players in the lobby. Players need to join the duo session first via the Group Selection page.</p>
+                                      <?php endif; ?>
+                                      <div class="mt-3">
+                                        <small class="text-muted d-block">Session ID: <?php echo $selectedSessionId; ?></small>
+                                        <small class="text-muted d-block">Duo Teams Loaded: <?php echo $duoCount; ?> | Total in DB: <?php echo $totalDuosInDB; ?> | Players in Lobby: <?php echo $playersInLobby; ?></small>
+                                        <?php if ($queryError): ?>
+                                          <small class="text-danger d-block mt-2"><strong>⚠️ Query Error: <?php echo htmlspecialchars($queryError); ?></strong></small>
+                                        <?php elseif ($totalDuosInDB > 0 && $duoCount == 0): ?>
+                                          <small class="text-danger d-block mt-2"><strong>⚠️ Data exists in database but not loading. Check database connection or refresh page.</strong></small>
+                                        <?php endif; ?>
+                                </div>
                               </td>
                             </tr>
                                 <?php endif; ?>
@@ -555,8 +752,8 @@ if ($selectedSession) {
                       </div>
                     </div>
                     <?php endfor; ?>
-                  </div>
-                </div>
+                      </div>
+                    </div>
               </div>
             </div>
           </div>
@@ -640,7 +837,8 @@ if ($selectedSession) {
       const player2OpenFrames = teamOpenFrames - player1OpenFrames;
 
       const requests = [];
-      const url = BASE_PATH + '/ajax/duo-management.php';
+      const basePath = (typeof BASE_PATH !== 'undefined' ? BASE_PATH : (window.BASE_PATH || ''));
+      const url = basePath + '/ajax/duo-management.php';
 
       // Save for player 1
       requests.push(fetch(url, {
@@ -752,7 +950,8 @@ if ($selectedSession) {
         return;
       }
 
-      const url = BASE_PATH + '/ajax/duo-management.php';
+      const basePath = (typeof BASE_PATH !== 'undefined' ? BASE_PATH : (window.BASE_PATH || ''));
+      const url = basePath + '/ajax/duo-management.php';
       fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -820,41 +1019,84 @@ if ($selectedSession) {
       }
     };
 
-    // Initialize tabs and session filter on page load
-    document.addEventListener('DOMContentLoaded', function() {
-      // Initialize Bootstrap tabs if available
-      if (typeof bootstrap !== 'undefined' && bootstrap.Tab) {
-        const tabTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tab"]'));
-        tabTriggerList.forEach(function(tabTriggerEl) {
-          new bootstrap.Tab(tabTriggerEl);
-        });
+    // Simple tab switching function that always works
+    window.switchTab = function(tabId) {
+      console.log('Switching to tab:', tabId);
+      
+      // Hide all tab panes - remove both Bootstrap classes and inline styles
+      document.querySelectorAll('.tab-pane').forEach(function(pane) {
+        pane.classList.remove('show', 'active');
+        pane.style.display = 'none';
+        pane.style.opacity = '0';
+      });
+      
+      // Remove active from all nav links
+      document.querySelectorAll('.nav-link').forEach(function(link) {
+        link.classList.remove('active');
+        link.setAttribute('aria-selected', 'false');
+      });
+      
+      // Show target tab pane
+      const targetPane = document.getElementById(tabId);
+      if (targetPane) {
+        // Add Bootstrap classes
+        targetPane.classList.add('show', 'active');
+        // Force display with inline style (overrides any CSS)
+        targetPane.style.display = 'block';
+        targetPane.style.opacity = '1';
+        targetPane.setAttribute('aria-hidden', 'false');
+        console.log('Tab pane found and shown:', tabId, targetPane);
+      } else {
+        console.error('Tab pane not found:', tabId);
+        // Debug: list all available tab panes
+        const allPanes = document.querySelectorAll('.tab-pane');
+        console.log('Available tab panes:', Array.from(allPanes).map(p => p.id));
       }
       
-      // Manual tab switching (works even without Bootstrap)
+      // Activate corresponding nav link
+      const targetLink = document.querySelector('[data-bs-target="#' + tabId + '"]');
+      if (targetLink) {
+        targetLink.classList.add('active');
+        targetLink.setAttribute('aria-selected', 'true');
+      } else {
+        console.error('Tab link not found for:', tabId);
+      }
+    };
+
+    // Initialize tabs and session filter on page load
+    document.addEventListener('DOMContentLoaded', function() {
+      // Ensure all game tabs are initially hidden (except overall)
+      document.querySelectorAll('.tab-pane').forEach(function(pane) {
+        if (pane.id !== 'overall') {
+          pane.classList.remove('show', 'active');
+          pane.style.display = 'none';
+          pane.style.opacity = '0';
+          pane.setAttribute('aria-hidden', 'true');
+        } else {
+          pane.classList.add('show', 'active');
+          pane.style.display = 'block';
+          pane.style.opacity = '1';
+          pane.setAttribute('aria-hidden', 'false');
+        }
+      });
+      
+      // Debug: Log all tab panes found
+      const allPanes = document.querySelectorAll('.tab-pane');
+      console.log('Found tab panes on load:', Array.from(allPanes).map(p => ({
+        id: p.id,
+        display: p.style.display,
+        classes: p.className
+      })));
+      
+      // Make all tabs clickable with simple switching
       document.querySelectorAll('[data-bs-toggle="tab"]').forEach(function(tab) {
         tab.addEventListener('click', function(e) {
           e.preventDefault();
-          e.stopPropagation();
           const targetId = this.getAttribute('data-bs-target');
           if (targetId) {
-            // Hide all panes
-            document.querySelectorAll('.tab-pane').forEach(p => {
-              p.classList.remove('show', 'active');
-            });
-            // Remove active from nav links
-            document.querySelectorAll('.nav-link').forEach(l => {
-              l.classList.remove('active');
-            });
-            // Show target and activate
-            const target = document.querySelector(targetId);
-            if (target) {
-              target.classList.add('show', 'active');
-              this.classList.add('active');
-              // Scroll to top of tab content
-              target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            } else {
-              showNotification('Tab content not found: ' + targetId, 'warning');
-            }
+            // Remove # from targetId
+            const tabId = targetId.replace('#', '');
+            window.switchTab(tabId);
           }
         });
       });
@@ -865,7 +1107,7 @@ if ($selectedSession) {
         sessionFilter.addEventListener('change', function() {
           const sessionId = this.value;
           if (sessionId) {
-            window.location.href = 'admin-score-monitoring-doubles.php?session_id=' + sessionId;
+            window.location.href = 'admin-score-monitoring-doubles.php?session_id=' + encodeURIComponent(sessionId);
           }
         });
       }

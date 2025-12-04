@@ -630,7 +630,7 @@ try {
                 $updateStmt = $pdo->prepare("
                     UPDATE game_scores 
                     SET player_score = ?, strikes = ?, spares = ?, open_frames = ?, 
-                        lane_number = ?, updated_at = NOW()
+                        lane_number = ?
                     WHERE score_id = ?
                 ");
                 $updateStmt->execute([

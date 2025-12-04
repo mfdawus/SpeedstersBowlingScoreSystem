@@ -96,24 +96,30 @@ if ($selectedSession) {
 
     if (!empty($duoTableData)) {
         // Fetch team scores from game_scores (games 1-6) - aggregate by duo and game
-        $scoreStmt = $pdo->prepare("
-            SELECT 
-                duo_id,
-                game_number,
-                SUM(player_score) as team_score,
-                SUM(strikes) as team_strikes,
-                SUM(spares) as team_spares,
-                SUM(open_frames) as team_open_frames,
-                MAX(created_at) as created_at
-            FROM game_scores
-            WHERE session_id = ?
-              AND duo_id IS NOT NULL
-              AND status = 'Completed'
-              AND game_number BETWEEN 1 AND 6
-            GROUP BY duo_id, game_number
-        ");
-        $scoreStmt->execute([$selectedSessionId]);
-        $scores = $scoreStmt->fetchAll(PDO::FETCH_ASSOC);
+        try {
+            $scoreStmt = $pdo->prepare("
+                SELECT 
+                    duo_id,
+                    game_number,
+                    SUM(player_score) as team_score,
+                    SUM(COALESCE(strikes, 0)) as team_strikes,
+                    SUM(COALESCE(spares, 0)) as team_spares,
+                    SUM(COALESCE(open_frames, 0)) as team_open_frames,
+                    MAX(created_at) as created_at
+                FROM game_scores
+                WHERE session_id = ?
+                  AND duo_id IS NOT NULL
+                  AND status = 'Completed'
+                  AND game_number BETWEEN 1 AND 6
+                GROUP BY duo_id, game_number
+            ");
+            $scoreStmt->execute([$selectedSessionId]);
+            $scores = $scoreStmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            // Log error but don't break the page
+            error_log('Error fetching duo scores: ' . $e->getMessage());
+            $scores = [];
+        }
 
         foreach ($scores as $s) {
             $duoId = (int)$s['duo_id'];
@@ -121,11 +127,11 @@ if ($selectedSession) {
                 continue;
             }
             $g = (int)$s['game_number'];
-            $score = (int)$s['team_score'];
-            $strikes = (int)$s['team_strikes'];
-            $spares = (int)$s['team_spares'];
-            $openFrames = (int)$s['team_open_frames'];
-            $time = $s['created_at'];
+            $score = (int)($s['team_score'] ?? 0);
+            $strikes = (int)($s['team_strikes'] ?? 0);
+            $spares = (int)($s['team_spares'] ?? 0);
+            $openFrames = (int)($s['team_open_frames'] ?? 0);
+            $time = $s['created_at'] ?? null;
 
             $duo = &$duoTableData[$duoId];
             $duo['games'][$g] = [
@@ -412,12 +418,12 @@ usort($overallRanking, function ($a, $b) {
                                   <div class="d-flex me-2">
                                         <?php
                                           $basePath = defined('BASE_PATH') ? BASE_PATH : '';
-                                          $p1Pic = !empty($duo['players'][0]['pic'])
+                                          $p1Pic = (!empty($duo['players'][0]['pic']) && $duo['players'][0]['pic'] !== 'default-avatar.png')
                                             ? $basePath . '/uploads/profile_pictures/' . $duo['players'][0]['pic']
-                                            : $basePath . '/assets/images/profile/user-1.jpg';
-                                          $p2Pic = !empty($duo['players'][1]['pic'])
+                                            : $basePath . '/assets/images/profile/user-' . (($duo['players'][0]['id'] % 8) + 1) . '.jpg';
+                                          $p2Pic = (!empty($duo['players'][1]['pic']) && $duo['players'][1]['pic'] !== 'default-avatar.png')
                                             ? $basePath . '/uploads/profile_pictures/' . $duo['players'][1]['pic']
-                                            : $basePath . '/assets/images/profile/user-2.jpg';
+                                            : $basePath . '/assets/images/profile/user-' . (($duo['players'][1]['id'] % 8) + 1) . '.jpg';
                                         ?>
                                         <img src="<?php echo htmlspecialchars($p1Pic); ?>" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
                                         <img src="<?php echo htmlspecialchars($p2Pic); ?>" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
@@ -524,12 +530,12 @@ usort($overallRanking, function ($a, $b) {
                                   $duo = $entry['duo'];
                                   $rankClass = $rank === 1 ? 'rank-1' : ($rank === 2 ? 'rank-2' : ($rank === 3 ? 'rank-3' : 'rank-other'));
                                   $pinDiff = $entry['score'] - $firstScore;
-                                  $p1Pic = !empty($duo['players'][0]['pic'])
+                                  $p1Pic = (!empty($duo['players'][0]['pic']) && $duo['players'][0]['pic'] !== 'default-avatar.png')
                                     ? $basePath . '/uploads/profile_pictures/' . $duo['players'][0]['pic']
-                                    : $basePath . '/assets/images/profile/user-1.jpg';
-                                  $p2Pic = !empty($duo['players'][1]['pic'])
+                                    : $basePath . '/assets/images/profile/user-' . (($duo['players'][0]['id'] % 8) + 1) . '.jpg';
+                                  $p2Pic = (!empty($duo['players'][1]['pic']) && $duo['players'][1]['pic'] !== 'default-avatar.png')
                                     ? $basePath . '/uploads/profile_pictures/' . $duo['players'][1]['pic']
-                                    : $basePath . '/assets/images/profile/user-2.jpg';
+                                    : $basePath . '/assets/images/profile/user-' . (($duo['players'][1]['id'] % 8) + 1) . '.jpg';
                               ?>
                                 <tr>
                                   <td><span class="rank-badge <?php echo $rankClass; ?>"><?php echo $rank; ?></span></td>
@@ -576,443 +582,21 @@ usort($overallRanking, function ($a, $b) {
                       <?php
                     }
                     
-                    // Render Game 1-5 tabs
-                    for ($gameNum = 1; $gameNum <= 5; $gameNum++) {
-                      renderGameTab($gameNum, $duoTableData);
+                    // Render Game 1-6 tabs
+                    if (isset($duoTableData) && is_array($duoTableData)) {
+                      for ($gameNum = 1; $gameNum <= 6; $gameNum++) {
+                        renderGameTab($gameNum, $duoTableData);
+                      }
+                    } else {
+                      // Fallback if $duoTableData is not set
+                      for ($gameNum = 1; $gameNum <= 6; $gameNum++) {
+                        echo '<div class="tab-pane fade" id="game' . $gameNum . '" role="tabpanel">';
+                        echo '<div class="table-responsive"><table class="table table-hover"><tbody>';
+                        echo '<tr><td colspan="10" class="text-center text-muted py-4">No data available</td></tr>';
+                        echo '</tbody></table></div></div>';
+                      }
                     }
                     ?>
-
-                    <!-- Game 2 Tab -->
-                    <div class="tab-pane fade" id="game2" role="tabpanel">
-                      <div class="table-responsive">
-                        <table class="table table-hover">
-                          <thead>
-                            <tr>
-                              <th scope="col">Rank</th>
-                              <th scope="col">Team</th>
-                              <th scope="col">Players</th>
-                              <th scope="col">Score</th>
-                              <th scope="col">Player 1 Score</th>
-                              <th scope="col">Player 2 Score</th>
-                              <th scope="col">Combined Strikes</th>
-                              <th scope="col">Time</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            <tr>
-                              <td><span class="badge bg-primary">1</span></td>
-                              <td>
-                                <div class="d-flex align-items-center">
-                                  <div class="d-flex me-2">
-                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-3.jpg'; ?>" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
-                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-4.jpg'; ?>" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
-                                  </div>
-                                  <div>
-                                    <h6 class="mb-0">Pin Crushers</h6>
-                                  </div>
-                                </div>
-                              </td>
-                              <td>Mike & Lisa</td>
-                              <td><span class="fw-bold text-success">535</span></td>
-                              <td>272</td>
-                              <td>263</td>
-                              <td>18</td>
-                              <td><small class="text-muted">10:15 AM</small></td>
-                            </tr>
-                            <tr>
-                              <td><span class="badge bg-secondary">2</span></td>
-                              <td>
-                                <div class="d-flex align-items-center">
-                                  <div class="d-flex me-2">
-                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-1.jpg'; ?>" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
-                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-2.jpg'; ?>" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
-                                  </div>
-                                  <div>
-                                    <h6 class="mb-0">Thunder Strikers</h6>
-                                  </div>
-                                </div>
-                              </td>
-                              <td>John & Sarah</td>
-                              <td><span class="fw-bold text-success">522</span></td>
-                              <td>262</td>
-                              <td>260</td>
-                              <td>17</td>
-                              <td><small class="text-muted">10:30 AM</small></td>
-                            </tr>
-                            <tr>
-                              <td><span class="badge bg-warning">3</span></td>
-                              <td>
-                                <div class="d-flex align-items-center">
-                                  <div class="d-flex me-2">
-                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-7.jpg'; ?>" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
-                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-8.jpg'; ?>" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
-                                  </div>
-                                  <div>
-                                    <h6 class="mb-0">Spare Seekers</h6>
-                                  </div>
-                                </div>
-                              </td>
-                              <td>Alex & Maria</td>
-                              <td><span class="fw-bold text-success">508</span></td>
-                              <td>248</td>
-                              <td>260</td>
-                              <td>16</td>
-                              <td><small class="text-muted">10:45 AM</small></td>
-                            </tr>
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-
-                    <!-- Game 3 Tab -->
-                    <div class="tab-pane fade" id="game3" role="tabpanel">
-                      <div class="table-responsive">
-                        <table class="table table-hover">
-                          <thead>
-                            <tr>
-                              <th scope="col">Rank</th>
-                              <th scope="col">Team</th>
-                              <th scope="col">Players</th>
-                              <th scope="col">Score</th>
-                              <th scope="col">Player 1 Score</th>
-                              <th scope="col">Player 2 Score</th>
-                              <th scope="col">Combined Strikes</th>
-                              <th scope="col">Time</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            <tr>
-                              <td><span class="badge bg-primary">1</span></td>
-                              <td>
-                                <div class="d-flex align-items-center">
-                                  <div class="d-flex me-2">
-                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-1.jpg'; ?>" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
-                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-2.jpg'; ?>" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
-                                  </div>
-                                  <div>
-                                    <h6 class="mb-0">Thunder Strikers</h6>
-                                  </div>
-                                </div>
-                              </td>
-                              <td>John & Sarah</td>
-                              <td><span class="fw-bold text-success">555</span></td>
-                              <td>285</td>
-                              <td>270</td>
-                              <td>20</td>
-                              <td><small class="text-muted">11:00 AM</small></td>
-                            </tr>
-                            <tr>
-                              <td><span class="badge bg-secondary">2</span></td>
-                              <td>
-                                <div class="d-flex align-items-center">
-                                  <div class="d-flex me-2">
-                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-5.jpg'; ?>" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
-                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-6.jpg'; ?>" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
-                                  </div>
-                                  <div>
-                                    <h6 class="mb-0">Lane Masters</h6>
-                                  </div>
-                                </div>
-                              </td>
-                              <td>Tom & Emma</td>
-                              <td><span class="fw-bold text-success">532</span></td>
-                              <td>278</td>
-                              <td>254</td>
-                              <td>18</td>
-                              <td><small class="text-muted">11:15 AM</small></td>
-                            </tr>
-                            <tr>
-                              <td><span class="badge bg-warning">3</span></td>
-                              <td>
-                                <div class="d-flex align-items-center">
-                                  <div class="d-flex me-2">
-                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-3.jpg'; ?>" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
-                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-4.jpg'; ?>" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
-                                  </div>
-                                  <div>
-                                    <h6 class="mb-0">Pin Crushers</h6>
-                                  </div>
-                                </div>
-                              </td>
-                              <td>Mike & Lisa</td>
-                              <td><span class="fw-bold text-success">518</span></td>
-                              <td>265</td>
-                              <td>253</td>
-                              <td>17</td>
-                              <td><small class="text-muted">11:30 AM</small></td>
-                            </tr>
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-
-                    <!-- Game 4 Tab -->
-                    <div class="tab-pane fade" id="game4" role="tabpanel">
-                      <div class="table-responsive">
-                        <table class="table table-hover">
-                          <thead>
-                            <tr>
-                              <th scope="col">Rank</th>
-                              <th scope="col">Team</th>
-                              <th scope="col">Players</th>
-                              <th scope="col">Score</th>
-                              <th scope="col">Player 1 Score</th>
-                              <th scope="col">Player 2 Score</th>
-                              <th scope="col">Combined Strikes</th>
-                              <th scope="col">Time</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            <tr>
-                              <td><span class="badge bg-primary">1</span></td>
-                              <td>
-                                <div class="d-flex align-items-center">
-                                  <div class="d-flex me-2">
-                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-3.jpg'; ?>" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
-                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-4.jpg'; ?>" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
-                                  </div>
-                                  <div>
-                                    <h6 class="mb-0">Pin Crushers</h6>
-                                  </div>
-                                </div>
-                              </td>
-                              <td>Mike & Lisa</td>
-                              <td><span class="fw-bold text-success">548</span></td>
-                              <td>278</td>
-                              <td>270</td>
-                              <td>19</td>
-                              <td><small class="text-muted">11:45 AM</small></td>
-                            </tr>
-                            <tr>
-                              <td><span class="badge bg-secondary">2</span></td>
-                              <td>
-                                <div class="d-flex align-items-center">
-                                  <div class="d-flex me-2">
-                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-1.jpg'; ?>" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
-                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-2.jpg'; ?>" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
-                                  </div>
-                                  <div>
-                                    <h6 class="mb-0">Thunder Strikers</h6>
-                                  </div>
-                                </div>
-                              </td>
-                              <td>John & Sarah</td>
-                              <td><span class="fw-bold text-success">535</span></td>
-                              <td>265</td>
-                              <td>270</td>
-                              <td>18</td>
-                              <td><small class="text-muted">12:00 PM</small></td>
-                            </tr>
-                            <tr>
-                              <td><span class="badge bg-warning">3</span></td>
-                              <td>
-                                <div class="d-flex align-items-center">
-                                  <div class="d-flex me-2">
-                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-1.jpg'; ?>" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
-                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-3.jpg'; ?>" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
-                                  </div>
-                                  <div>
-                                    <h6 class="mb-0">Gutter Guards</h6>
-                                  </div>
-                                </div>
-                              </td>
-                              <td>David & Anna</td>
-                              <td><span class="fw-bold text-success">512</span></td>
-                              <td>252</td>
-                              <td>260</td>
-                              <td>16</td>
-                              <td><small class="text-muted">12:15 PM</small></td>
-                            </tr>
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-
-                    <!-- Game 5 Tab -->
-                    <div class="tab-pane fade" id="game5" role="tabpanel">
-                      <div class="table-responsive">
-                        <table class="table table-hover">
-                          <thead>
-                            <tr>
-                              <th scope="col">Rank</th>
-                              <th scope="col">Team</th>
-                              <th scope="col">Players</th>
-                              <th scope="col">Score</th>
-                              <th scope="col">Player 1 Score</th>
-                              <th scope="col">Player 2 Score</th>
-                              <th scope="col">Combined Strikes</th>
-                              <th scope="col">Time</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            <tr>
-                              <td><span class="badge bg-primary">1</span></td>
-                              <td>
-                                <div class="d-flex align-items-center">
-                                  <div class="d-flex me-2">
-                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-2.jpg'; ?>" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
-                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-1.jpg'; ?>" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
-                                  </div>
-                                  <div>
-                                    <h6 class="mb-0">Thunder Strikers</h6>
-                                  </div>
-                                </div>
-                              </td>
-                              <td>Sarah & John</td>
-                              <td><span class="fw-bold text-success">562</span></td>
-                              <td>282</td>
-                              <td>280</td>
-                              <td>21</td>
-                              <td><small class="text-muted">12:30 PM</small></td>
-                            </tr>
-                            <tr>
-                              <td><span class="badge bg-secondary">2</span></td>
-                              <td>
-                                <div class="d-flex align-items-center">
-                                  <div class="d-flex me-2">
-                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-1.jpg'; ?>" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
-                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-3.jpg'; ?>" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
-                                  </div>
-                                  <div>
-                                    <h6 class="mb-0">Gutter Guards</h6>
-                                  </div>
-                                </div>
-                              </td>
-                              <td>David & Anna</td>
-                              <td><span class="fw-bold text-success">548</span></td>
-                              <td>269</td>
-                              <td>279</td>
-                              <td>19</td>
-                              <td><small class="text-muted">12:45 PM</small></td>
-                            </tr>
-                            <tr>
-                              <td><span class="badge bg-warning">3</span></td>
-                              <td>
-                                <div class="d-flex align-items-center">
-                                  <div class="d-flex me-2">
-                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-4.jpg'; ?>" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
-                                    <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-7.jpg'; ?>" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
-                                  </div>
-                                  <div>
-                                    <h6 class="mb-0">Spare Seekers</h6>
-                                  </div>
-                                </div>
-                              </td>
-                              <td>Lisa & Alex</td>
-                              <td><span class="fw-bold text-success">534</span></td>
-                              <td>256</td>
-                              <td>278</td>
-                              <td>18</td>
-                              <td><small class="text-muted">1:00 PM</small></td>
-                            </tr>
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-
-                    <!-- Game 6 Tab -->
-                    <div class="tab-pane fade" id="game6" role="tabpanel">
-                      <div class="table-responsive">
-                        <table class="table table-hover">
-                          <thead>
-                            <tr>
-                              <th scope="col">Rank</th>
-                              <th scope="col">Team</th>
-                              <th scope="col">Players</th>
-                              <th scope="col">Lane</th>
-                              <th scope="col">Score</th>
-                              <th scope="col">Pin Diff</th>
-                              <th scope="col">Strikes</th>
-                              <th scope="col">Spares</th>
-                              <th scope="col">Open Frames</th>
-                              <th scope="col">Time</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            <?php
-                            // Get Game 6 scores
-                            $game6Scores = [];
-                            foreach ($duoTableData as $duo) {
-                              if (isset($duo['games'][6])) {
-                                $game6Scores[] = [
-                                  'duo' => $duo,
-                                  'score' => $duo['games'][6]['score'],
-                                  'strikes' => $duo['games'][6]['strikes'],
-                                  'spares' => $duo['games'][6]['spares'],
-                                  'open_frames' => $duo['games'][6]['open_frames'],
-                                  'time' => $duo['games'][6]['time']
-                                ];
-                              }
-                            }
-                            
-                            // Sort by score DESC
-                            usort($game6Scores, function($a, $b) {
-                              return $b['score'] <=> $a['score'];
-                            });
-                            
-                            if (empty($game6Scores)): ?>
-                              <tr>
-                                <td colspan="10" class="text-center text-muted py-4">
-                                  No scores available for Game 6 yet.
-                                </td>
-                              </tr>
-                            <?php else:
-                              $rank = 1;
-                              $firstScore = $game6Scores[0]['score'];
-                              foreach ($game6Scores as $entry):
-                                $duo = $entry['duo'];
-                                $rankClass = $rank === 1 ? 'rank-1' : ($rank === 2 ? 'rank-2' : ($rank === 3 ? 'rank-3' : 'rank-other'));
-                                $pinDiff = $entry['score'] - $firstScore;
-                                $basePath = defined('BASE_PATH') ? BASE_PATH : '';
-                                $p1Pic = !empty($duo['players'][0]['pic'])
-                                  ? $basePath . '/uploads/profile_pictures/' . $duo['players'][0]['pic']
-                                  : $basePath . '/assets/images/profile/user-1.jpg';
-                                $p2Pic = !empty($duo['players'][1]['pic'])
-                                  ? $basePath . '/uploads/profile_pictures/' . $duo['players'][1]['pic']
-                                  : $basePath . '/assets/images/profile/user-2.jpg';
-                            ?>
-                              <tr>
-                                <td><span class="rank-badge <?php echo $rankClass; ?>"><?php echo $rank; ?></span></td>
-                                <td>
-                                  <div class="d-flex align-items-center">
-                                    <div class="d-flex me-2">
-                                      <img src="<?php echo htmlspecialchars($p1Pic); ?>" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
-                                      <img src="<?php echo htmlspecialchars($p2Pic); ?>" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
-                  </div>
-                                    <div>
-                                      <h6 class="mb-0"><?php echo htmlspecialchars($duo['duo_name'] ?: 'Duo #' . $duo['duo_id']); ?></h6>
-                                    </div>
-                                  </div>
-                                </td>
-                                <td>
-                                  <small>
-                                    <?php echo htmlspecialchars($duo['players'][0]['name']); ?>
-                                    <br>
-                                    <?php echo htmlspecialchars($duo['players'][1]['name']); ?>
-                                  </small>
-                                </td>
-                                <td><span class="badge bg-primary">Lane <?php echo $duo['lane_number'] ?: '-'; ?></span></td>
-                                <td><span class="fw-bold text-success"><?php echo $entry['score']; ?></span></td>
-                                <td>
-                                  <?php if ($pinDiff === 0): ?>
-                                    <span class="badge bg-success">Leader</span>
-                                  <?php else: ?>
-                                    <span class="text-danger"><?php echo $pinDiff; ?></span>
-                                  <?php endif; ?>
-                                </td>
-                                <td><?php echo $entry['strikes']; ?></td>
-                                <td><?php echo $entry['spares']; ?></td>
-                                <td><?php echo $entry['open_frames']; ?></td>
-                                <td><small class="text-muted"><?php echo date('g:i A', strtotime($entry['time'])); ?></small></td>
-                              </tr>
-                            <?php 
-                              $rank++;
-                              endforeach;
-                            endif; ?>
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
                   </div>
                 </div>
               </div>
@@ -1021,7 +605,6 @@ usort($overallRanking, function ($a, $b) {
         </div>
       </div>
     </div>
-  </div>
   
   <script src="./assets/libs/jquery/dist/jquery.min.js"></script>
   <script src="./assets/libs/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
@@ -1037,15 +620,26 @@ usort($overallRanking, function ($a, $b) {
     const targetDate = new Date('2025-03-15T18:00:00').getTime();
     
     function updateCountdown() {
+      // Check if countdown elements exist before trying to update them
+      const daysEl = document.getElementById('days');
+      const hoursEl = document.getElementById('hours');
+      const minutesEl = document.getElementById('minutes');
+      const secondsEl = document.getElementById('seconds');
+      
+      // If countdown elements don't exist, skip the countdown update
+      if (!daysEl || !hoursEl || !minutesEl || !secondsEl) {
+        return;
+      }
+      
       const now = new Date().getTime();
       const distance = targetDate - now;
       
       if (distance < 0) {
         // Event has passed
-        document.getElementById('days').innerHTML = '00';
-        document.getElementById('hours').innerHTML = '00';
-        document.getElementById('minutes').innerHTML = '00';
-        document.getElementById('seconds').innerHTML = '00';
+        daysEl.innerHTML = '00';
+        hoursEl.innerHTML = '00';
+        minutesEl.innerHTML = '00';
+        secondsEl.innerHTML = '00';
         return;
       }
       
@@ -1054,10 +648,10 @@ usort($overallRanking, function ($a, $b) {
       const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
       const seconds = Math.floor((distance % (1000 * 60)) / 1000);
       
-      document.getElementById('days').innerHTML = days.toString().padStart(2, '0');
-      document.getElementById('hours').innerHTML = hours.toString().padStart(2, '0');
-      document.getElementById('minutes').innerHTML = minutes.toString().padStart(2, '0');
-      document.getElementById('seconds').innerHTML = seconds.toString().padStart(2, '0');
+      daysEl.innerHTML = days.toString().padStart(2, '0');
+      hoursEl.innerHTML = hours.toString().padStart(2, '0');
+      minutesEl.innerHTML = minutes.toString().padStart(2, '0');
+      secondsEl.innerHTML = seconds.toString().padStart(2, '0');
     }
     
     // Update countdown every second
