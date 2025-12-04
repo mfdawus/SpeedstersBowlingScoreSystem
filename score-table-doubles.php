@@ -52,9 +52,11 @@ if ($selectedSession) {
             dt.session_id,
             dt.lane_number,
             dt.status,
+            u1.user_id AS p1_id,
             u1.first_name AS p1_first,
             u1.last_name AS p1_last,
             u1.profile_picture AS p1_pic,
+            u2.user_id AS p2_id,
             u2.first_name AS p2_first,
             u2.last_name AS p2_last,
             u2.profile_picture AS p2_pic
@@ -77,10 +79,12 @@ if ($selectedSession) {
             'status' => $d['status'],
             'players' => [
                 [
+                    'id' => (int)$d['p1_id'],
                     'name' => trim($d['p1_first'] . ' ' . $d['p1_last']),
                     'pic' => $d['p1_pic'],
                 ],
                 [
+                    'id' => (int)$d['p2_id'],
                     'name' => trim($d['p2_first'] . ' ' . $d['p2_last']),
                     'pic' => $d['p2_pic'],
                 ],
@@ -418,12 +422,14 @@ usort($overallRanking, function ($a, $b) {
                                   <div class="d-flex me-2">
                                         <?php
                                           $basePath = defined('BASE_PATH') ? BASE_PATH : '';
+                                          $p1Id = isset($duo['players'][0]['id']) ? (int)$duo['players'][0]['id'] : (($duo['duo_id'] * 2) % 8);
                                           $p1Pic = (!empty($duo['players'][0]['pic']) && $duo['players'][0]['pic'] !== 'default-avatar.png')
                                             ? $basePath . '/uploads/profile_pictures/' . $duo['players'][0]['pic']
-                                            : $basePath . '/assets/images/profile/user-' . (($duo['players'][0]['id'] % 8) + 1) . '.jpg';
+                                            : $basePath . '/assets/images/profile/user-' . (($p1Id % 8) + 1) . '.jpg';
+                                          $p2Id = isset($duo['players'][1]['id']) ? (int)$duo['players'][1]['id'] : (($duo['duo_id'] * 2 + 1) % 8);
                                           $p2Pic = (!empty($duo['players'][1]['pic']) && $duo['players'][1]['pic'] !== 'default-avatar.png')
                                             ? $basePath . '/uploads/profile_pictures/' . $duo['players'][1]['pic']
-                                            : $basePath . '/assets/images/profile/user-' . (($duo['players'][1]['id'] % 8) + 1) . '.jpg';
+                                            : $basePath . '/assets/images/profile/user-' . (($p2Id % 8) + 1) . '.jpg';
                                         ?>
                                         <img src="<?php echo htmlspecialchars($p1Pic); ?>" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
                                         <img src="<?php echo htmlspecialchars($p2Pic); ?>" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
@@ -530,12 +536,14 @@ usort($overallRanking, function ($a, $b) {
                                   $duo = $entry['duo'];
                                   $rankClass = $rank === 1 ? 'rank-1' : ($rank === 2 ? 'rank-2' : ($rank === 3 ? 'rank-3' : 'rank-other'));
                                   $pinDiff = $entry['score'] - $firstScore;
+                                  $p1Id = isset($duo['players'][0]['id']) ? (int)$duo['players'][0]['id'] : (($duo['duo_id'] * 2) % 8);
                                   $p1Pic = (!empty($duo['players'][0]['pic']) && $duo['players'][0]['pic'] !== 'default-avatar.png')
                                     ? $basePath . '/uploads/profile_pictures/' . $duo['players'][0]['pic']
-                                    : $basePath . '/assets/images/profile/user-' . (($duo['players'][0]['id'] % 8) + 1) . '.jpg';
+                                    : $basePath . '/assets/images/profile/user-' . (($p1Id % 8) + 1) . '.jpg';
+                                  $p2Id = isset($duo['players'][1]['id']) ? (int)$duo['players'][1]['id'] : (($duo['duo_id'] * 2 + 1) % 8);
                                   $p2Pic = (!empty($duo['players'][1]['pic']) && $duo['players'][1]['pic'] !== 'default-avatar.png')
                                     ? $basePath . '/uploads/profile_pictures/' . $duo['players'][1]['pic']
-                                    : $basePath . '/assets/images/profile/user-' . (($duo['players'][1]['id'] % 8) + 1) . '.jpg';
+                                    : $basePath . '/assets/images/profile/user-' . (($p2Id % 8) + 1) . '.jpg';
                               ?>
                                 <tr>
                                   <td><span class="rank-badge <?php echo $rankClass; ?>"><?php echo $rank; ?></span></td>

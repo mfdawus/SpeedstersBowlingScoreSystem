@@ -1043,6 +1043,10 @@ try {
 
       const sessionDate = session.session_date ? new Date(session.session_date) : null;
       const formattedDate = sessionDate ? sessionDate.toLocaleString() : 'Date TBD';
+      
+      // Handle both property name formats
+      const playerCount = session.playerCount ?? session.participants_count ?? 0;
+      const maxPlayers = session.maxPlayers ?? session.max_players ?? 0;
 
       lobbySection.innerHTML = `
         <div class="row mt-4">
@@ -1051,13 +1055,13 @@ try {
               <div class="card-header bg-primary text-white">
                 <h5 class="mb-0">
                   <i class="ti ti-users me-2"></i>
-                  Duo Lobby – ${session.name || 'Doubles Session'}
+                  Duo Lobby – ${session.name || session.session_name || 'Doubles Session'}
                 </h5>
               </div>
               <div class="card-body">
                 <p class="text-muted">
                   Session date: <strong>${formattedDate}</strong><br>
-                  Players in session: <strong>${session.playerCount}/${session.maxPlayers}</strong>
+                  Players in session: <strong>${playerCount}/${maxPlayers}</strong>
                 </p>
 
                 <div class="text-center mb-4">
@@ -1183,6 +1187,10 @@ try {
             (duo.player1_first_name + ' ' + duo.player1_last_name) :
             (duo.player2_first_name + ' ' + duo.player2_last_name);
 
+          // Preserve current input value if it exists (user might be typing)
+          const existingInput = document.getElementById('duoNameInput');
+          const preservedValue = existingInput ? existingInput.value : (duo.duo_name || 'Duo 1');
+          
           partnerInfoEl.innerHTML = `
             <div class="card mb-3">
               <div class="card-body">
@@ -1191,10 +1199,10 @@ try {
                   <input type="text" 
                          class="form-control" 
                          id="duoNameInput" 
-                         value="${(duo.duo_name || 'Duo 1').replace(/"/g, '&quot;')}" 
+                         value="${preservedValue.replace(/"/g, '&quot;')}" 
                          placeholder="Enter duo name"
                          maxlength="50">
-                  <button class="btn btn-primary" onclick="updateDuoName()">
+                  <button class="btn btn-primary" id="saveDuoNameBtn" type="button">
                     <i class="ti ti-check me-1"></i>Save
                   </button>
                 </div>
@@ -1209,6 +1217,15 @@ try {
             </div>
           `;
           partnerInfoEl.style.display = 'block';
+          
+          // Attach event listener after HTML is created
+          const saveBtn = document.getElementById('saveDuoNameBtn');
+          if (saveBtn) {
+            saveBtn.addEventListener('click', function(e) {
+              e.preventDefault();
+              updateDuoName(e);
+            });
+          }
 
           // Lane info and button visibility
           if (duo.lane_number) {
@@ -1259,14 +1276,18 @@ try {
         });
     }
 
-    function updateDuoName() {
+    // Make function globally accessible
+    window.updateDuoName = function(event) {
       if (!currentDuoId) {
         alert('Duo not found yet. Please wait for pairing to complete.');
         return;
       }
 
       const duoNameInput = document.getElementById('duoNameInput');
-      if (!duoNameInput) return;
+      if (!duoNameInput) {
+        console.error('Duo name input not found');
+        return;
+      }
 
       const newName = duoNameInput.value.trim();
       if (!newName) {
@@ -1275,7 +1296,11 @@ try {
       }
 
       // Disable button while saving
-      const saveBtn = event.target;
+      const saveBtn = event && event.target ? event.target : document.getElementById('saveDuoNameBtn');
+      if (!saveBtn) {
+        console.error('Save button not found');
+        return;
+      }
       const originalHTML = saveBtn.innerHTML;
       saveBtn.disabled = true;
       saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Saving...';
@@ -1328,7 +1353,7 @@ try {
           saveBtn.disabled = false;
           saveBtn.innerHTML = originalHTML;
         });
-    }
+    };
 
     function voteForRandomLane() {
       if (!currentDuoId) {
