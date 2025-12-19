@@ -2121,58 +2121,75 @@ $activeSession = getActiveSession();
 
   <!-- Create Session Modal -->
   <div class="modal fade" id="createSessionModal" tabindex="-1" aria-labelledby="createSessionModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-lg">
       <div class="modal-content">
         <div class="modal-header">
-          <h5 class="modal-title" id="createSessionModalLabel">Create New Game Session</h5>
+          <h5 class="modal-title" id="createSessionModalLabel">Create New Session</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <form id="createSessionForm">
           <div class="modal-body">
-            <div class="mb-3">
-              <label for="sessionName" class="form-label">Session Name</label>
-              <input type="text" class="form-control" id="sessionName" name="session_name" required>
-            </div>
             <div class="row">
-              <div class="col-md-6 mb-3">
-                <label for="sessionDate" class="form-label">Date</label>
-                <input type="date" class="form-control" id="sessionDate" name="session_date" required>
-              </div>
-              <div class="col-md-6 mb-3">
-                <label for="sessionTime" class="form-label">Time</label>
-                <input type="time" class="form-control" id="sessionTime" name="session_time" value="21:00" required>
-              </div>
-            </div>
-            <div class="mb-3">
-              <label for="gameMode" class="form-label">Game Mode</label>
-              <select class="form-select" id="gameMode" name="game_mode" required onchange="toggleTeamSelection()">
-                <option value="Solo">Solo</option>
-                <option value="Doubles" disabled>Doubles (Coming Soon)</option>
-                <option value="Team">Team</option>
-              </select>
-            </div>
-            
-            <!-- Team Selection (hidden by default) -->
-            <div id="teamSelectionSection" class="mb-3" style="display: none;">
-              <label class="form-label">Select Teams</label>
-              <div id="teamCheckboxes" class="border rounded p-3" style="max-height: 200px; overflow-y: auto;">
-                <div class="text-center text-muted">
-                  <i class="ti ti-loader-2 ti-spin"></i> Loading teams...
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="sessionName" class="form-label">Session Name</label>
+                  <input type="text" class="form-control" id="sessionName" name="session_name" 
+                         placeholder="Enter session name" required>
                 </div>
               </div>
-              <small class="form-text text-muted">Select which teams will participate in this session</small>
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="gameMode" class="form-label">Game Mode</label>
+                  <select class="form-select" id="gameMode" name="game_mode" required>
+                    <option value="Solo">Solo</option>
+                    <option value="Doubles">Doubles</option>
+                    <option value="Team">Team</option>
+                  </select>
+                </div>
+              </div>
             </div>
-            
-            <div class="mb-3">
-              <label for="maxPlayers" class="form-label">Max Players</label>
-              <input type="number" class="form-control" id="maxPlayers" name="max_players" value="10" min="1" max="20" required>
+            <div class="row">
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="sessionDate" class="form-label">Session Date</label>
+                  <input type="date" class="form-control" id="sessionDate" name="session_date" 
+                         value="<?php echo date('Y-m-d'); ?>" required>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="sessionTime" class="form-label">Session Time</label>
+                  <input type="time" class="form-control" id="sessionTime" name="session_time" 
+                         value="21:00" required>
+                </div>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="maxPlayers" class="form-label">Max Players</label>
+                  <input type="number" class="form-control" id="maxPlayers" name="max_players" 
+                         value="10" min="1" max="50" required>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="sessionNotes" class="form-label">Notes (Optional)</label>
+                  <input type="text" class="form-control" id="sessionNotes" name="notes" 
+                         placeholder="Additional notes...">
+                </div>
+              </div>
             </div>
             
             <!-- Lane Configuration Section -->
-            <div class="mb-3">
-              <h6 class="fw-bold text-primary mb-3">
-                <i class="ti ti-target me-2"></i>Lane Configuration
-              </h6>
+            <div class="row">
+              <div class="col-12">
+                <div class="mb-3">
+                  <h6 class="fw-bold text-primary mb-3">
+                    <i class="ti ti-target me-2"></i>Lane Configuration
+                  </h6>
+                </div>
+              </div>
             </div>
             <div class="row">
               <div class="col-md-6">
@@ -2221,16 +2238,11 @@ $activeSession = getActiveSession();
                   <label for="assignmentLocked" class="form-label">Assignment Status</label>
                   <select class="form-select" id="assignmentLocked" name="assignment_locked">
                     <option value="0">Unlocked (can modify)</option>
-                    <option value="1">Locked (cannot modify)</option>
+                    <option value="1">Locked (final assignments)</option>
                   </select>
-                  <small class="form-text text-muted">Allow modifications to lane assignments</small>
+                  <small class="form-text text-muted">Lock prevents further lane changes</small>
                 </div>
               </div>
-            </div>
-            
-            <div class="mb-3">
-              <label for="sessionNotes" class="form-label">Notes (Optional)</label>
-              <textarea class="form-control" id="sessionNotes" name="notes" rows="3"></textarea>
             </div>
           </div>
           <div class="modal-footer">

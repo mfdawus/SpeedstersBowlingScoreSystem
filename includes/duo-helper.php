@@ -50,14 +50,26 @@ function calculatePlayerAverage($userId, $gameCount = 5) {
 }
 
 /**
- * Auto-pair players based on skill level
- * Pairs highest with next-highest (similar averages together)
+ * Auto-pair players based on pairing mode
  * @param int $sessionId Session ID
  * @return array Array of created duos or error
  */
 function autoPairPlayers($sessionId) {
     try {
         $pdo = getDBConnection();
+        
+        // Get pairing mode from session (check if column exists first)
+        $checkColumnStmt = $pdo->prepare("SHOW COLUMNS FROM game_sessions LIKE 'pairing_mode'");
+        $checkColumnStmt->execute();
+        $columnExists = $checkColumnStmt->fetch();
+        
+        $pairingMode = 'auto'; // Default
+        if ($columnExists) {
+            $modeStmt = $pdo->prepare("SELECT pairing_mode FROM game_sessions WHERE session_id = ?");
+            $modeStmt->execute([$sessionId]);
+            $session = $modeStmt->fetch(PDO::FETCH_ASSOC);
+            $pairingMode = $session['pairing_mode'] ?? 'auto';
+        }
         
         // Get all players in lobby who aren't paired yet
         $stmt = $pdo->prepare("
@@ -83,79 +95,212 @@ function autoPairPlayers($sessionId) {
         
         $duos = [];
         
-        // Pair players sequentially by average score (highest with next highest, etc.)
-        $pairsCount = (int) floor($playerCount / 2);
-        
-        for ($i = 0; $i < $pairsCount; $i++) {
-            $idx1 = $i * 2;
-            $idx2 = $idx1 + 1;
-            
-            $player1 = $players[$idx1];
-            $player2 = $players[$idx2];
-            
-            // Create default duo name
-            $duoName = "Duo " . ($i + 1);
-            
-            // Insert duo team
-            $insertStmt = $pdo->prepare("
-                INSERT INTO duo_teams (
-                    session_id, duo_name, 
-                    player1_id, player2_id, 
-                    player1_avg, player2_avg, 
-                    status
-                ) VALUES (?, ?, ?, ?, ?, ?, 'Pending')
-            ");
-            $insertStmt->execute([
-                $sessionId,
-                $duoName,
-                $player1['user_id'],
-                $player2['user_id'],
-                $player1['avg_score'],
-                $player2['avg_score']
-            ]);
-            
-            $duoId = $pdo->lastInsertId();
-            
-            // Update lobby entries to mark as paired
-            $updateStmt = $pdo->prepare("
-                UPDATE duo_join_lobby 
-                SET is_paired = TRUE, duo_id = ? 
-                WHERE session_id = ? AND user_id IN (?, ?)
-            ");
-            $updateStmt->execute([$duoId, $sessionId, $player1['user_id'], $player2['user_id']]);
-            
-            $duos[] = [
-                'duo_id' => $duoId,
-                'duo_name' => $duoName,
-                'player1' => $player1,
-                'player2' => $player2,
-                'combined_avg' => round(($player1['avg_score'] + $player2['avg_score']) / 2, 2)
-            ];
-            
-            // Send notifications to both players
-            createDuoNotification($sessionId, $player1['user_id'], $duoId, 'pairing_complete', 
-                "You've been paired with {$player2['first_name']} {$player2['last_name']}!");
-            createDuoNotification($sessionId, $player2['user_id'], $duoId, 'pairing_complete', 
-                "You've been paired with {$player1['first_name']} {$player1['last_name']}!");
+        // Handle different pairing modes
+        if ($pairingMode === 'manual') {
+            // For manual mode, match players to existing duos
+            return matchPlayersToExistingDuos($sessionId, $players);
+        } elseif ($pairingMode === 'semi_auto') {
+            // Semi-auto: Pair Group A with Group B
+            return pairSemiAuto($sessionId, $players);
+        } else {
+            // Auto: Sequential pairing by skill
+            return pairAuto($sessionId, $players);
         }
-        
-        // Handle final odd player (if any)
-        $oddPlayer = null;
-        if ($playerCount % 2 != 0) {
-            $oddPlayer = $players[$playerCount - 1];
-        }
-        
-        return [
-            'success' => true,
-            'duos' => $duos,
-            'odd_player' => $oddPlayer,
-            'message' => count($duos) . ' duo(s) created successfully!'
-        ];
         
     } catch (PDOException $e) {
         error_log("Error auto-pairing players: " . $e->getMessage());
         return ['success' => false, 'message' => 'Database error: ' . $e->getMessage()];
     }
+}
+
+/**
+ * Auto pairing: Sequential pairing by skill (highest with next highest)
+ */
+function pairAuto($sessionId, $players) {
+    $pdo = getDBConnection();
+    $duos = [];
+    $pairsCount = (int) floor(count($players) / 2);
+    
+    for ($i = 0; $i < $pairsCount; $i++) {
+        $idx1 = $i * 2;
+        $idx2 = $idx1 + 1;
+        
+        $player1 = $players[$idx1];
+        $player2 = $players[$idx2];
+        
+        $duoName = "Duo " . ($i + 1);
+        $duoId = createDuo($pdo, $sessionId, $duoName, $player1, $player2);
+        
+        if ($duoId) {
+            markPlayersAsPaired($pdo, $sessionId, $player1['user_id'], $player2['user_id'], $duoId);
+            $duos[] = buildDuoArray($duoId, $duoName, $player1, $player2);
+            sendPairingNotifications($sessionId, $player1, $player2, $duoId);
+        }
+    }
+    
+    $oddPlayer = (count($players) % 2 != 0) ? $players[count($players) - 1] : null;
+    
+    return [
+        'success' => true,
+        'duos' => $duos,
+        'odd_player' => $oddPlayer,
+        'message' => count($duos) . ' duo(s) created successfully!'
+    ];
+}
+
+/**
+ * Semi-auto pairing: Pair Group A with Group B
+ */
+function pairSemiAuto($sessionId, $players) {
+    $pdo = getDBConnection();
+    
+    // Get group assignments from session_participants
+    $groupStmt = $pdo->prepare("
+        SELECT sp.user_id, sp.group_assignment
+        FROM session_participants sp
+        WHERE sp.session_id = ?
+    ");
+    $groupStmt->execute([$sessionId]);
+    $groupData = $groupStmt->fetchAll(PDO::FETCH_KEY_PAIR);
+    
+    // Separate players into groups
+    $groupA = [];
+    $groupB = [];
+    
+    foreach ($players as $player) {
+        $groupId = $groupData[$player['user_id']] ?? null;
+        if ($groupId === 'A') {
+            $groupA[] = $player;
+        } elseif ($groupId === 'B') {
+            $groupB[] = $player;
+        } else {
+            // If not assigned, add to smaller group
+            if (count($groupA) <= count($groupB)) {
+                $groupA[] = $player;
+            } else {
+                $groupB[] = $player;
+            }
+        }
+    }
+    
+    // Sort each group by average score
+    usort($groupA, function($a, $b) {
+        return $b['avg_score'] <=> $a['avg_score'];
+    });
+    usort($groupB, function($a, $b) {
+        return $b['avg_score'] <=> $a['avg_score'];
+    });
+    
+    // Pair A[i] with B[i]
+    $duos = [];
+    $pairsCount = min(count($groupA), count($groupB));
+    
+    for ($i = 0; $i < $pairsCount; $i++) {
+        $player1 = $groupA[$i];
+        $player2 = $groupB[$i];
+        
+        $duoName = "Duo " . ($i + 1);
+        $duoId = createDuo($pdo, $sessionId, $duoName, $player1, $player2);
+        
+        if ($duoId) {
+            markPlayersAsPaired($pdo, $sessionId, $player1['user_id'], $player2['user_id'], $duoId);
+            $duos[] = buildDuoArray($duoId, $duoName, $player1, $player2);
+            sendPairingNotifications($sessionId, $player1, $player2, $duoId);
+        }
+    }
+    
+    return [
+        'success' => true,
+        'duos' => $duos,
+        'odd_player' => null,
+        'message' => count($duos) . ' duo(s) created successfully!'
+    ];
+}
+
+/**
+ * Manual pairing: Match players to existing duos
+ */
+function matchPlayersToExistingDuos($sessionId, $players) {
+    $pdo = getDBConnection();
+    
+    // Get existing duos for this session
+    $duoStmt = $pdo->prepare("
+        SELECT duo_id, duo_name, player1_id, player2_id
+        FROM duo_teams
+        WHERE session_id = ? AND status = 'Pending'
+    ");
+    $duoStmt->execute([$sessionId]);
+    $existingDuos = $duoStmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    $matched = 0;
+    foreach ($existingDuos as $duo) {
+        $player1Id = $duo['player1_id'];
+        $player2Id = $duo['player2_id'];
+        
+        // Check if both players are in lobby
+        $p1InLobby = array_search($player1Id, array_column($players, 'user_id')) !== false;
+        $p2InLobby = array_search($player2Id, array_column($players, 'user_id')) !== false;
+        
+        if ($p1InLobby && $p2InLobby) {
+            // Mark both players as paired
+            markPlayersAsPaired($pdo, $sessionId, $player1Id, $player2Id, $duo['duo_id']);
+            $matched++;
+        }
+    }
+    
+    return [
+        'success' => true,
+        'duos' => [],
+        'odd_player' => null,
+        'message' => "Matched $matched existing duo(s)!"
+    ];
+}
+
+// Helper functions
+function createDuo($pdo, $sessionId, $duoName, $player1, $player2) {
+    $insertStmt = $pdo->prepare("
+        INSERT INTO duo_teams (
+            session_id, duo_name, 
+            player1_id, player2_id, 
+            player1_avg, player2_avg, 
+            status
+        ) VALUES (?, ?, ?, ?, ?, ?, 'Pending')
+    ");
+    $insertStmt->execute([
+        $sessionId,
+        $duoName,
+        $player1['user_id'],
+        $player2['user_id'],
+        $player1['avg_score'],
+        $player2['avg_score']
+    ]);
+    return $pdo->lastInsertId();
+}
+
+function markPlayersAsPaired($pdo, $sessionId, $player1Id, $player2Id, $duoId) {
+    $updateStmt = $pdo->prepare("
+        UPDATE duo_join_lobby 
+        SET is_paired = TRUE, duo_id = ? 
+        WHERE session_id = ? AND user_id IN (?, ?)
+    ");
+    $updateStmt->execute([$duoId, $sessionId, $player1Id, $player2Id]);
+}
+
+function buildDuoArray($duoId, $duoName, $player1, $player2) {
+    return [
+        'duo_id' => $duoId,
+        'duo_name' => $duoName,
+        'player1' => $player1,
+        'player2' => $player2,
+        'combined_avg' => round(($player1['avg_score'] + $player2['avg_score']) / 2, 2)
+    ];
+}
+
+function sendPairingNotifications($sessionId, $player1, $player2, $duoId) {
+    createDuoNotification($sessionId, $player1['user_id'], $duoId, 'pairing_complete', 
+        "You've been paired with {$player2['first_name']} {$player2['last_name']}!");
+    createDuoNotification($sessionId, $player2['user_id'], $duoId, 'pairing_complete', 
+        "You've been paired with {$player1['first_name']} {$player1['last_name']}!");
 }
 
 /**

@@ -89,7 +89,8 @@ if ($selectedSession) {
                     'pic' => $d['p2_pic'],
                 ],
             ],
-            'games' => [],         // game_number => ['score' => ..., 'strikes' => ..., 'time' => ...]
+            'games' => [],         // game_number => ['score' => ..., 'strikes' => ..., 'time' => ...] (combined)
+            'player_scores' => [], // user_id => [game_number => ['score' => ..., 'strikes' => ..., 'time' => ...]] (individual)
             'total_score' => 0,
             'games_played' => 0,
             'best_game' => 0,
@@ -99,23 +100,24 @@ if ($selectedSession) {
     }
 
     if (!empty($duoTableData)) {
-        // Fetch team scores from game_scores (games 1-6) - aggregate by duo and game
+        // Fetch individual player scores from game_scores (games 1-5)
         try {
             $scoreStmt = $pdo->prepare("
                 SELECT 
                     duo_id,
+                    user_id,
                     game_number,
-                    SUM(player_score) as team_score,
-                    SUM(COALESCE(strikes, 0)) as team_strikes,
-                    SUM(COALESCE(spares, 0)) as team_spares,
-                    SUM(COALESCE(open_frames, 0)) as team_open_frames,
-                    MAX(created_at) as created_at
+                    player_score,
+                    COALESCE(strikes, 0) as strikes,
+                    COALESCE(spares, 0) as spares,
+                    COALESCE(open_frames, 0) as open_frames,
+                    created_at
                 FROM game_scores
                 WHERE session_id = ?
                   AND duo_id IS NOT NULL
                   AND status = 'Completed'
-                  AND game_number BETWEEN 1 AND 6
-                GROUP BY duo_id, game_number
+                  AND game_number BETWEEN 1 AND 5
+                ORDER BY duo_id, user_id, game_number
             ");
             $scoreStmt->execute([$selectedSessionId]);
             $scores = $scoreStmt->fetchAll(PDO::FETCH_ASSOC);
@@ -125,31 +127,60 @@ if ($selectedSession) {
             $scores = [];
         }
 
+        // Store individual player scores and calculate combined scores
         foreach ($scores as $s) {
             $duoId = (int)$s['duo_id'];
             if (!isset($duoTableData[$duoId])) {
                 continue;
             }
+            $userId = (int)$s['user_id'];
             $g = (int)$s['game_number'];
-            $score = (int)($s['team_score'] ?? 0);
-            $strikes = (int)($s['team_strikes'] ?? 0);
-            $spares = (int)($s['team_spares'] ?? 0);
-            $openFrames = (int)($s['team_open_frames'] ?? 0);
+            $score = (int)($s['player_score'] ?? 0);
+            $strikes = (int)($s['strikes'] ?? 0);
+            $spares = (int)($s['spares'] ?? 0);
+            $openFrames = (int)($s['open_frames'] ?? 0);
             $time = $s['created_at'] ?? null;
 
             $duo = &$duoTableData[$duoId];
-            $duo['games'][$g] = [
+            
+            // Initialize player scores structure if not exists
+            if (!isset($duo['player_scores'])) {
+                $duo['player_scores'] = [];
+            }
+            if (!isset($duo['player_scores'][$userId])) {
+                $duo['player_scores'][$userId] = [];
+            }
+            
+            // Store individual player score
+            $duo['player_scores'][$userId][$g] = [
                 'score' => $score,
                 'strikes' => $strikes,
                 'spares' => $spares,
                 'open_frames' => $openFrames,
                 'time' => $time,
             ];
+            
+            // Calculate combined team score for this game
+            if (!isset($duo['games'][$g])) {
+                $duo['games'][$g] = [
+                    'score' => 0,
+                    'strikes' => 0,
+                    'spares' => 0,
+                    'open_frames' => 0,
+                    'time' => $time,
+                ];
+            }
+            $duo['games'][$g]['score'] += $score;
+            $duo['games'][$g]['strikes'] += $strikes;
+            $duo['games'][$g]['spares'] += $spares;
+            $duo['games'][$g]['open_frames'] += $openFrames;
+            
+            // Update totals for overall ranking
             $duo['total_score'] += $score;
             $duo['combined_strikes'] += $strikes;
             $duo['games_played'] = count($duo['games']);
-            if ($score > $duo['best_game']) {
-                $duo['best_game'] = $score;
+            if ($duo['games'][$g]['score'] > $duo['best_game']) {
+                $duo['best_game'] = $duo['games'][$g]['score'];
             }
             if (!$duo['last_updated'] || $time > $duo['last_updated']) {
                 $duo['last_updated'] = $time;
@@ -245,6 +276,19 @@ usort($overallRanking, function ($a, $b) {
     }
     .table tbody tr[data-duo-id] {
       will-change: transform, opacity;
+    }
+    /* Style for duo player rows */
+    .duo-player-row {
+      transition: background-color 0.2s;
+    }
+    .duo-player-row:hover {
+      background-color: #f8f9fa;
+    }
+    .duo-player-row[data-player-id] {
+      border-left: 3px solid transparent;
+    }
+    .duo-player-row:nth-child(even) {
+      background-color: rgba(13, 110, 253, 0.02);
     }
     /* Smooth transitions for score updates */
     .score-update {
@@ -371,11 +415,6 @@ usort($overallRanking, function ($a, $b) {
                         Game 5
                       </button>
                     </li>
-                    <li class="nav-item" role="presentation">
-                      <button class="nav-link" id="game6-tab" data-bs-toggle="tab" data-bs-target="#game6" type="button" role="tab">
-                        Game 6
-                      </button>
-                    </li>
                   </ul>
 
                   <div class="tab-content" id="gameTabContent">
@@ -463,7 +502,7 @@ usort($overallRanking, function ($a, $b) {
                                       echo $avg;
                                     ?>
                               </td>
-                                  <td><?php echo (int)$duo['games_played']; ?>/6</td>
+                                  <td><?php echo (int)$duo['games_played']; ?>/5</td>
                                   <td><span class="text-warning"><?php echo (int)$duo['best_game']; ?></span></td>
                                   <td><?php echo (int)$duo['combined_strikes']; ?></td>
                                   <td>
@@ -481,25 +520,49 @@ usort($overallRanking, function ($a, $b) {
                     </div>
 
                     <?php
-                    // Function to render game tab
+                    // Function to render game tab with individual player rows
                     function renderGameTab($gameNumber, $duoTableData) {
-                      // Get scores for this game
-                      $gameScores = [];
+                      // Get individual player scores for this game
+                      $playerScores = [];
                       foreach ($duoTableData as $duo) {
-                        if (isset($duo['games'][$gameNumber])) {
-                          $gameScores[] = [
-                            'duo' => $duo,
-                            'score' => $duo['games'][$gameNumber]['score'],
-                            'strikes' => $duo['games'][$gameNumber]['strikes'],
-                            'spares' => $duo['games'][$gameNumber]['spares'],
-                            'open_frames' => $duo['games'][$gameNumber]['open_frames'],
-                            'time' => $duo['games'][$gameNumber]['time']
-                          ];
+                        if (isset($duo['player_scores'])) {
+                          foreach ($duo['player_scores'] as $userId => $games) {
+                            if (isset($games[$gameNumber])) {
+                              // Find which player this is
+                              $playerIndex = null;
+                              $playerName = '';
+                              $playerPic = '';
+                              if ($duo['players'][0]['id'] == $userId) {
+                                $playerIndex = 0;
+                                $playerName = $duo['players'][0]['name'];
+                                $playerPic = $duo['players'][0]['pic'];
+                              } elseif ($duo['players'][1]['id'] == $userId) {
+                                $playerIndex = 1;
+                                $playerName = $duo['players'][1]['name'];
+                                $playerPic = $duo['players'][1]['pic'];
+                              }
+                              
+                              if ($playerIndex !== null) {
+                                $playerScores[] = [
+                                  'duo' => $duo,
+                                  'player_id' => $userId,
+                                  'player_index' => $playerIndex,
+                                  'player_name' => $playerName,
+                                  'player_pic' => $playerPic,
+                                  'score' => $games[$gameNumber]['score'],
+                                  'strikes' => $games[$gameNumber]['strikes'],
+                                  'spares' => $games[$gameNumber]['spares'],
+                                  'open_frames' => $games[$gameNumber]['open_frames'],
+                                  'time' => $games[$gameNumber]['time']
+                                ];
+                              }
+                            }
+                          }
                         }
                       }
                       
                       // Sort by score DESC
-                      usort($gameScores, function($a, $b) {
+                      usort($playerScores, function($a, $b) {
                         return $b['score'] <=> $a['score'];
                       });
                       
@@ -512,7 +575,7 @@ usort($overallRanking, function ($a, $b) {
                             <tr>
                               <th scope="col">Rank</th>
                               <th scope="col">Team</th>
-                              <th scope="col">Players</th>
+                              <th scope="col">Player</th>
                                 <th scope="col">Lane</th>
                               <th scope="col">Score</th>
                                 <th scope="col">Pin Diff</th>
@@ -523,7 +586,7 @@ usort($overallRanking, function ($a, $b) {
                             </tr>
                           </thead>
                           <tbody>
-                              <?php if (empty($gameScores)): ?>
+                              <?php if (empty($playerScores)): ?>
                                 <tr>
                                   <td colspan="10" class="text-center text-muted py-4">
                                     No scores available for Game <?php echo $gameNumber; ?> yet.
@@ -531,11 +594,13 @@ usort($overallRanking, function ($a, $b) {
                             </tr>
                               <?php else:
                                 $rank = 1;
-                                $firstScore = $gameScores[0]['score'];
-                                foreach ($gameScores as $entry):
+                                $firstScore = $playerScores[0]['score'];
+                                foreach ($playerScores as $entry):
                                   $duo = $entry['duo'];
                                   $rankClass = $rank === 1 ? 'rank-1' : ($rank === 2 ? 'rank-2' : ($rank === 3 ? 'rank-3' : 'rank-other'));
                                   $pinDiff = $entry['score'] - $firstScore;
+                                  
+                                  // Get both player pics for team display
                                   $p1Id = isset($duo['players'][0]['id']) ? (int)$duo['players'][0]['id'] : (($duo['duo_id'] * 2) % 8);
                                   $p1Pic = (!empty($duo['players'][0]['pic']) && $duo['players'][0]['pic'] !== 'default-avatar.png')
                                     ? $basePath . '/uploads/profile_pictures/' . $duo['players'][0]['pic']
@@ -544,8 +609,13 @@ usort($overallRanking, function ($a, $b) {
                                   $p2Pic = (!empty($duo['players'][1]['pic']) && $duo['players'][1]['pic'] !== 'default-avatar.png')
                                     ? $basePath . '/uploads/profile_pictures/' . $duo['players'][1]['pic']
                                     : $basePath . '/assets/images/profile/user-' . (($p2Id % 8) + 1) . '.jpg';
+                                  
+                                  // Get current player pic
+                                  $currentPlayerPic = (!empty($entry['player_pic']) && $entry['player_pic'] !== 'default-avatar.png')
+                                    ? $basePath . '/uploads/profile_pictures/' . $entry['player_pic']
+                                    : $basePath . '/assets/images/profile/user-' . (($entry['player_id'] % 8) + 1) . '.jpg';
                               ?>
-                                <tr>
+                                <tr class="duo-player-row" data-duo-id="<?php echo $duo['duo_id']; ?>" data-player-id="<?php echo $entry['player_id']; ?>">
                                   <td><span class="rank-badge <?php echo $rankClass; ?>"><?php echo $rank; ?></span></td>
                               <td>
                                 <div class="d-flex align-items-center">
@@ -559,11 +629,13 @@ usort($overallRanking, function ($a, $b) {
                                 </div>
                               </td>
                                   <td>
-                                    <small>
-                                      <?php echo htmlspecialchars($duo['players'][0]['name']); ?>
-                                      <br>
-                                      <?php echo htmlspecialchars($duo['players'][1]['name']); ?>
-                                    </small>
+                                    <div class="d-flex align-items-center">
+                                      <img src="<?php echo htmlspecialchars($currentPlayerPic); ?>" alt="Player" class="rounded-circle me-2" width="32">
+                                      <div>
+                                        <strong><?php echo htmlspecialchars($entry['player_name']); ?></strong>
+                                        <br><small class="text-muted">Player <?php echo $entry['player_index'] + 1; ?></small>
+                                      </div>
+                                    </div>
                               </td>
                                   <td><span class="badge bg-primary">Lane <?php echo $duo['lane_number'] ?: '-'; ?></span></td>
                                   <td><span class="fw-bold text-success"><?php echo $entry['score']; ?></span></td>
@@ -590,14 +662,14 @@ usort($overallRanking, function ($a, $b) {
                       <?php
                     }
                     
-                    // Render Game 1-6 tabs
+                    // Render Game 1-5 tabs
                     if (isset($duoTableData) && is_array($duoTableData)) {
-                      for ($gameNum = 1; $gameNum <= 6; $gameNum++) {
+                      for ($gameNum = 1; $gameNum <= 5; $gameNum++) {
                         renderGameTab($gameNum, $duoTableData);
                       }
                     } else {
                       // Fallback if $duoTableData is not set
-                      for ($gameNum = 1; $gameNum <= 6; $gameNum++) {
+                      for ($gameNum = 1; $gameNum <= 5; $gameNum++) {
                         echo '<div class="tab-pane fade" id="game' . $gameNum . '" role="tabpanel">';
                         echo '<div class="table-responsive"><table class="table table-hover"><tbody>';
                         echo '<tr><td colspan="10" class="text-center text-muted py-4">No data available</td></tr>';

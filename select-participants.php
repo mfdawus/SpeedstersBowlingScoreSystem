@@ -316,6 +316,31 @@ error_log("Teams count: " . count($teams));
             transform: translateX(5px);
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
+        
+        /* Group assignment styles */
+        .group-container {
+            min-height: 200px;
+            transition: background-color 0.2s;
+        }
+        
+        .group-container.drag-over {
+            background-color: #e3f2fd !important;
+            border-color: #2196F3 !important;
+        }
+        
+        .player-card {
+            transition: all 0.2s;
+            user-select: none;
+        }
+        
+        .player-card:hover {
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            transform: translateY(-2px);
+        }
+        
+        .player-card.dragging {
+            opacity: 0.5;
+        }
     </style>
 </head>
 
@@ -451,6 +476,127 @@ error_log("Teams count: " . count($teams));
                             </div>
                         </div>
                     </div>
+
+                    <?php if ($sessionDraft['game_mode'] === 'Doubles'): ?>
+                    <!-- Pairing Mode Selection (Only for Doubles) -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="card admin-card">
+                                <div class="card-header">
+                                    <h5 class="card-title fw-semibold mb-1">Pairing Mode</h5>
+                                    <span class="fw-normal text-muted">Choose how players will be paired into duos</span>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <div class="form-check pairing-mode-option">
+                                                <input class="form-check-input" type="radio" name="pairingMode" id="pairingAuto" value="auto" checked>
+                                                <label class="form-check-label w-100" for="pairingAuto">
+                                                    <div class="p-3 border rounded">
+                                                        <h6 class="mb-2"><i class="ti ti-robot text-primary me-2"></i>Auto</h6>
+                                                        <small class="text-muted">Players paired automatically by skill level (highest with next highest)</small>
+                                                    </div>
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-check pairing-mode-option">
+                                                <input class="form-check-input" type="radio" name="pairingMode" id="pairingSemiAuto" value="semi_auto">
+                                                <label class="form-check-label w-100" for="pairingSemiAuto">
+                                                    <div class="p-3 border rounded">
+                                                        <h6 class="mb-2"><i class="ti ti-adjustments text-warning me-2"></i>Semi-Auto</h6>
+                                                        <small class="text-muted">Divide into Group A & B, then pair A with B by skill</small>
+                                                    </div>
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-check pairing-mode-option">
+                                                <input class="form-check-input" type="radio" name="pairingMode" id="pairingManual" value="manual">
+                                                <label class="form-check-label w-100" for="pairingManual">
+                                                    <div class="p-3 border rounded">
+                                                        <h6 class="mb-2"><i class="ti ti-hand-click text-success me-2"></i>Manual</h6>
+                                                        <small class="text-muted">Admin manually pairs players into duos</small>
+                                                    </div>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Semi-Auto Group Assignment (Hidden by default) -->
+                    <div class="row mb-4" id="semiAutoSection" style="display: none;">
+                        <div class="col-12">
+                            <div class="card admin-card">
+                                <div class="card-header">
+                                    <div class="d-flex align-items-center justify-content-between">
+                                        <div>
+                                            <h5 class="card-title fw-semibold mb-1">Group Assignment</h5>
+                                            <span class="fw-normal text-muted">Assign players to Group A or B</span>
+                                        </div>
+                                        <button class="btn btn-sm btn-outline-primary" onclick="autoAssignGroups()">
+                                            <i class="ti ti-adjustments me-1"></i> Auto-Assign by Skill
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <h6 class="mb-3"><span class="badge bg-primary">Group A</span></h6>
+                                            <div id="groupA" class="group-container border rounded p-3" style="min-height: 200px; background: #f8f9fa;">
+                                                <p class="text-muted text-center">Drag players here or click to move</p>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <h6 class="mb-3"><span class="badge bg-warning">Group B</span></h6>
+                                            <div id="groupB" class="group-container border rounded p-3" style="min-height: 200px; background: #f8f9fa;">
+                                                <p class="text-muted text-center">Drag players here or click to move</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Manual Pairing Interface (Hidden by default) -->
+                    <div class="row mb-4" id="manualPairingSection" style="display: none;">
+                        <div class="col-12">
+                            <div class="card admin-card">
+                                <div class="card-header">
+                                    <div class="d-flex align-items-center justify-content-between">
+                                        <div>
+                                            <h5 class="card-title fw-semibold mb-1">Manual Pairing</h5>
+                                            <span class="fw-normal text-muted">Select two players to create a duo</span>
+                                        </div>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="clearAllPairs()">
+                                            <i class="ti ti-x me-1"></i> Clear All Pairs
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <h6 class="mb-3">Available Players</h6>
+                                            <div id="availablePlayers" class="available-players-container border rounded p-3" style="min-height: 300px; max-height: 500px; overflow-y: auto;">
+                                                <p class="text-muted text-center">Select participants first</p>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <h6 class="mb-3">Paired Teams (<span id="pairedCount">0</span>)</h6>
+                                            <div id="pairedTeams" class="paired-teams-container border rounded p-3" style="min-height: 300px; max-height: 500px; overflow-y: auto;">
+                                                <p class="text-muted text-center">No pairs created yet</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <?php endif; ?>
 
                     <!-- Filter Section -->
                     <div class="row mb-4">
@@ -817,6 +963,13 @@ error_log("Teams count: " . count($teams));
             
             // Enable/disable save button
             document.getElementById('saveBtn').disabled = selectedCount === 0;
+            
+            // Update pairing UI if in Doubles mode
+            <?php if ($sessionDraft['game_mode'] === 'Doubles'): ?>
+            if (typeof updatePairingUI === 'function') {
+                updatePairingUI();
+            }
+            <?php endif; ?>
         }
 
         // Search players
@@ -875,13 +1028,26 @@ error_log("Teams count: " . count($teams));
             saveBtn.innerHTML = '<i class="ti ti-loader"></i> Saving...';
 
 
+            // Prepare data based on pairing mode
+            const postData = {
+                session_id: <?php echo $sessionId; ?>,
+                participant_ids: JSON.stringify(selectedParticipants)
+            };
+            
+            <?php if ($sessionDraft['game_mode'] === 'Doubles'): ?>
+            postData.pairing_mode = pairingMode;
+            
+            if (pairingMode === 'semi_auto') {
+                postData.group_assignments = JSON.stringify(groupAssignments);
+            } else if (pairingMode === 'manual') {
+                postData.manual_pairs = JSON.stringify(manualPairs);
+            }
+            <?php endif; ?>
+
             $.ajax({
                 url: 'ajax/save-participants.php',
                 method: 'POST',
-                data: {
-                    session_id: <?php echo $sessionId; ?>,
-                    participant_ids: JSON.stringify(selectedParticipants)
-                },
+                data: postData,
                 dataType: 'json',
                 success: function(response) {
                     if (response.success) {
@@ -914,6 +1080,350 @@ error_log("Teams count: " . count($teams));
             };
             return classes[skillLevel] || 'bg-secondary';
         }
+
+        // Pairing mode state
+        let pairingMode = 'auto';
+        let groupAssignments = {}; // {userId: 'A' or 'B'}
+        let manualPairs = []; // [{player1_id, player2_id, duo_name}]
+
+        // Initialize pairing mode handlers (only for Doubles)
+        <?php if ($sessionDraft['game_mode'] === 'Doubles'): ?>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Handle pairing mode change
+            document.querySelectorAll('input[name="pairingMode"]').forEach(radio => {
+                radio.addEventListener('change', function() {
+                    pairingMode = this.value;
+                    updatePairingUI();
+                });
+            });
+            
+            // Initialize UI
+            updatePairingUI();
+        });
+
+        function updatePairingUI() {
+            const semiAutoSection = document.getElementById('semiAutoSection');
+            const manualSection = document.getElementById('manualPairingSection');
+            
+            if (pairingMode === 'semi_auto') {
+                semiAutoSection.style.display = 'block';
+                manualSection.style.display = 'none';
+                updateGroupAssignmentUI();
+            } else if (pairingMode === 'manual') {
+                semiAutoSection.style.display = 'none';
+                manualSection.style.display = 'block';
+                updateManualPairingUI();
+            } else {
+                semiAutoSection.style.display = 'none';
+                manualSection.style.display = 'none';
+            }
+        }
+
+        function updateGroupAssignmentUI() {
+            const groupA = document.getElementById('groupA');
+            const groupB = document.getElementById('groupB');
+            
+            // Clear groups but keep placeholder if empty
+            const groupAItems = groupA.querySelectorAll('.player-card');
+            const groupBItems = groupB.querySelectorAll('.player-card');
+            
+            // Remove existing player cards
+            groupAItems.forEach(item => item.remove());
+            groupBItems.forEach(item => item.remove());
+            
+            // Show placeholder if group is empty
+            if (groupA.querySelectorAll('.player-card').length === 0) {
+                const placeholderA = document.createElement('p');
+                placeholderA.className = 'text-muted text-center mb-0';
+                placeholderA.textContent = 'No players assigned. Click "Auto-Assign" or drag players here.';
+                placeholderA.id = 'groupAPlaceholder';
+                groupA.appendChild(placeholderA);
+            }
+            
+            if (groupB.querySelectorAll('.player-card').length === 0) {
+                const placeholderB = document.createElement('p');
+                placeholderB.className = 'text-muted text-center mb-0';
+                placeholderB.textContent = 'No players assigned. Click "Auto-Assign" or drag players here.';
+                placeholderB.id = 'groupBPlaceholder';
+                groupB.appendChild(placeholderB);
+            }
+            
+            // Add players to their assigned groups
+            selectedParticipants.forEach(userId => {
+                const player = allPlayers.find(p => p.user_id == userId);
+                if (!player) return;
+                
+                const group = groupAssignments[userId] || null;
+                
+                if (group === 'A') {
+                    const placeholder = groupA.querySelector('#groupAPlaceholder');
+                    if (placeholder) placeholder.remove();
+                    const card = createGroupPlayerCard(player, 'A');
+                    groupA.appendChild(card);
+                } else if (group === 'B') {
+                    const placeholder = groupB.querySelector('#groupBPlaceholder');
+                    if (placeholder) placeholder.remove();
+                    const card = createGroupPlayerCard(player, 'B');
+                    groupB.appendChild(card);
+                }
+            });
+            
+            // Make groups droppable
+            setupDragAndDrop();
+        }
+
+        function createGroupPlayerCard(player, currentGroup) {
+            const div = document.createElement('div');
+            div.className = 'player-card mb-2 p-2 border rounded bg-white';
+            div.setAttribute('data-user-id', player.user_id);
+            div.setAttribute('draggable', 'true');
+            div.style.cursor = 'move';
+            
+            div.innerHTML = `
+                <div class="d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center">
+                        <img src="${(typeof BASE_PATH !== 'undefined' ? BASE_PATH : '') + '/assets/images/profile/user-' + ((player.user_id % 8) + 1)}.jpg" 
+                             alt="Player" class="rounded-circle me-2" width="32" height="32">
+                        <div>
+                            <small class="fw-semibold">${player.first_name} ${player.last_name}</small><br>
+                            <small class="text-muted">Avg: ${player.average_score || 0}</small>
+                        </div>
+                    </div>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="toggleGroup(${player.user_id}); event.stopPropagation();">
+                        ${currentGroup === 'A' ? '→ B' : '→ A'}
+                    </button>
+                </div>
+            `;
+            
+            // Drag events
+            div.addEventListener('dragstart', function(e) {
+                e.dataTransfer.setData('text/plain', player.user_id.toString());
+                e.dataTransfer.effectAllowed = 'move';
+                this.style.opacity = '0.5';
+            });
+            
+            div.addEventListener('dragend', function(e) {
+                this.style.opacity = '1';
+            });
+            
+            // Click to toggle (but not on button)
+            div.addEventListener('click', function(e) {
+                if (e.target.tagName !== 'BUTTON' && !e.target.closest('button')) {
+                    toggleGroup(player.user_id);
+                }
+            });
+            
+            return div;
+        }
+
+        function setupDragAndDrop() {
+            const groupA = document.getElementById('groupA');
+            const groupB = document.getElementById('groupB');
+            
+            // Setup drop zones (will only add listeners once due to check)
+            setupDropZone(groupA, 'A');
+            setupDropZone(groupB, 'B');
+        }
+
+        function setupDropZone(element, groupLetter) {
+            // Remove existing listeners by checking if already set up
+            if (element.dataset.dropzoneSetup === 'true') {
+                return;
+            }
+            element.dataset.dropzoneSetup = 'true';
+            
+            element.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                e.dataTransfer.dropEffect = 'move';
+                this.classList.add('drag-over');
+            });
+            
+            element.addEventListener('dragleave', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                this.classList.remove('drag-over');
+            });
+            
+            element.addEventListener('drop', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                this.classList.remove('drag-over');
+                
+                const userId = parseInt(e.dataTransfer.getData('text/plain'));
+                if (userId && selectedParticipants.includes(userId)) {
+                    groupAssignments[userId] = groupLetter;
+                    updateGroupAssignmentUI();
+                    showNotification(`Player moved to Group ${groupLetter}`, 'success');
+                }
+            });
+        }
+
+        function toggleGroup(userId) {
+            userId = parseInt(userId);
+            const currentGroup = groupAssignments[userId];
+            if (currentGroup === 'A') {
+                groupAssignments[userId] = 'B';
+            } else if (currentGroup === 'B') {
+                groupAssignments[userId] = 'A';
+            } else {
+                // Assign to group with fewer players
+                const groupACount = Object.values(groupAssignments).filter(g => g === 'A').length;
+                const groupBCount = Object.values(groupAssignments).filter(g => g === 'B').length;
+                groupAssignments[userId] = groupACount <= groupBCount ? 'A' : 'B';
+            }
+            updateGroupAssignmentUI();
+        }
+
+        function autoAssignGroups() {
+            // Get selected players with their averages
+            const playersWithAvg = selectedParticipants.map(userId => {
+                const player = allPlayers.find(p => p.user_id == userId);
+                return {
+                    user_id: userId,
+                    average_score: parseFloat(player.average_score || 0)
+                };
+            }).sort((a, b) => b.average_score - a.average_score);
+            
+            // Alternate assignment: 1st→A, 2nd→B, 3rd→A, 4th→B, etc.
+            groupAssignments = {};
+            playersWithAvg.forEach((player, index) => {
+                groupAssignments[player.user_id] = (index % 2 === 0) ? 'A' : 'B';
+            });
+            
+            updateGroupAssignmentUI();
+            showNotification('Players auto-assigned to groups by skill level', 'success');
+        }
+
+        function updateManualPairingUI() {
+            const availableContainer = document.getElementById('availablePlayers');
+            const pairedContainer = document.getElementById('pairedTeams');
+            
+            // Get unpaired players
+            const pairedPlayerIds = new Set();
+            manualPairs.forEach(pair => {
+                pairedPlayerIds.add(pair.player1_id);
+                pairedPlayerIds.add(pair.player2_id);
+            });
+            
+            const unpairedPlayers = selectedParticipants.filter(userId => !pairedPlayerIds.has(userId));
+            
+            // Show available players
+            if (unpairedPlayers.length === 0) {
+                availableContainer.innerHTML = '<p class="text-muted text-center">All players have been paired</p>';
+            } else {
+                availableContainer.innerHTML = unpairedPlayers.map(userId => {
+                    const player = allPlayers.find(p => p.user_id == userId);
+                    if (!player) return '';
+                    return `
+                        <div class="player-select-card mb-2 p-2 border rounded bg-white" data-user-id="${userId}" onclick="selectPlayerForPairing(${userId})">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="player_${userId}" onchange="togglePlayerSelection(${userId})">
+                                <label class="form-check-label w-100" for="player_${userId}">
+                                    <div class="d-flex align-items-center">
+                                        <img src="${(typeof BASE_PATH !== 'undefined' ? BASE_PATH : '') + '/assets/images/profile/user-' + ((player.user_id % 8) + 1)}.jpg" 
+                                             alt="Player" class="rounded-circle me-2" width="32" height="32">
+                                        <div>
+                                            <small class="fw-semibold">${player.first_name} ${player.last_name}</small><br>
+                                            <small class="text-muted">Avg: ${player.average_score || 0}</small>
+                                        </div>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+            
+            // Show paired teams
+            if (manualPairs.length === 0) {
+                pairedContainer.innerHTML = '<p class="text-muted text-center">No pairs created yet</p>';
+            } else {
+                pairedContainer.innerHTML = manualPairs.map((pair, index) => {
+                    const p1 = allPlayers.find(p => p.user_id == pair.player1_id);
+                    const p2 = allPlayers.find(p => p.user_id == pair.player2_id);
+                    return `
+                        <div class="paired-team-card mb-2 p-2 border rounded bg-light">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <div class="flex-grow-1">
+                                    <small class="fw-semibold">${pair.duo_name}</small>
+                                    <div class="d-flex align-items-center mt-1">
+                                        <img src="${(typeof BASE_PATH !== 'undefined' ? BASE_PATH : '') + '/assets/images/profile/user-' + ((p1.user_id % 8) + 1)}.jpg" 
+                                             class="rounded-circle me-1" width="24" height="24">
+                                        <small>${p1.first_name} ${p1.last_name}</small>
+                                        <span class="mx-1">+</span>
+                                        <img src="${(typeof BASE_PATH !== 'undefined' ? BASE_PATH : '') + '/assets/images/profile/user-' + ((p2.user_id % 8) + 1)}.jpg" 
+                                             class="rounded-circle me-1" width="24" height="24">
+                                        <small>${p2.first_name} ${p2.last_name}</small>
+                                    </div>
+                                </div>
+                                <button class="btn btn-sm btn-outline-danger" onclick="removePair(${index})">
+                                    <i class="ti ti-x"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+            
+            document.getElementById('pairedCount').textContent = manualPairs.length;
+        }
+
+        let selectedPlayersForPairing = [];
+        
+        function togglePlayerSelection(userId) {
+            const index = selectedPlayersForPairing.indexOf(userId);
+            if (index > -1) {
+                selectedPlayersForPairing.splice(index, 1);
+            } else {
+                if (selectedPlayersForPairing.length >= 2) {
+                    showNotification('You can only select 2 players at a time', 'warning');
+                    document.getElementById(`player_${userId}`).checked = false;
+                    return;
+                }
+                selectedPlayersForPairing.push(userId);
+            }
+            
+            if (selectedPlayersForPairing.length === 2) {
+                createManualPair();
+            }
+        }
+
+        function createManualPair() {
+            if (selectedPlayersForPairing.length !== 2) {
+                showNotification('Please select exactly 2 players', 'warning');
+                return;
+            }
+            
+            const p1 = allPlayers.find(p => p.user_id == selectedPlayersForPairing[0]);
+            const p2 = allPlayers.find(p => p.user_id == selectedPlayersForPairing[1]);
+            
+            const duoName = `Duo ${manualPairs.length + 1}`;
+            
+            manualPairs.push({
+                player1_id: selectedPlayersForPairing[0],
+                player2_id: selectedPlayersForPairing[1],
+                duo_name: duoName
+            });
+            
+            selectedPlayersForPairing = [];
+            updateManualPairingUI();
+            showNotification(`Pair created: ${p1.first_name} + ${p2.first_name}`, 'success');
+        }
+
+        function removePair(index) {
+            manualPairs.splice(index, 1);
+            updateManualPairingUI();
+        }
+
+        function clearAllPairs() {
+            if (confirm('Are you sure you want to clear all pairs?')) {
+                manualPairs = [];
+                selectedPlayersForPairing = [];
+                updateManualPairingUI();
+            }
+        }
+        <?php endif; ?>
 
         // Show notification
         function showNotification(message, type = 'info') {

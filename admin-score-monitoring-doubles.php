@@ -109,9 +109,9 @@ if ($selectedSession) {
     error_log("Error counting duos: " . $e->getMessage());
   }
   
-  // PERFORMANCE FIX: Fetch ALL scores for ALL duos and ALL games in ONE query
+  // PERFORMANCE FIX: Fetch ALL individual player scores for ALL duos and ALL games in ONE query
   // Instead of querying inside loops (N+1 problem)
-  $allScoresByDuoAndGame = [];
+  $allScoresByPlayerAndGame = [];
   if (!empty($adminDuoTeams)) {
     try {
       $duoIds = array_column($adminDuoTeams, 'duo_id');
@@ -120,26 +120,28 @@ if ($selectedSession) {
         $scoresStmt = $pdo->prepare("
           SELECT 
             duo_id,
+            user_id,
             game_number,
-            COALESCE(SUM(player_score), 0) as team_score,
-            COALESCE(SUM(strikes), 0) as total_strikes,
-            COALESCE(SUM(spares), 0) as total_spares,
-            COALESCE(SUM(open_frames), 0) as total_open_frames,
-            MAX(created_at) as last_updated
+            player_score,
+            strikes,
+            spares,
+            open_frames,
+            created_at as last_updated
           FROM game_scores
           WHERE duo_id IN ($placeholders) 
-            AND game_number BETWEEN 1 AND 6 
+            AND game_number BETWEEN 1 AND 5 
             AND status = 'Completed'
-          GROUP BY duo_id, game_number
+          ORDER BY duo_id, user_id, game_number
         ");
         $scoresStmt->execute($duoIds);
         $allScores = $scoresStmt->fetchAll(PDO::FETCH_ASSOC);
         
-        // Organize scores by duo_id and game_number for fast lookup
+        // Organize scores by duo_id, user_id, and game_number for fast lookup
         foreach ($allScores as $score) {
           $duoId = (int)$score['duo_id'];
+          $userId = (int)$score['user_id'];
           $gameNum = (int)$score['game_number'];
-          $allScoresByDuoAndGame[$duoId][$gameNum] = $score;
+          $allScoresByPlayerAndGame[$duoId][$userId][$gameNum] = $score;
         }
       }
     } catch (PDOException $e) {
@@ -148,7 +150,7 @@ if ($selectedSession) {
   }
 } else {
   $totalDuosInDB = 0;
-  $allScoresByDuoAndGame = [];
+  $allScoresByPlayerAndGame = [];
 }
 ?>
 <!doctype html>
@@ -299,6 +301,21 @@ if ($selectedSession) {
       display: block !important;
       visibility: visible !important;
     }
+    
+    /* Style for duo player rows */
+    .duo-player-row {
+      transition: background-color 0.2s;
+    }
+    .duo-player-row:hover {
+      background-color: #f8f9fa;
+    }
+    .duo-player-row[data-player-num="1"] {
+      border-top: 2px solid #0d6efd;
+    }
+    .duo-player-row[data-player-num="2"] {
+      border-bottom: 2px solid #0d6efd;
+      margin-bottom: 8px;
+    }
   </style>
 </head>
 
@@ -440,11 +457,6 @@ if ($selectedSession) {
                         Game 5
                       </button>
                     </li>
-                    <li class="nav-item" role="presentation">
-                      <button class="nav-link" id="game6-tab" data-bs-toggle="tab" data-bs-target="#game6" type="button" role="tab" onclick="switchTab('game6'); return false;">
-                        Game 6
-                      </button>
-                    </li>
                   </ul>
 
                   <div class="tab-content" id="gameTabContent">
@@ -539,12 +551,12 @@ if ($selectedSession) {
                               </td>
                                       <td><span class="fw-bold text-success fs-5"><?php echo $totalScore; ?></span></td>
                                       <td><span class="text-info"><?php echo $avgScore; ?></span></td>
-                                      <td><?php echo $gamesPlayed; ?>/6</td>
+                                      <td><?php echo $gamesPlayed; ?>/5</td>
                                       <td><span class="text-warning fw-bold"><?php echo $bestGame; ?></span></td>
                                       <td><?php echo $totalStrikes; ?></td>
                                       <td><?php echo $totalSpares; ?></td>
                                       <td>
-                                        <?php if ($gamesPlayed >= 6): ?>
+                                        <?php if ($gamesPlayed >= 5): ?>
                                           <span class="badge bg-success">Completed</span>
                                         <?php elseif ($gamesPlayed > 0): ?>
                                           <span class="badge bg-warning">In Progress</span>
@@ -575,7 +587,7 @@ if ($selectedSession) {
                                 </div>
                     </div>
 
-                    <?php for ($gameNum = 1; $gameNum <= 6; $gameNum++): ?>
+                    <?php for ($gameNum = 1; $gameNum <= 5; $gameNum++): ?>
                     <!-- Game <?php echo $gameNum; ?> Tab -->
                     <div class="tab-pane fade" id="game<?php echo $gameNum; ?>" role="tabpanel">
                       <div class="card">
@@ -592,8 +604,8 @@ if ($selectedSession) {
                             <table class="table table-bordered" id="game<?php echo $gameNum; ?>Table">
                               <thead class="table-dark">
                                 <tr>
-                                  <th scope="col" style="width: 20%;">Duo Team</th>
-                                  <th scope="col" style="width: 15%;">Players</th>
+                                  <th scope="col" style="width: 15%;">Duo Team</th>
+                                  <th scope="col" style="width: 15%;">Player</th>
                                   <th scope="col" style="width: 6%;">Lane</th>
                                   <th scope="col" style="width: 10%;">Score</th>
                                   <th scope="col" style="width: 8%;">Strikes</th>
@@ -607,40 +619,40 @@ if ($selectedSession) {
                                 <?php if (!empty($adminDuoTeams)): ?>
                                   <?php foreach ($adminDuoTeams as $duo): ?>
                                     <?php
-                                      // PERFORMANCE FIX: Use pre-fetched scores instead of querying
                                       $duoId = (int)$duo['duo_id'];
-                                      $scoreData = $allScoresByDuoAndGame[$duoId][$gameNum] ?? null;
+                                      $basePath = defined('BASE_PATH') ? BASE_PATH : '';
+                                      $p1Pic = (!empty($duo['player1_picture']) && $duo['player1_picture'] !== 'default-avatar.png')
+                                        ? $basePath . '/uploads/profile_pictures/' . $duo['player1_picture']
+                                        : $basePath . '/assets/images/profile/user-' . (($duo['player1_id'] % 8) + 1) . '.jpg';
+                                      $p2Pic = (!empty($duo['player2_picture']) && $duo['player2_picture'] !== 'default-avatar.png')
+                                        ? $basePath . '/uploads/profile_pictures/' . $duo['player2_picture']
+                                        : $basePath . '/assets/images/profile/user-' . (($duo['player2_id'] % 8) + 1) . '.jpg';
                                       
-                                      // Handle NULL values - if no scores exist, scoreData will be null
-                                      if ($scoreData && $scoreData['team_score'] > 0) {
-                                        $teamScore = (int)$scoreData['team_score'];
-                                        $teamStrikes = (int)$scoreData['total_strikes'];
-                                        $teamSpares = (int)$scoreData['total_spares'];
-                                        $teamOpenFrames = (int)$scoreData['total_open_frames'];
-                                        $hasScores = true;
-                                        $lastUpdated = $scoreData['last_updated'];
-                                      } else {
-                                        $teamScore = '';
-                                        $teamStrikes = '';
-                                        $teamSpares = '';
-                                        $teamOpenFrames = '';
-                                        $hasScores = false;
-                                        $lastUpdated = null;
-                                      }
+                                      // Get individual player scores
+                                      $player1Score = $allScoresByPlayerAndGame[$duoId][$duo['player1_id']][$gameNum] ?? null;
+                                      $player2Score = $allScoresByPlayerAndGame[$duoId][$duo['player2_id']][$gameNum] ?? null;
+                                      
+                                      // Process Player 1
+                                      $p1HasScore = $player1Score && $player1Score['player_score'] > 0;
+                                      $p1Score = $p1HasScore ? (int)$player1Score['player_score'] : '';
+                                      $p1Strikes = $p1HasScore ? (int)$player1Score['strikes'] : '';
+                                      $p1Spares = $p1HasScore ? (int)$player1Score['spares'] : '';
+                                      $p1OpenFrames = $p1HasScore ? (int)$player1Score['open_frames'] : '';
+                                      $p1LastUpdated = $p1HasScore ? $player1Score['last_updated'] : null;
+                                      
+                                      // Process Player 2
+                                      $p2HasScore = $player2Score && $player2Score['player_score'] > 0;
+                                      $p2Score = $p2HasScore ? (int)$player2Score['player_score'] : '';
+                                      $p2Strikes = $p2HasScore ? (int)$player2Score['strikes'] : '';
+                                      $p2Spares = $p2HasScore ? (int)$player2Score['spares'] : '';
+                                      $p2OpenFrames = $p2HasScore ? (int)$player2Score['open_frames'] : '';
+                                      $p2LastUpdated = $p2HasScore ? $player2Score['last_updated'] : null;
                                     ?>
-                                    <tr>
+                                    <!-- Player 1 Row -->
+                                    <tr class="duo-player-row" data-duo-id="<?php echo $duo['duo_id']; ?>" data-user-id="<?php echo $duo['player1_id']; ?>" data-player-num="1">
                               <td>
                                 <div class="d-flex align-items-center">
                                   <div class="d-flex me-2">
-                                            <?php
-                                              $basePath = defined('BASE_PATH') ? BASE_PATH : '';
-                                              $p1Pic = (!empty($duo['player1_picture']) && $duo['player1_picture'] !== 'default-avatar.png')
-                                                ? $basePath . '/uploads/profile_pictures/' . $duo['player1_picture']
-                                                : $basePath . '/assets/images/profile/user-' . (($duo['player1_id'] % 8) + 1) . '.jpg';
-                                              $p2Pic = (!empty($duo['player2_picture']) && $duo['player2_picture'] !== 'default-avatar.png')
-                                                ? $basePath . '/uploads/profile_pictures/' . $duo['player2_picture']
-                                                : $basePath . '/assets/images/profile/user-' . (($duo['player2_id'] % 8) + 1) . '.jpg';
-                                            ?>
                                             <img src="<?php echo htmlspecialchars($p1Pic); ?>" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
                                             <img src="<?php echo htmlspecialchars($p2Pic); ?>" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
                                   </div>
@@ -650,11 +662,13 @@ if ($selectedSession) {
                                 </div>
                               </td>
                                       <td>
-                                        <small>
-                                          <?php echo htmlspecialchars(trim($duo['player1_first_name'] . ' ' . $duo['player1_last_name'])); ?>
-                                          <br>
-                                          <?php echo htmlspecialchars(trim($duo['player2_first_name'] . ' ' . $duo['player2_last_name'])); ?>
-                                        </small>
+                                        <div class="d-flex align-items-center">
+                                          <img src="<?php echo htmlspecialchars($p1Pic); ?>" alt="Player 1" class="rounded-circle me-2" width="32">
+                                          <div>
+                                            <strong><?php echo htmlspecialchars(trim($duo['player1_first_name'] . ' ' . $duo['player1_last_name'])); ?></strong>
+                                            <br><small class="text-muted">Player 1</small>
+                                          </div>
+                                        </div>
                               </td>
                                       <td class="text-center">
                                         <span class="badge bg-primary">Lane <?php echo $duo['lane_number'] ?: '-'; ?></span>
@@ -663,58 +677,147 @@ if ($selectedSession) {
                                         <input type="number" 
                                                class="form-control form-control-sm score-input" 
                                                data-duo-id="<?php echo $duo['duo_id']; ?>" 
-                                               data-player1-id="<?php echo $duo['player1_id']; ?>"
-                                               data-player2-id="<?php echo $duo['player2_id']; ?>"
+                                               data-user-id="<?php echo $duo['player1_id']; ?>"
                                                data-field="score" 
                                                data-game="<?php echo $gameNum; ?>"
-                                               value="<?php echo $hasScores ? $teamScore : ''; ?>" 
+                                               value="<?php echo $p1Score; ?>" 
                                                min="0" 
-                                               max="600" 
-                                               placeholder="0-600">
+                                               max="300" 
+                                               placeholder="0-300">
                               </td>
                                       <td>
                                         <input type="number" 
                                                class="form-control form-control-sm score-input" 
                                                data-duo-id="<?php echo $duo['duo_id']; ?>" 
+                                               data-user-id="<?php echo $duo['player1_id']; ?>"
                                                data-field="strikes" 
                                                data-game="<?php echo $gameNum; ?>"
-                                               value="<?php echo $hasScores ? $teamStrikes : ''; ?>" 
+                                               value="<?php echo $p1Strikes; ?>" 
                                                min="0" 
-                                               max="24" 
-                                               placeholder="0-24">
+                                               max="12" 
+                                               placeholder="0-12">
                               </td>
                                       <td>
                                         <input type="number" 
                                                class="form-control form-control-sm score-input" 
                                                data-duo-id="<?php echo $duo['duo_id']; ?>" 
+                                               data-user-id="<?php echo $duo['player1_id']; ?>"
                                                data-field="spares" 
                                                data-game="<?php echo $gameNum; ?>"
-                                               value="<?php echo $hasScores ? $teamSpares : ''; ?>" 
+                                               value="<?php echo $p1Spares; ?>" 
                                                min="0" 
-                                               max="20" 
-                                               placeholder="0-20">
+                                               max="10" 
+                                               placeholder="0-10">
                               </td>
                                       <td>
                                         <input type="number" 
                                                class="form-control form-control-sm score-input" 
                                                data-duo-id="<?php echo $duo['duo_id']; ?>" 
+                                               data-user-id="<?php echo $duo['player1_id']; ?>"
                                                data-field="open_frames" 
                                                data-game="<?php echo $gameNum; ?>"
-                                               value="<?php echo $hasScores ? $teamOpenFrames : ''; ?>" 
+                                               value="<?php echo $p1OpenFrames; ?>" 
                                                min="0" 
-                                               max="20" 
-                                               placeholder="0-20">
+                                               max="10" 
+                                               placeholder="0-10">
                               </td>
                                       <td class="text-center">
-                                        <?php if ($hasScores): ?>
+                                        <?php if ($p1HasScore): ?>
                                           <span class="badge bg-success">Completed</span>
-                                          <br><small class="text-muted"><?php echo date('g:i A', strtotime($lastUpdated)); ?></small>
+                                          <br><small class="text-muted"><?php echo date('g:i A', strtotime($p1LastUpdated)); ?></small>
                                         <?php else: ?>
                                           <span class="badge bg-warning">Pending</span>
                                         <?php endif; ?>
                               </td>
                                       <td class="text-center">
-                                        <button class="btn btn-success btn-sm" onclick="saveTeamScore(<?php echo $duo['duo_id']; ?>, <?php echo $gameNum; ?>)" title="Save Team Score">
+                                        <button class="btn btn-success btn-sm" onclick="savePlayerScore(<?php echo $duo['duo_id']; ?>, <?php echo $duo['player1_id']; ?>, <?php echo $gameNum; ?>)" title="Save Player Score">
+                                          <i class="ti ti-device-floppy me-1"></i>Save
+                                  </button>
+                              </td>
+                            </tr>
+                                    <!-- Player 2 Row -->
+                                    <tr class="duo-player-row" data-duo-id="<?php echo $duo['duo_id']; ?>" data-user-id="<?php echo $duo['player2_id']; ?>" data-player-num="2">
+                              <td>
+                                <div class="d-flex align-items-center">
+                                  <div class="d-flex me-2">
+                                            <img src="<?php echo htmlspecialchars($p1Pic); ?>" alt="Player 1" class="rounded-circle border border-2 border-white" width="32" style="margin-right: -8px;">
+                                            <img src="<?php echo htmlspecialchars($p2Pic); ?>" alt="Player 2" class="rounded-circle border border-2 border-white" width="32">
+                                  </div>
+                                  <div>
+                                            <strong><?php echo htmlspecialchars($duo['duo_name']); ?></strong>
+                                  </div>
+                                </div>
+                              </td>
+                                      <td>
+                                        <div class="d-flex align-items-center">
+                                          <img src="<?php echo htmlspecialchars($p2Pic); ?>" alt="Player 2" class="rounded-circle me-2" width="32">
+                                          <div>
+                                            <strong><?php echo htmlspecialchars(trim($duo['player2_first_name'] . ' ' . $duo['player2_last_name'])); ?></strong>
+                                            <br><small class="text-muted">Player 2</small>
+                                          </div>
+                                        </div>
+                              </td>
+                                      <td class="text-center">
+                                        <span class="badge bg-primary">Lane <?php echo $duo['lane_number'] ?: '-'; ?></span>
+                              </td>
+                                      <td>
+                                        <input type="number" 
+                                               class="form-control form-control-sm score-input" 
+                                               data-duo-id="<?php echo $duo['duo_id']; ?>" 
+                                               data-user-id="<?php echo $duo['player2_id']; ?>"
+                                               data-field="score" 
+                                               data-game="<?php echo $gameNum; ?>"
+                                               value="<?php echo $p2Score; ?>" 
+                                               min="0" 
+                                               max="300" 
+                                               placeholder="0-300">
+                              </td>
+                                      <td>
+                                        <input type="number" 
+                                               class="form-control form-control-sm score-input" 
+                                               data-duo-id="<?php echo $duo['duo_id']; ?>" 
+                                               data-user-id="<?php echo $duo['player2_id']; ?>"
+                                               data-field="strikes" 
+                                               data-game="<?php echo $gameNum; ?>"
+                                               value="<?php echo $p2Strikes; ?>" 
+                                               min="0" 
+                                               max="12" 
+                                               placeholder="0-12">
+                              </td>
+                                      <td>
+                                        <input type="number" 
+                                               class="form-control form-control-sm score-input" 
+                                               data-duo-id="<?php echo $duo['duo_id']; ?>" 
+                                               data-user-id="<?php echo $duo['player2_id']; ?>"
+                                               data-field="spares" 
+                                               data-game="<?php echo $gameNum; ?>"
+                                               value="<?php echo $p2Spares; ?>" 
+                                               min="0" 
+                                               max="10" 
+                                               placeholder="0-10">
+                              </td>
+                                      <td>
+                                        <input type="number" 
+                                               class="form-control form-control-sm score-input" 
+                                               data-duo-id="<?php echo $duo['duo_id']; ?>" 
+                                               data-user-id="<?php echo $duo['player2_id']; ?>"
+                                               data-field="open_frames" 
+                                               data-game="<?php echo $gameNum; ?>"
+                                               value="<?php echo $p2OpenFrames; ?>" 
+                                               min="0" 
+                                               max="10" 
+                                               placeholder="0-10">
+                              </td>
+                                      <td class="text-center">
+                                        <?php if ($p2HasScore): ?>
+                                          <span class="badge bg-success">Completed</span>
+                                          <br><small class="text-muted"><?php echo date('g:i A', strtotime($p2LastUpdated)); ?></small>
+                                        <?php else: ?>
+                                          <span class="badge bg-warning">Pending</span>
+                                        <?php endif; ?>
+                              </td>
+                                      <td class="text-center">
+                                        <button class="btn btn-success btn-sm" onclick="savePlayerScore(<?php echo $duo['duo_id']; ?>, <?php echo $duo['player2_id']; ?>, <?php echo $gameNum; ?>)" title="Save Player Score">
                                           <i class="ti ti-device-floppy me-1"></i>Save
                                   </button>
                               </td>
@@ -774,8 +877,8 @@ if ($selectedSession) {
     // Last Updated: <?php echo date('Y-m-d H:i:s'); ?>
     // Version: 2.0 - Team-based score entry
     
-    // Override placeholder with full implementation
-    window.saveTeamScore = function(duoId, gameNumber) {
+    // Save individual player score
+    window.savePlayerScore = function(duoId, userId, gameNumber) {
       
       if (!SELECTED_SESSION_ID) {
         showNotification('No active Doubles session selected.', 'danger');
@@ -789,121 +892,170 @@ if ($selectedSession) {
         return;
       }
       
-      const row = table.querySelector(`input[data-duo-id="${duoId}"][data-game="${gameNumber}"]`).closest('tr');
+      // Find the row for this specific player
+      const row = table.querySelector(`input[data-duo-id="${duoId}"][data-user-id="${userId}"][data-game="${gameNumber}"]`)?.closest('tr');
+      
       if (!row) {
-        console.error('Row not found for duo:', duoId);
+        console.error('Row not found for duo:', duoId, 'user:', userId);
         showNotification('Row not found', 'danger');
         return;
       }
       
-      const scoreInput = row.querySelector('[data-field="score"]');
-      const strikesInput = row.querySelector('[data-field="strikes"]');
-      const sparesInput = row.querySelector('[data-field="spares"]');
-      const openFramesInput = row.querySelector('[data-field="open_frames"]');
+      const scoreInput = row.querySelector('[data-field="score"][data-user-id="' + userId + '"]');
+      const strikesInput = row.querySelector('[data-field="strikes"][data-user-id="' + userId + '"]');
+      const sparesInput = row.querySelector('[data-field="spares"][data-user-id="' + userId + '"]');
+      const openFramesInput = row.querySelector('[data-field="open_frames"][data-user-id="' + userId + '"]');
       
-      const teamScore = parseInt(scoreInput.value || '0', 10);
-      const teamStrikes = parseInt(strikesInput.value || '0', 10);
-      const teamSpares = parseInt(sparesInput.value || '0', 10);
-      const teamOpenFrames = parseInt(openFramesInput.value || '0', 10);
+      if (!scoreInput || !strikesInput || !sparesInput || !openFramesInput) {
+        console.error('Input fields not found');
+        showNotification('Input fields not found', 'danger');
+        return;
+      }
       
-      const player1Id = parseInt(scoreInput.getAttribute('data-player1-id'), 10);
-      const player2Id = parseInt(scoreInput.getAttribute('data-player2-id'), 10);
-
+      const playerScore = parseInt(scoreInput.value || '0', 10);
+      const playerStrikes = parseInt(strikesInput.value || '0', 10);
+      const playerSpares = parseInt(sparesInput.value || '0', 10);
+      const playerOpenFrames = parseInt(openFramesInput.value || '0', 10);
 
       // Validation
-      if (!teamScore || teamScore <= 0) {
-        showNotification('Please enter a team score.', 'warning');
+      if (!playerScore || playerScore <= 0) {
+        showNotification('Please enter a valid score (1-300).', 'warning');
         return;
       }
       
-      if (!player1Id || !player2Id) {
-        console.error('Missing player IDs:', player1Id, player2Id);
-        showNotification('Missing player information', 'danger');
+      if (playerScore > 300) {
+        showNotification('Score cannot exceed 300.', 'warning');
         return;
       }
 
-      // Split the team score equally between both players (or you can adjust this logic)
-      const player1Score = Math.floor(teamScore / 2);
-      const player2Score = teamScore - player1Score;
-      
-      // Split strikes, spares, open frames equally
-      const player1Strikes = Math.floor(teamStrikes / 2);
-      const player2Strikes = teamStrikes - player1Strikes;
-      
-      const player1Spares = Math.floor(teamSpares / 2);
-      const player2Spares = teamSpares - player1Spares;
-      
-      const player1OpenFrames = Math.floor(teamOpenFrames / 2);
-      const player2OpenFrames = teamOpenFrames - player1OpenFrames;
-
-      const requests = [];
       const basePath = (typeof BASE_PATH !== 'undefined' ? BASE_PATH : (window.BASE_PATH || ''));
       const url = basePath + '/ajax/duo-management.php';
 
-      // Save for player 1
-      requests.push(fetch(url, {
+      // Save individual player score
+      fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams({
           action: 'save_duo_score',
           duo_id: duoId,
-          user_id: player1Id,
+          user_id: userId,
           game_number: gameNumber,
-          player_score: player1Score,
-          strikes: player1Strikes,
-          spares: player1Spares,
-          open_frames: player1OpenFrames,
+          player_score: playerScore,
+          strikes: playerStrikes,
+          spares: playerSpares,
+          open_frames: playerOpenFrames,
           session_id: SELECTED_SESSION_ID
         })
-      }));
+      })
+      .then(response => response.json())
+      .then(result => {
+        if (!result.success) {
+          console.error('Error saving player score:', result);
+          showNotification(result.message || 'Failed to save player score.', 'danger');
+          return;
+        }
 
-      // Save for player 2
-      requests.push(fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({
-          action: 'save_duo_score',
-          duo_id: duoId,
-          user_id: player2Id,
-          game_number: gameNumber,
-          player_score: player2Score,
-          strikes: player2Strikes,
-          spares: player2Spares,
-          open_frames: player2OpenFrames,
-          session_id: SELECTED_SESSION_ID
-        })
-      }));
-
-      Promise.all(requests)
-        .then(responses => Promise.all(responses.map(r => r.json())))
-        .then(results => {
-          const anyError = results.find(r => !r.success);
-          if (anyError) {
-            console.error('Error saving duo scores:', anyError);
-            showNotification(anyError.message || 'Failed to save team score.', 'danger');
-            return;
-          }
-
-          showNotification('Team score saved successfully!', 'success');
-          
-          // Update status
-          const statusCell = row.querySelector('td:nth-child(8)');
-          if (statusCell) {
-            statusCell.innerHTML = `
-              <span class="badge bg-success">Completed</span>
-              <br><small class="text-muted">${new Date().toLocaleTimeString()}</small>
-            `;
-          }
-        })
-        .catch(err => {
-          console.error('Error in saveTeamScore:', err);
-          showNotification('Error while saving team score.', 'danger');
-        });
+        showNotification('Player score saved successfully!', 'success');
+        
+        // Update status cell (8th column)
+        const statusCell = row.querySelector('td:nth-child(8)');
+        if (statusCell) {
+          statusCell.innerHTML = `
+            <span class="badge bg-success">Completed</span>
+            <br><small class="text-muted">${new Date().toLocaleTimeString()}</small>
+          `;
+        }
+      })
+      .catch(err => {
+        console.error('Error in savePlayerScore:', err);
+        showNotification('Error while saving player score.', 'danger');
+      });
     };
 
     window.saveAllScores = function(gameNumber) {
+      if (!SELECTED_SESSION_ID) {
+        showNotification('No active Doubles session selected.', 'danger');
+        return;
+      }
+
+      const table = document.getElementById(`game${gameNumber}Table`);
+      if (!table) {
+        showNotification('Table not found', 'danger');
+        return;
+      }
+
+      // Get all player rows
+      const playerRows = table.querySelectorAll('tr.duo-player-row');
+      if (playerRows.length === 0) {
+        showNotification('No players found to save', 'warning');
+        return;
+      }
+
       showNotification('Saving all scores for Game ' + gameNumber + '...', 'info');
-      // Implement bulk save if needed
+      
+      const basePath = (typeof BASE_PATH !== 'undefined' ? BASE_PATH : (window.BASE_PATH || ''));
+      const url = basePath + '/ajax/duo-management.php';
+      const requests = [];
+      
+      playerRows.forEach(row => {
+        const duoId = parseInt(row.getAttribute('data-duo-id'), 10);
+        const scoreInput = row.querySelector('[data-field="score"]');
+        const strikesInput = row.querySelector('[data-field="strikes"]');
+        const sparesInput = row.querySelector('[data-field="spares"]');
+        const openFramesInput = row.querySelector('[data-field="open_frames"]');
+        
+        if (!scoreInput) return;
+        
+        const userId = parseInt(scoreInput.getAttribute('data-user-id'), 10);
+        const playerScore = parseInt(scoreInput.value || '0', 10);
+        const playerStrikes = parseInt(strikesInput.value || '0', 10);
+        const playerSpares = parseInt(sparesInput.value || '0', 10);
+        const playerOpenFrames = parseInt(openFramesInput.value || '0', 10);
+        
+        // Only save if score is valid
+        if (playerScore > 0 && playerScore <= 300) {
+          requests.push(
+            fetch(url, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+              body: new URLSearchParams({
+                action: 'save_duo_score',
+                duo_id: duoId,
+                user_id: userId,
+                game_number: gameNumber,
+                player_score: playerScore,
+                strikes: playerStrikes,
+                spares: playerSpares,
+                open_frames: playerOpenFrames,
+                session_id: SELECTED_SESSION_ID
+              })
+            }).then(r => r.json())
+          );
+        }
+      });
+      
+      if (requests.length === 0) {
+        showNotification('No valid scores to save', 'warning');
+        return;
+      }
+      
+      Promise.all(requests)
+        .then(results => {
+          const errors = results.filter(r => !r.success);
+          if (errors.length > 0) {
+            showNotification(`Saved ${results.length - errors.length} scores. ${errors.length} failed.`, 'warning');
+          } else {
+            showNotification(`Successfully saved ${results.length} player scores!`, 'success');
+            // Refresh page after a short delay
+            setTimeout(() => {
+              location.reload();
+            }, 1500);
+          }
+        })
+        .catch(err => {
+          console.error('Error saving all scores:', err);
+          showNotification('Error while saving scores.', 'danger');
+        });
     };
 
     window.refreshTable = function() {

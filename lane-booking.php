@@ -2,10 +2,13 @@
 // Get current user and their active session
 require_once 'includes/auth.php';
 require_once 'includes/session-management.php';
+require_once 'includes/duo-helper.php';
 
 $currentUser = getCurrentUser();
 $userActiveSession = null;
 $userLaneAssignment = null;
+$duoInfo = null;
+$duoPartner = null;
 
 if ($currentUser) {
     // Get active session
@@ -27,6 +30,58 @@ if ($currentUser) {
                 }
             } catch (Exception $e) {
                 // Handle error silently
+            }
+            
+            // Get duo information if this is a Doubles session
+            if ($activeSession['game_mode'] === 'Doubles') {
+                try {
+                    $pdo = getDBConnection();
+                    $stmt = $pdo->prepare("
+                        SELECT 
+                            dt.duo_id,
+                            dt.duo_name,
+                            dt.lane_number as duo_lane,
+                            dt.player1_id,
+                            dt.player2_id,
+                            u1.user_id as p1_id,
+                            u1.first_name as p1_first_name,
+                            u1.last_name as p1_last_name,
+                            u1.profile_picture as p1_picture,
+                            u2.user_id as p2_id,
+                            u2.first_name as p2_first_name,
+                            u2.last_name as p2_last_name,
+                            u2.profile_picture as p2_picture
+                        FROM duo_teams dt
+                        JOIN users u1 ON dt.player1_id = u1.user_id
+                        JOIN users u2 ON dt.player2_id = u2.user_id
+                        WHERE dt.session_id = ? 
+                        AND (dt.player1_id = ? OR dt.player2_id = ?)
+                        LIMIT 1
+                    ");
+                    $stmt->execute([$activeSession['session_id'], $currentUser['user_id'], $currentUser['user_id']]);
+                    $duoInfo = $stmt->fetch(PDO::FETCH_ASSOC);
+                    
+                    if ($duoInfo) {
+                        // Determine which player is the current user and who is the partner
+                        if ($duoInfo['player1_id'] == $currentUser['user_id']) {
+                            $duoPartner = [
+                                'user_id' => $duoInfo['p2_id'],
+                                'first_name' => $duoInfo['p2_first_name'],
+                                'last_name' => $duoInfo['p2_last_name'],
+                                'profile_picture' => $duoInfo['p2_picture']
+                            ];
+                        } else {
+                            $duoPartner = [
+                                'user_id' => $duoInfo['p1_id'],
+                                'first_name' => $duoInfo['p1_first_name'],
+                                'last_name' => $duoInfo['p1_last_name'],
+                                'profile_picture' => $duoInfo['p1_picture']
+                            ];
+                        }
+                    }
+                } catch (Exception $e) {
+                    error_log("Error fetching duo info: " . $e->getMessage());
+                }
             }
         }
     }
@@ -337,6 +392,20 @@ if ($currentUser) {
                             <i class="ti ti-user me-2"></i>
                             <span><?php echo ucfirst($userActiveSession['game_mode']); ?></span>
                           </div>
+                          <?php if ($duoInfo && $duoPartner): ?>
+                          <div class="d-flex align-items-center">
+                            <i class="ti ti-users me-2"></i>
+                            <span>
+                              <strong>Duo:</strong> <?php echo htmlspecialchars($duoInfo['duo_name']); ?>
+                            </span>
+                          </div>
+                          <div class="d-flex align-items-center">
+                            <i class="ti ti-user-plus me-2"></i>
+                            <span>
+                              <strong>Partner:</strong> <?php echo htmlspecialchars($duoPartner['first_name'] . ' ' . $duoPartner['last_name']); ?>
+                            </span>
+                          </div>
+                          <?php endif; ?>
                           <?php if ($userLaneAssignment): ?>
                           <div class="d-flex align-items-center">
                             <i class="ti ti-target me-2"></i>
@@ -397,7 +466,7 @@ if ($currentUser) {
                         <div class="bg-primary rounded-circle p-3 me-3">
                           <i class="ti ti-target text-white fs-3"></i>
                         </div>
-                        <div>
+                        <div class="flex-grow-1">
                           <h6 class="mb-0">Your Lane Assignment</h6>
                           <h4 class="mb-0 text-primary">
                             <?php if ($userLaneAssignment): ?>
@@ -413,6 +482,29 @@ if ($currentUser) {
                               Click "Draw Your Lane" to get assigned
                             <?php endif; ?>
                           </small>
+                          
+                          <?php if ($duoInfo && $duoPartner): ?>
+                          <div class="mt-3 pt-3 border-top">
+                            <div class="d-flex align-items-center mb-2">
+                              <i class="ti ti-users me-2 text-primary"></i>
+                              <strong class="text-primary">Duo Team:</strong>
+                              <span class="ms-2"><?php echo htmlspecialchars($duoInfo['duo_name']); ?></span>
+                            </div>
+                            <div class="d-flex align-items-center">
+                              <?php
+                                $basePath = defined('BASE_PATH') ? BASE_PATH : '';
+                                $partnerPic = (!empty($duoPartner['profile_picture']) && $duoPartner['profile_picture'] !== 'default-avatar.png')
+                                  ? $basePath . '/uploads/profile_pictures/' . $duoPartner['profile_picture']
+                                  : $basePath . '/assets/images/profile/user-' . (($duoPartner['user_id'] % 8) + 1) . '.jpg';
+                              ?>
+                              <img src="<?php echo htmlspecialchars($partnerPic); ?>" alt="Partner" class="rounded-circle me-2" width="32" height="32" style="object-fit: cover;">
+                              <div>
+                                <strong>Your Partner:</strong>
+                                <span class="ms-2"><?php echo htmlspecialchars($duoPartner['first_name'] . ' ' . $duoPartner['last_name']); ?></span>
+                              </div>
+                            </div>
+                          </div>
+                          <?php endif; ?>
                         </div>
                       </div>
                     </div>
