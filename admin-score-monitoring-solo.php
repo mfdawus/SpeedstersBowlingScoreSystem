@@ -703,12 +703,12 @@ if ($sessionId) {
                                   <span class="text-muted">-</span>
                                 <?php endif; ?>
                               </td>
-                                    <td><span class="fw-bold text-success"><?php echo $stats['total_score']; ?></span></td>
-                                    <td><span class="fw-bold text-primary"><?php echo $stats['avg_score']; ?></span></td>
-                                    <td><?php echo $stats['games_played']; ?></td>
-                                    <td><span class="badge bg-info"><?php echo $stats['best_score'] > 0 ? $stats['best_score'] : '-'; ?></span></td>
-                                    <td><?php echo $stats['total_strikes']; ?></td>
-                                    <td><?php echo $stats['total_spares']; ?></td>
+                                     <td><span class="fw-bold text-success total-score"><?php echo $stats['total_score']; ?></span></td>
+                                     <td><span class="fw-bold text-primary avg-score"><?php echo $stats['avg_score']; ?></span></td>
+                                     <td><span class="games-played"><?php echo $stats['games_played']; ?></span></td>
+                                     <td><span class="badge bg-info best-game"><?php echo $stats['best_score'] > 0 ? $stats['best_score'] : '-'; ?></span></td>
+                                     <td><span class="total-strikes"><?php echo $stats['total_strikes']; ?></span></td>
+                                     <td><span class="total-spares"><?php echo $stats['total_spares']; ?></span></td>
                               <td><span class="badge bg-success">Active</span></td>
                                     <td><small class="text-muted"><?php echo $stats['last_updated'] ? date('M j, g:i A', strtotime($stats['last_updated'])) : 'Never'; ?></small></td>
                               <td>
@@ -812,7 +812,7 @@ if ($sessionId) {
                                     foreach ($allPlayers as $player):
                                       $score = $game1ScoresByUser[$player['user_id']] ?? null;
                                 ?>
-                                    <tr>
+                                    <tr data-player-id="<?php echo $player['user_id']; ?>">
                               <td>
                                 <div class="d-flex align-items-center">
                                           <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-' . ($player['user_id'] % 8) + 1; ?>.jpg" alt="Player" class="rounded-circle me-2" width="32">
@@ -981,7 +981,7 @@ if ($sessionId) {
                                       $stmt->execute([$player['user_id']]);
                                       $score = $stmt->fetch(PDO::FETCH_ASSOC);
                                 ?>
-                                    <tr>
+                                    <tr data-player-id="<?php echo $player['user_id']; ?>">
                               <td>
                                 <div class="d-flex align-items-center">
                                           <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-' . ($player['user_id'] % 8) + 1; ?>.jpg" alt="Player" class="rounded-circle me-2" width="32">
@@ -1150,7 +1150,7 @@ if ($sessionId) {
                                       $stmt->execute([$player['user_id']]);
                                       $score = $stmt->fetch(PDO::FETCH_ASSOC);
                                 ?>
-                                    <tr>
+                                    <tr data-player-id="<?php echo $player['user_id']; ?>">
                               <td>
                                 <div class="d-flex align-items-center">
                                           <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-' . ($player['user_id'] % 8) + 1; ?>.jpg" alt="Player" class="rounded-circle me-2" width="32">
@@ -1319,7 +1319,7 @@ if ($sessionId) {
                                       $stmt->execute([$player['user_id']]);
                                       $score = $stmt->fetch(PDO::FETCH_ASSOC);
                                 ?>
-                                    <tr>
+                                    <tr data-player-id="<?php echo $player['user_id']; ?>">
                               <td>
                                 <div class="d-flex align-items-center">
                                           <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-' . ($player['user_id'] % 8) + 1; ?>.jpg" alt="Player" class="rounded-circle me-2" width="32">
@@ -1488,7 +1488,7 @@ if ($sessionId) {
                                       $stmt->execute([$player['user_id']]);
                                       $score = $stmt->fetch(PDO::FETCH_ASSOC);
                                 ?>
-                                    <tr>
+                                    <tr data-player-id="<?php echo $player['user_id']; ?>">
                                       <td>
                                         <div class="d-flex align-items-center">
                                           <img src="<?php echo (defined('BASE_PATH') ? BASE_PATH : '') . '/assets/images/profile/user-' . ($player['user_id'] % 8) + 1; ?>.jpg" alt="Player" class="rounded-circle me-2" width="32">
@@ -2342,14 +2342,20 @@ if ($sessionId) {
         return;
       }
       
-      // Update existing rows instead of replacing them
-      players.forEach((player, index) => {
-        let row = tbody.children[index];
+      // Update existing rows by matching player ID instead of DOM index
+      players.forEach(player => {
+        let row = tbody.querySelector(`tr[data-player-id="${player.user_id}"]`);
+        if (!row) {
+          const input = tbody.querySelector(`input[data-user-id="${player.user_id}"]`);
+          if (input) {
+            row = input.closest('tr');
+          }
+        }
         if (row) {
           // Update the existing row data
           updateGameRow(row, player, gameNumber);
         } else {
-          console.log(`Game ${gameNumber} row ${index} not found for player ${player.name || player.user_id}`);
+          console.log(`Game ${gameNumber} row not found for player ${player.user_id}`);
         }
       });
     }
@@ -2437,8 +2443,8 @@ if ($sessionId) {
       // Update average
       const avgCell = row.querySelector('.avg-score');
       if (avgCell) {
-        avgCell.textContent = playerData.average_score || 0;
-        console.log('Updated average to:', playerData.average_score || 0);
+        avgCell.textContent = playerData.average_score || playerData.avg_score || 0;
+        console.log('Updated average to:', avgCell.textContent);
       } else {
         console.log('Average cell not found');
       }
@@ -2455,8 +2461,9 @@ if ($sessionId) {
       // Update best game
       const bestGameCell = row.querySelector('.best-game');
       if (bestGameCell) {
-        bestGameCell.textContent = playerData.best_game || 0;
-        console.log('Updated best game to:', playerData.best_game || 0);
+        const best = playerData.best_score || playerData.best_game || 0;
+        bestGameCell.textContent = best > 0 ? best : '-';
+        console.log('Updated best game to:', best);
       } else {
         console.log('Best game cell not found');
       }

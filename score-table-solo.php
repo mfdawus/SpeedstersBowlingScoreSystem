@@ -276,11 +276,13 @@ $currentUser = getCurrentUser();
                               <th scope="col">Strikes</th>
                               <th scope="col">Spares</th>
                               <th scope="col">Last Updated</th>
+                              <th scope="col" class="text-center">Scorecard</th>
                             </tr>
                           </thead>
                           <tbody id="overallTableBody">
                             <tr>
                               <td colspan="11" class="text-center py-4">
+                              <td colspan="12" class="text-center py-4">
                                 <div class="loading-spinner"></div>
                                 <span class="ms-2">Loading data...</span>
                               </td>
@@ -548,6 +550,7 @@ $currentUser = getCurrentUser();
       const tbody = document.getElementById('overallTableBody');
       if (!currentData || currentData.length === 0) {
         tbody.innerHTML = '<tr><td colspan="11" class="text-center text-muted py-4">No data available</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="12" class="text-center text-muted py-4">No data available</td></tr>';
         return;
       }
 
@@ -582,6 +585,7 @@ $currentUser = getCurrentUser();
         
         html += `
           <tr data-player-id="${player.user_id || index}" class="${highlightClass}" style="transition: all 0.3s ease; ${highlightStyle}">
+          <tr data-player-id="${player.user_id || index}" class="${highlightClass}" style="transition: all 0.3s ease; cursor: pointer; ${highlightStyle}" onclick="if(!event.target.closest('button')) showPlayerScorecardModal(${player.user_id})">
             <td><span class="rank-badge ${rankClass}">${rank}</span></td>
             <td>
               <div class="d-flex align-items-center">
@@ -606,6 +610,11 @@ $currentUser = getCurrentUser();
             <td>${totalStrikes}</td>
             <td>${totalSpares}</td>
             <td><small class="text-muted">${lastUpdated}</small></td>
+            <td class="text-center">
+              <button class="btn btn-sm btn-outline-primary shadow-sm rounded-pill px-3" onclick="showPlayerScorecardModal(${player.user_id})" title="View Full 5-Game Scorecard">
+                <i class="ti ti-eye me-1"></i>Scorecard
+              </button>
+            </td>
           </tr>
         `;
       });
@@ -771,6 +780,139 @@ $currentUser = getCurrentUser();
         }
       });
     });
+
+    // Show Player 5-Game Scorecard Modal
+    function showPlayerScorecardModal(userId) {
+      if (!currentData || currentData.length === 0) return;
+      
+      const player = currentData.find(p => p.user_id == userId);
+      if (!player) {
+        showNotification('Player data not found', 'error');
+        return;
+      }
+      
+      const playerName = `${player.first_name} ${player.last_name}`;
+      const totalScore = player.total_score || 0;
+      const avgScore = player.avg_score || 0;
+      const lane = player.lane_number ? `Lane ${player.lane_number}` : 'Not assigned';
+      const bestScore = player.best_score || 0;
+      
+      let gameCardsHtml = '';
+      
+      for (let game = 1; game <= 5; game++) {
+        const gameScoreObj = player[`game_${game}_score`];
+        const score = gameScoreObj ? gameScoreObj.player_score : '-';
+        const strikes = gameScoreObj && gameScoreObj.strikes !== null ? gameScoreObj.strikes : '-';
+        const spares = gameScoreObj && gameScoreObj.spares !== null ? gameScoreObj.spares : '-';
+        const openFrames = gameScoreObj && gameScoreObj.open_frames !== null ? gameScoreObj.open_frames : '-';
+        const isCompleted = gameScoreObj && gameScoreObj.player_score > 0;
+        
+        const scoreDisplay = isCompleted ? (score == 300 ? '<span class="text-warning font-bold">300 🏆</span>' : `<span class="fw-bold text-dark fs-4">${score}</span>`) : '<span class="text-muted fs-5">-</span>';
+        
+        gameCardsHtml += `
+          <div class="col-md-6 col-lg-4 mb-3">
+            <div class="card h-100 border-0 shadow-sm rounded-3 bg-light">
+              <div class="card-body p-3">
+                <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
+                  <h6 class="fw-bold text-primary mb-0">
+                    <i class="ti ti-bowling me-1"></i>Game ${game}
+                  </h6>
+                  <div>${scoreDisplay}</div>
+                </div>
+                <div class="row text-center g-1">
+                  <div class="col-4">
+                    <div class="p-2 bg-white rounded border">
+                      <small class="text-muted d-block" style="font-size: 0.7rem;">Strikes</small>
+                      <strong class="text-success fs-6">${strikes}</strong>
+                    </div>
+                  </div>
+                  <div class="col-4">
+                    <div class="p-2 bg-white rounded border">
+                      <small class="text-muted d-block" style="font-size: 0.7rem;">Spares</small>
+                      <strong class="text-info fs-6">${spares}</strong>
+                    </div>
+                  </div>
+                  <div class="col-4">
+                    <div class="p-2 bg-white rounded border">
+                      <small class="text-muted d-block" style="font-size: 0.7rem;">Opens</small>
+                      <strong class="text-warning fs-6">${openFrames}</strong>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+      
+      const modalHtml = `
+        <div class="modal fade" id="playerScorecardModal" tabindex="-1" aria-labelledby="playerScorecardModalLabel" aria-hidden="true">
+          <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg rounded-4">
+              <div class="modal-header bg-gradient-primary text-white py-3">
+                <div class="d-flex align-items-center">
+                  <img src="${getProfilePictureUrl(player)}" alt="Player Avatar" class="rounded-circle me-3 border border-2 border-white" width="45" height="45" style="object-fit: cover;" onerror="this.onerror=null; this.src=(typeof BASE_PATH !== 'undefined' ? BASE_PATH : '') + '/assets/images/profile/user-1.jpg';">
+                  <div>
+                    <h5 class="modal-title fw-bold text-white mb-0" id="playerScorecardModalLabel">
+                      ${playerName}
+                    </h5>
+                    <small class="text-white-50">${player.user_role || 'Player'} • ${lane}</small>
+                  </div>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body p-4">
+                <div class="row mb-4 text-center g-2">
+                  <div class="col-3">
+                    <div class="p-2 rounded bg-light border">
+                      <small class="text-muted d-block">Total Score</small>
+                      <span class="fs-5 fw-bold text-success">${totalScore}</span>
+                    </div>
+                  </div>
+                  <div class="col-3">
+                    <div class="p-2 rounded bg-light border">
+                      <small class="text-muted d-block">Average</small>
+                      <span class="fs-5 fw-bold text-primary">${avgScore}</span>
+                    </div>
+                  </div>
+                  <div class="col-3">
+                    <div class="p-2 rounded bg-light border">
+                      <small class="text-muted d-block">Best Game</small>
+                      <span class="fs-5 fw-bold text-warning">${bestScore > 0 ? bestScore : '-'}</span>
+                    </div>
+                  </div>
+                  <div class="col-3">
+                    <div class="p-2 rounded bg-light border">
+                      <small class="text-muted d-block">Games</small>
+                      <span class="fs-5 fw-bold text-info">${player.games_played || 0}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <h6 class="fw-bold text-dark mb-3 border-bottom pb-2">
+                  <i class="ti ti-report-analytics me-1 text-primary"></i>5-Game Performance Scorecard
+                </h6>
+                <div class="row">
+                  ${gameCardsHtml}
+                </div>
+              </div>
+              <div class="modal-footer bg-light py-2">
+                <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">Close</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      const existingModal = document.getElementById('playerScorecardModal');
+      if (existingModal) {
+        existingModal.remove();
+      }
+      
+      document.body.insertAdjacentHTML('beforeend', modalHtml);
+      const modal = new bootstrap.Modal(document.getElementById('playerScorecardModal'));
+      modal.show();
+    }
 
     // Notification function
     function showNotification(message, type = 'info') {
