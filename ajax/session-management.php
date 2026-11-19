@@ -747,15 +747,69 @@ case 'get_players_data':
             
             try {
                 $pdo = getDBConnection();
+                $pdo->beginTransaction();
+                
+                $userId = $_SESSION['user_id'];
+                
+                // Ensure user is in session_participants table
+                $checkParticipantStmt = $pdo->prepare("SELECT participant_id, lane_number FROM session_participants WHERE session_id = ? AND user_id = ?");
+                $checkParticipantStmt->execute([$sessionId, $userId]);
+                $participant = $checkParticipantStmt->fetch(PDO::FETCH_ASSOC);
+                
+                // If user is not in session_participants, add them
+                if (!$participant) {
+                    $insertStmt = $pdo->prepare("INSERT INTO session_participants (session_id, user_id, joined_at) VALUES (?, ?, NOW())");
+                    $insertStmt->execute([$sessionId, $userId]);
+                    $participant = ['participant_id' => $pdo->lastInsertId(), 'lane_number' => null];
+                }
                 
                 // Check if user already has a lane assigned
-                $checkStmt = $pdo->prepare("SELECT lane_number FROM session_participants WHERE session_id = ? AND user_id = ?");
-                $checkStmt->execute([$sessionId, $_SESSION['user_id']]);
-                $existingLane = $checkStmt->fetch(PDO::FETCH_ASSOC);
-                
-                if ($existingLane && $existingLane['lane_number']) {
+                if ($participant['lane_number']) {
+                    $pdo->rollBack();
                     $response['message'] = 'You already have a lane assigned';
                     break;
+                }
+                
+                // Check if this is a Doubles session and if user is in a duo
+                $sessionStmt = $pdo->prepare("SELECT game_mode FROM game_sessions WHERE session_id = ?");
+                $sessionStmt->execute([$sessionId]);
+                $session = $sessionStmt->fetch(PDO::FETCH_ASSOC);
+                $isDoubles = ($session && $session['game_mode'] === 'Doubles');
+                
+                $duoInfo = null;
+                $partnerId = null;
+                if ($isDoubles) {
+                    // Check if user is in a duo
+                    $duoStmt = $pdo->prepare("
+                        SELECT duo_id, player1_id, player2_id, lane_number as duo_lane
+                        FROM duo_teams
+                        WHERE session_id = ? AND (player1_id = ? OR player2_id = ?)
+                        LIMIT 1
+                    ");
+                    $duoStmt->execute([$sessionId, $userId, $userId]);
+                    $duoInfo = $duoStmt->fetch(PDO::FETCH_ASSOC);
+                    
+                    if ($duoInfo) {
+                        // Check if duo already has a lane assigned
+                        if ($duoInfo['duo_lane']) {
+                            $pdo->rollBack();
+                            $response['message'] = 'Your duo already has a lane assigned (Lane ' . $duoInfo['duo_lane'] . ')';
+                            break;
+                        }
+                        
+                        // Get partner ID
+                        $partnerId = ($duoInfo['player1_id'] == $userId) ? $duoInfo['player2_id'] : $duoInfo['player1_id'];
+                        
+                        // Ensure partner is also in session_participants
+                        $checkPartnerStmt = $pdo->prepare("SELECT participant_id FROM session_participants WHERE session_id = ? AND user_id = ?");
+                        $checkPartnerStmt->execute([$sessionId, $partnerId]);
+                        $partnerParticipant = $checkPartnerStmt->fetch(PDO::FETCH_ASSOC);
+                        
+                        if (!$partnerParticipant) {
+                            $insertPartnerStmt = $pdo->prepare("INSERT INTO session_participants (session_id, user_id, joined_at) VALUES (?, ?, NOW())");
+                            $insertPartnerStmt->execute([$sessionId, $partnerId]);
+                        }
+                    }
                 }
                 
                 // Get session lane configuration
@@ -763,6 +817,8 @@ case 'get_players_data':
                 $availableLanes = getAvailableLanes($sessionId);
                 
                 // Get available lanes (not full)
+                // For doubles, we need to account for both players in the duo
+                $playersNeeded = $isDoubles && $duoInfo ? 2 : 1;
                 $stmt = $pdo->prepare("
                     SELECT lane_number, COUNT(*) as player_count 
                     FROM session_participants 
@@ -776,12 +832,14 @@ case 'get_players_data':
                 $availableLanesForAssignment = [];
                 foreach ($availableLanes as $laneNumber) {
                     $currentCount = isset($laneCounts[$laneNumber]) ? $laneCounts[$laneNumber] : 0;
-                    if ($currentCount < $config['players_per_lane']) {
+                    // Check if lane has space for both players (if doubles) or just one
+                    if (($currentCount + $playersNeeded) <= $config['players_per_lane']) {
                         $availableLanesForAssignment[] = $laneNumber;
                     }
                 }
                 
                 if (empty($availableLanesForAssignment)) {
+                    $pdo->rollBack();
                     $response['message'] = 'No lanes available';
                     break;
                 }
@@ -791,14 +849,42 @@ case 'get_players_data':
                 
                 // Assign user to the random lane
                 $assignStmt = $pdo->prepare("UPDATE session_participants SET lane_number = ? WHERE session_id = ? AND user_id = ?");
-                $result = $assignStmt->execute([$randomLane, $sessionId, $_SESSION['user_id']]);
+                $result = $assignStmt->execute([$randomLane, $sessionId, $userId]);
                 
-                if ($result) {
-                    $response = ['success' => true, 'lane_number' => $randomLane, 'message' => 'Lane assigned successfully'];
-                } else {
+                if (!$result) {
+                    $pdo->rollBack();
                     $response['message'] = 'Failed to assign lane';
+                    break;
                 }
+                
+                // For doubles, assign the same lane to partner and update duo_teams
+                if ($isDoubles && $duoInfo && $partnerId) {
+                    // Assign lane to partner
+                    $assignPartnerStmt = $pdo->prepare("UPDATE session_participants SET lane_number = ? WHERE session_id = ? AND user_id = ?");
+                    $partnerResult = $assignPartnerStmt->execute([$randomLane, $sessionId, $partnerId]);
+                    
+                    if (!$partnerResult) {
+                        $pdo->rollBack();
+                        $response['message'] = 'Failed to assign lane to partner';
+                        break;
+                    }
+                    
+                    // Update duo_teams table with the lane number
+                    $updateDuoStmt = $pdo->prepare("UPDATE duo_teams SET lane_number = ? WHERE duo_id = ?");
+                    $updateDuoStmt->execute([$randomLane, $duoInfo['duo_id']]);
+                }
+                
+                $pdo->commit();
+                $response = [
+                    'success' => true, 
+                    'lane_number' => $randomLane, 
+                    'message' => $isDoubles && $duoInfo ? 'Lane assigned to you and your partner successfully!' : 'Lane assigned successfully'
+                ];
             } catch (Exception $e) {
+                if (isset($pdo) && $pdo->inTransaction()) {
+                    $pdo->rollBack();
+                }
+                error_log("Error in draw_random_lane: " . $e->getMessage());
                 $response['message'] = 'Database error: ' . $e->getMessage();
             }
             break;
@@ -890,16 +976,53 @@ case 'get_players_data':
             
             try {
                 $pdo = getDBConnection();
+                $pdo->beginTransaction();
                 
-                // Check if the user is a participant in this session
-                $checkStmt = $pdo->prepare("SELECT participant_id FROM session_participants WHERE session_id = ? AND user_id = ?");
-                $checkStmt->execute([$sessionId, $userId]);
-                $participant = $checkStmt->fetch();
+                // Ensure user is in session_participants table
+                $checkParticipantStmt = $pdo->prepare("SELECT participant_id FROM session_participants WHERE session_id = ? AND user_id = ?");
+                $checkParticipantStmt->execute([$sessionId, $userId]);
+                $participant = $checkParticipantStmt->fetch();
                 
                 if (!$participant) {
-                    error_log("Lane update failed: User $userId is not a participant in session $sessionId");
-                    $response['message'] = 'User is not a participant in this session';
-                    break;
+                    // Add user to session_participants if not present
+                    $insertStmt = $pdo->prepare("INSERT INTO session_participants (session_id, user_id, joined_at) VALUES (?, ?, NOW())");
+                    $insertStmt->execute([$sessionId, $userId]);
+                    error_log("Added user $userId to session_participants for session $sessionId");
+                }
+                
+                // Check if this is a Doubles session and if user is in a duo
+                $sessionStmt = $pdo->prepare("SELECT game_mode FROM game_sessions WHERE session_id = ?");
+                $sessionStmt->execute([$sessionId]);
+                $session = $sessionStmt->fetch(PDO::FETCH_ASSOC);
+                $isDoubles = ($session && $session['game_mode'] === 'Doubles');
+                
+                $duoInfo = null;
+                $partnerId = null;
+                if ($isDoubles) {
+                    // Check if user is in a duo
+                    $duoStmt = $pdo->prepare("
+                        SELECT duo_id, player1_id, player2_id
+                        FROM duo_teams
+                        WHERE session_id = ? AND (player1_id = ? OR player2_id = ?)
+                        LIMIT 1
+                    ");
+                    $duoStmt->execute([$sessionId, $userId, $userId]);
+                    $duoInfo = $duoStmt->fetch(PDO::FETCH_ASSOC);
+                    
+                    if ($duoInfo) {
+                        // Get partner ID
+                        $partnerId = ($duoInfo['player1_id'] == $userId) ? $duoInfo['player2_id'] : $duoInfo['player1_id'];
+                        
+                        // Ensure partner is also in session_participants
+                        $checkPartnerStmt = $pdo->prepare("SELECT participant_id FROM session_participants WHERE session_id = ? AND user_id = ?");
+                        $checkPartnerStmt->execute([$sessionId, $partnerId]);
+                        $partnerParticipant = $checkPartnerStmt->fetch();
+                        
+                        if (!$partnerParticipant) {
+                            $insertPartnerStmt = $pdo->prepare("INSERT INTO session_participants (session_id, user_id, joined_at) VALUES (?, ?, NOW())");
+                            $insertPartnerStmt->execute([$sessionId, $partnerId]);
+                        }
+                    }
                 }
                 
                 // Update the lane number in session_participants table
@@ -909,15 +1032,193 @@ case 'get_players_data':
                 error_log("Lane update SQL result: " . ($result ? 'true' : 'false'));
                 error_log("Lane update affected rows: " . $stmt->rowCount());
                 
-                if ($result && $stmt->rowCount() > 0) {
-                    $response = ['success' => true, 'message' => 'Lane number updated successfully'];
-                    error_log("Lane update successful for user $userId to lane $laneNumber in session $sessionId");
-                } else {
-                    $response['message'] = 'Failed to update lane number - no changes made';
-                    error_log("Lane update failed: No rows affected for user $userId in session $sessionId");
+                if (!$result) {
+                    $pdo->rollBack();
+                    $response['message'] = 'Failed to update lane number';
+                    error_log("Lane update failed for user $userId in session $sessionId");
+                    break;
                 }
+                
+                // For doubles, assign the same lane to partner and update duo_teams
+                if ($isDoubles && $duoInfo && $partnerId) {
+                    // Assign lane to partner
+                    $assignPartnerStmt = $pdo->prepare("UPDATE session_participants SET lane_number = ? WHERE session_id = ? AND user_id = ?");
+                    $partnerResult = $assignPartnerStmt->execute([$laneNumber, $sessionId, $partnerId]);
+                    
+                    if (!$partnerResult) {
+                        $pdo->rollBack();
+                        $response['message'] = 'Failed to assign lane to partner';
+                        error_log("Lane update failed: Could not assign lane to partner $partnerId");
+                        break;
+                    }
+                    
+                    // Update duo_teams table with the lane number
+                    $updateDuoStmt = $pdo->prepare("UPDATE duo_teams SET lane_number = ? WHERE duo_id = ?");
+                    $updateDuoStmt->execute([$laneNumber, $duoInfo['duo_id']]);
+                    error_log("Updated duo_teams lane for duo_id {$duoInfo['duo_id']} to lane $laneNumber");
+                }
+                
+                $pdo->commit();
+                $response = [
+                    'success' => true, 
+                    'message' => $isDoubles && $duoInfo ? 'Lane updated for you and your partner successfully!' : 'Lane number updated successfully'
+                ];
+                error_log("Lane update successful for user $userId to lane $laneNumber in session $sessionId");
             } catch (PDOException $e) {
+                if (isset($pdo) && $pdo->inTransaction()) {
+                    $pdo->rollBack();
+                }
                 error_log("Lane update error: " . $e->getMessage());
+                $response['message'] = 'Database error: ' . $e->getMessage();
+            }
+            break;
+            
+        case 'submit_lane_choice':
+            $sessionId = $_POST['session_id'] ?? null;
+            $laneNumber = isset($_POST['lane_number']) ? (int)$_POST['lane_number'] : null;
+            
+            if (!$sessionId) { 
+                $response['message'] = 'Missing session_id'; 
+                break; 
+            }
+            
+            if (!$laneNumber || $laneNumber < 1) {
+                $response['message'] = 'Invalid lane number';
+                break;
+            }
+            
+            try {
+                $pdo = getDBConnection();
+                $pdo->beginTransaction();
+                
+                $userId = $_SESSION['user_id'];
+                
+                // Ensure user is in session_participants table
+                $checkParticipantStmt = $pdo->prepare("SELECT participant_id, lane_number FROM session_participants WHERE session_id = ? AND user_id = ?");
+                $checkParticipantStmt->execute([$sessionId, $userId]);
+                $participant = $checkParticipantStmt->fetch(PDO::FETCH_ASSOC);
+                
+                // If user is not in session_participants, add them
+                if (!$participant) {
+                    $insertStmt = $pdo->prepare("INSERT INTO session_participants (session_id, user_id, joined_at) VALUES (?, ?, NOW())");
+                    $insertStmt->execute([$sessionId, $userId]);
+                    $participant = ['participant_id' => $pdo->lastInsertId(), 'lane_number' => null];
+                }
+                
+                // Check if user already has a lane assigned
+                if ($participant['lane_number']) {
+                    $pdo->rollBack();
+                    $response['message'] = 'You already have a lane assigned (Lane ' . $participant['lane_number'] . ')';
+                    break;
+                }
+                
+                // Check if this is a Doubles session and if user is in a duo
+                $sessionStmt = $pdo->prepare("SELECT game_mode FROM game_sessions WHERE session_id = ?");
+                $sessionStmt->execute([$sessionId]);
+                $session = $sessionStmt->fetch(PDO::FETCH_ASSOC);
+                $isDoubles = ($session && $session['game_mode'] === 'Doubles');
+                
+                $duoInfo = null;
+                $partnerId = null;
+                if ($isDoubles) {
+                    // Check if user is in a duo
+                    $duoStmt = $pdo->prepare("
+                        SELECT duo_id, player1_id, player2_id, lane_number as duo_lane
+                        FROM duo_teams
+                        WHERE session_id = ? AND (player1_id = ? OR player2_id = ?)
+                        LIMIT 1
+                    ");
+                    $duoStmt->execute([$sessionId, $userId, $userId]);
+                    $duoInfo = $duoStmt->fetch(PDO::FETCH_ASSOC);
+                    
+                    if ($duoInfo) {
+                        // Check if duo already has a lane assigned
+                        if ($duoInfo['duo_lane']) {
+                            $pdo->rollBack();
+                            $response['message'] = 'Your duo already has a lane assigned (Lane ' . $duoInfo['duo_lane'] . ')';
+                            break;
+                        }
+                        
+                        // Get partner ID
+                        $partnerId = ($duoInfo['player1_id'] == $userId) ? $duoInfo['player2_id'] : $duoInfo['player1_id'];
+                        
+                        // Ensure partner is also in session_participants
+                        $checkPartnerStmt = $pdo->prepare("SELECT participant_id FROM session_participants WHERE session_id = ? AND user_id = ?");
+                        $checkPartnerStmt->execute([$sessionId, $partnerId]);
+                        $partnerParticipant = $checkPartnerStmt->fetch(PDO::FETCH_ASSOC);
+                        
+                        if (!$partnerParticipant) {
+                            $insertPartnerStmt = $pdo->prepare("INSERT INTO session_participants (session_id, user_id, joined_at) VALUES (?, ?, NOW())");
+                            $insertPartnerStmt->execute([$sessionId, $partnerId]);
+                        }
+                    }
+                }
+                
+                // Get session lane configuration
+                $config = getLaneConfig($sessionId);
+                $availableLanes = getAvailableLanes($sessionId);
+                
+                // Verify the requested lane is available
+                if (!in_array($laneNumber, $availableLanes)) {
+                    $pdo->rollBack();
+                    $response['message'] = 'Selected lane is not available for this session';
+                    break;
+                }
+                
+                // Check if lane has capacity (for doubles, need space for both players)
+                $playersNeeded = $isDoubles && $duoInfo ? 2 : 1;
+                $stmt = $pdo->prepare("
+                    SELECT COUNT(*) as player_count 
+                    FROM session_participants 
+                    WHERE session_id = ? AND lane_number = ?
+                ");
+                $stmt->execute([$sessionId, $laneNumber]);
+                $currentCount = (int)$stmt->fetch(PDO::FETCH_ASSOC)['player_count'];
+                
+                if (($currentCount + $playersNeeded) > $config['players_per_lane']) {
+                    $pdo->rollBack();
+                    $response['message'] = 'Selected lane is full';
+                    break;
+                }
+                
+                // Assign user to the selected lane
+                $assignStmt = $pdo->prepare("UPDATE session_participants SET lane_number = ? WHERE session_id = ? AND user_id = ?");
+                $result = $assignStmt->execute([$laneNumber, $sessionId, $userId]);
+                
+                if (!$result) {
+                    $pdo->rollBack();
+                    $response['message'] = 'Failed to assign lane';
+                    break;
+                }
+                
+                // For doubles, assign the same lane to partner and update duo_teams
+                if ($isDoubles && $duoInfo && $partnerId) {
+                    // Assign lane to partner
+                    $assignPartnerStmt = $pdo->prepare("UPDATE session_participants SET lane_number = ? WHERE session_id = ? AND user_id = ?");
+                    $partnerResult = $assignPartnerStmt->execute([$laneNumber, $sessionId, $partnerId]);
+                    
+                    if (!$partnerResult) {
+                        $pdo->rollBack();
+                        $response['message'] = 'Failed to assign lane to partner';
+                        break;
+                    }
+                    
+                    // Update duo_teams table with the lane number
+                    $updateDuoStmt = $pdo->prepare("UPDATE duo_teams SET lane_number = ? WHERE duo_id = ?");
+                    $updateDuoStmt->execute([$laneNumber, $duoInfo['duo_id']]);
+                }
+                
+                $pdo->commit();
+                $response = [
+                    'success' => true, 
+                    'lane_number' => $laneNumber, 
+                    'message' => $isDoubles && $duoInfo ? 'Lane assigned to you and your partner successfully!' : 'Lane assigned successfully'
+                ];
+            } catch (Exception $e) {
+                if (isset($pdo) && $pdo->inTransaction()) {
+                    $pdo->rollBack();
+                }
+                error_log("Error in submit_lane_choice: " . $e->getMessage());
                 $response['message'] = 'Database error: ' . $e->getMessage();
             }
             break;

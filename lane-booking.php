@@ -22,14 +22,33 @@ if ($currentUser) {
             // Get user's current lane assignment/preference
             try {
                 $pdo = getDBConnection();
-                $stmt = $pdo->prepare("SELECT lane_number FROM session_participants WHERE session_id = ? AND user_id = ?");
-                $stmt->execute([$activeSession['session_id'], $currentUser['user_id']]);
-                $result = $stmt->fetch(PDO::FETCH_ASSOC);
-                if ($result) {
-                    $userLaneAssignment = $result['lane_number'];
+                
+                // For doubles, also check duo_teams table
+                if ($activeSession['game_mode'] === 'Doubles') {
+                    $duoStmt = $pdo->prepare("
+                        SELECT lane_number 
+                        FROM duo_teams 
+                        WHERE session_id = ? AND (player1_id = ? OR player2_id = ?)
+                        LIMIT 1
+                    ");
+                    $duoStmt->execute([$activeSession['session_id'], $currentUser['user_id'], $currentUser['user_id']]);
+                    $duoLane = $duoStmt->fetch(PDO::FETCH_ASSOC);
+                    if ($duoLane && $duoLane['lane_number']) {
+                        $userLaneAssignment = $duoLane['lane_number'];
+                    }
+                }
+                
+                // Also check session_participants (fallback or for solo/team)
+                if (!$userLaneAssignment) {
+                    $stmt = $pdo->prepare("SELECT lane_number FROM session_participants WHERE session_id = ? AND user_id = ?");
+                    $stmt->execute([$activeSession['session_id'], $currentUser['user_id']]);
+                    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+                    if ($result && $result['lane_number']) {
+                        $userLaneAssignment = $result['lane_number'];
+                    }
                 }
             } catch (Exception $e) {
-                // Handle error silently
+                error_log("Error fetching lane assignment: " . $e->getMessage());
             }
             
             // Get duo information if this is a Doubles session
