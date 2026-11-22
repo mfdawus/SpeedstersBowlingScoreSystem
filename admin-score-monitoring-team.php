@@ -662,6 +662,7 @@ $currentUser = getCurrentUser();
           teamStats[teamName] = {
             teamName: teamName,
             totalScore: 0,
+            hdcpApplied: 0,
             totalGames: 0,
             players: [],
             totalStrikes: 0,
@@ -674,6 +675,7 @@ $currentUser = getCurrentUser();
         }
         
         teamStats[teamName].totalScore += Number(player.total_score) || 0;
+        teamStats[teamName].hdcpApplied += Number(player.hdcp_applied) || 0;
         teamStats[teamName].totalGames += Number(player.games_played) || 0;
         teamStats[teamName].totalStrikes += Number(player.total_strikes) || 0;
         teamStats[teamName].totalSpares += Number(player.total_spares) || 0;
@@ -699,13 +701,16 @@ $currentUser = getCurrentUser();
       });
 
       // Convert to array and sort by total score
-      const teamArray = Object.values(teamStats).sort((a, b) => b.totalScore - a.totalScore);
+      const teamArray = Object.values(teamStats).sort((a, b) =>
+        (b.totalScore + b.hdcpApplied) - (a.totalScore + a.hdcpApplied)
+      );
 
       let html = '';
       teamArray.forEach((team, index) => {
         const rank = index + 1;
         const rankClass = rank === 1 ? 'rank-1' : rank === 2 ? 'rank-2' : rank === 3 ? 'rank-3' : 'rank-other';
-        const avgScore = team.totalGames > 0 ? (team.totalScore / team.totalGames).toFixed(1) : 0;
+        const adjustedTotal = team.totalScore + team.hdcpApplied;
+        const avgScore = team.totalGames > 0 ? (adjustedTotal / team.totalGames).toFixed(1) : 0;
         
         html += `
           <tr>
@@ -720,7 +725,10 @@ $currentUser = getCurrentUser();
               </div>
             </td>
             <td>${team.playerNames.join(', ')}</td>
-            <td><span class="fw-bold text-success">${team.totalScore}</span></td>
+            <td>
+              <span class="fw-bold text-success">${adjustedTotal}</span>
+              <br><small class="text-muted">Scratch ${team.totalScore} + HDCP ${team.hdcpApplied}</small>
+            </td>
             <td><span class="fw-bold text-primary">${avgScore}</span></td>
             <td>${team.totalGames}</td>
             <td><span class="badge bg-info">${team.bestScore > 0 ? team.bestScore : '-'}</span></td>

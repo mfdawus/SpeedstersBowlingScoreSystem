@@ -1,6 +1,7 @@
 <?php
 
 require_once __DIR__ . '/../database.php';
+require_once __DIR__ . '/handicap.php';
 
 // Create a new game session
 function createGameSession($data) {
@@ -271,6 +272,7 @@ function restartSession($sessionId) {
 function addScoreToSession($sessionId, $userId, $gameNumber, $playerScore, $strikes = 0, $spares = 0, $openFrames = 0, $laneNumber = null, $gameMode = 'Team') {
     try {
         $pdo = getDBConnection();
+        hdcpEnsureScoringAllowed($pdo, $sessionId);
         
         error_log("addScoreToSession called with: sessionId=$sessionId, userId=$userId, gameNumber=$gameNumber, playerScore=$playerScore, gameMode=$gameMode");
         
@@ -319,19 +321,27 @@ function addScoreToSession($sessionId, $userId, $gameNumber, $playerScore, $stri
         }
         
         $teamName = $result['team_name'];
-        
+
+        $pdo->beginTransaction();
         if ($result['score_id']) {
             // Update existing score instead of creating duplicate
             error_log("Updating existing score_id: " . $result['score_id']);
             $updateStmt = $pdo->prepare("
                 UPDATE game_scores 
-                SET player_score = ?, strikes = ?, spares = ?, open_frames = ?, 
+                SET player_score = ?, scratch_score = ?, strikes = ?, spares = ?, open_frames = ?,
                     lane_number = ?
                 WHERE score_id = ?
             ");
             $updateResult = $updateStmt->execute([
-                $playerScore, $strikes, $spares, $openFrames, $laneNumber, $result['score_id']
+                $playerScore, $playerScore, $strikes, $spares, $openFrames, $laneNumber, $result['score_id']
             ]);
+            if ($updateResult) {
+                hdcpApplyToScore(
+                    $pdo, $sessionId, $result['score_id'], $gameNumber, $gameMode,
+                    $userId, null, $teamName
+                );
+            }
+            $pdo->commit();
             error_log("Update result: " . ($updateResult ? 'true' : 'false'));
             return $updateResult;
         }
@@ -342,15 +352,23 @@ function addScoreToSession($sessionId, $userId, $gameNumber, $playerScore, $stri
         $stmt = $pdo->prepare("
             INSERT INTO game_scores (
                 user_id, session_id, game_mode, game_date, game_time, 
-                lane_number, game_number, player_score, strikes, spares, 
+                lane_number, game_number, player_score, scratch_score, hdcp_applied,
+                strikes, spares,
                 open_frames, status, team_name
-            ) VALUES (?, ?, ?, CURDATE(), CURTIME(), ?, ?, ?, ?, ?, ?, 'Completed', ?)
+            ) VALUES (?, ?, ?, CURDATE(), CURTIME(), ?, ?, ?, ?, 0, ?, ?, ?, 'Completed', ?)
         ");
         
         $insertResult = $stmt->execute([
             $userId, $sessionId, $gameMode, $laneNumber, $gameNumber, 
-            $playerScore, $strikes, $spares, $openFrames, $teamName
+            $playerScore, $playerScore, $strikes, $spares, $openFrames, $teamName
         ]);
+        if ($insertResult) {
+            hdcpApplyToScore(
+                $pdo, $sessionId, $pdo->lastInsertId(), $gameNumber, $gameMode,
+                $userId, null, $teamName
+            );
+        }
+        $pdo->commit();
         
         error_log("Insert result: " . ($insertResult ? 'true' : 'false'));
         if (!$insertResult) {
@@ -360,8 +378,16 @@ function addScoreToSession($sessionId, $userId, $gameNumber, $playerScore, $stri
         return $insertResult;
         
     } catch(PDOException $e) {
+        if (isset($pdo) && $pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
         error_log("addScoreToSession error: " . $e->getMessage());
         return false;
+    } catch (Exception $e) {
+        if (isset($pdo) && $pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        throw $e;
     }
 }
 

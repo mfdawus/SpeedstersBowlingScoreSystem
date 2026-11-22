@@ -618,15 +618,18 @@ if ($sessionId) {
                                 $stmt = $pdo->prepare("
                                   SELECT 
                                       user_id,
+                                      game_number,
                                       player_score,
+                                      COALESCE(scratch_score, player_score) AS scratch_score,
+                                      COALESCE(hdcp_applied, 0) AS hdcp_applied,
                                       strikes,
                                       spares,
                                       created_at
                                   FROM game_scores 
-                                  WHERE status = 'Completed' AND game_mode = 'Solo' AND DATE(created_at) = CURDATE()
+                                  WHERE status = 'Completed' AND game_mode = 'Solo' AND session_id = ?
                                   ORDER BY user_id, created_at DESC
                                 ");
-                                $stmt->execute();
+                                $stmt->execute([$sessionId]);
                                 $allTodayScores = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                 
                                 // Group scores by user_id
@@ -642,18 +645,31 @@ if ($sessionId) {
                                 foreach ($allPlayers as $player) {
                                   $playerGames = $scoresByUser[$player['user_id']] ?? [];
                                   
-                                  $playerScores = array_column($playerGames, 'player_score');
-                                  $totalScore = array_sum($playerScores);
+                                  $playerScores = array_column($playerGames, 'scratch_score');
+                                  $scratchTotal = array_sum($playerScores);
+                                  $hdcpApplied = array_sum(array_column($playerGames, 'hdcp_applied'));
+                                  $totalScore = $scratchTotal + $hdcpApplied;
+                                  $adjustedScores = array_map(function($game) {
+                                    return (int)$game['scratch_score'] + (int)$game['hdcp_applied'];
+                                  }, $playerGames);
+                                  $gameScoresByNumber = [];
+                                  foreach ($playerGames as $game) {
+                                    $gameScoresByNumber[(int)$game['game_number']] =
+                                      (int)$game['scratch_score'] + (int)$game['hdcp_applied'];
+                                  }
                                   $avgScore = !empty($playerScores) ? round($totalScore / count($playerScores), 1) : 0;
-                                  $bestScore = !empty($playerScores) ? max($playerScores) : 0;
+                                  $bestScore = !empty($adjustedScores) ? max($adjustedScores) : 0;
                                   $totalStrikes = array_sum(array_column($playerGames, 'strikes'));
                                   $totalSpares = array_sum(array_column($playerGames, 'spares'));
                                   
                                   $playerStats[] = [
                                     'player' => $player,
                                     'total_score' => $totalScore,
+                                    'scratch_total' => $scratchTotal,
+                                    'hdcp_applied' => $hdcpApplied,
                                     'avg_score' => $avgScore,
                                     'best_score' => $bestScore,
+                                    'game_scores_by_number' => $gameScoresByNumber,
                                     'games_played' => count($playerGames),
                                     'total_strikes' => $totalStrikes,
                                     'total_spares' => $totalSpares,
@@ -663,7 +679,19 @@ if ($sessionId) {
                                 
                                 // Sort by total score descending
                                 usort($playerStats, function($a, $b) {
-                                  return $b['total_score'] <=> $a['total_score'];
+                                  $totalComparison = $b['total_score'] <=> $a['total_score'];
+                                  if ($totalComparison !== 0) {
+                                    return $totalComparison;
+                                  }
+                                  for ($gameNumber = 5; $gameNumber >= 1; $gameNumber--) {
+                                    $aScore = $a['game_scores_by_number'][$gameNumber] ?? 0;
+                                    $bScore = $b['game_scores_by_number'][$gameNumber] ?? 0;
+                                    $gameComparison = $bScore <=> $aScore;
+                                    if ($gameComparison !== 0) {
+                                      return $gameComparison;
+                                    }
+                                  }
+                                  return (int)$a['player']['user_id'] <=> (int)$b['player']['user_id'];
                                 });
                                 
                                 foreach ($playerStats as $stats):
@@ -703,7 +731,10 @@ if ($sessionId) {
                                   <span class="text-muted">-</span>
                                 <?php endif; ?>
                               </td>
-                                     <td><span class="fw-bold text-success total-score"><?php echo $stats['total_score']; ?></span></td>
+                                     <td>
+                                       <span class="fw-bold text-success total-score"><?php echo $stats['total_score']; ?></span>
+                                       <br><small class="text-muted">Scratch <?php echo $stats['scratch_total']; ?> + HDCP <?php echo $stats['hdcp_applied']; ?></small>
+                                     </td>
                                      <td><span class="fw-bold text-primary avg-score"><?php echo $stats['avg_score']; ?></span></td>
                                      <td><span class="games-played"><?php echo $stats['games_played']; ?></span></td>
                                      <td><span class="badge bg-info best-game"><?php echo $stats['best_score'] > 0 ? $stats['best_score'] : '-'; ?></span></td>
@@ -3495,6 +3526,8 @@ if ($sessionId) {
       players.forEach(player => {
         // Always show the actual data from the server - don't hide scores
         const totalScore = player.total_score || 0;
+        const scratchTotal = player.scratch_total ?? totalScore;
+        const hdcpApplied = player.hdcp_applied || 0;
         const avgScore = player.avg_score || 0;
         const gamesPlayed = player.games_played || 0;
         const bestScore = player.best_score || 0;
@@ -3519,7 +3552,7 @@ if ($sessionId) {
                 ${availableLanes.map(lane => `<option value="${lane}" ${player.lane_number == lane ? 'selected' : ''}>Lane ${lane}</option>`).join('')}
               </select>
             </td>
-            <td><span class="fw-bold text-success">${totalScore}</span></td>
+            <td><span class="fw-bold text-success">${totalScore}</span><br><small class="text-muted">Scratch ${scratchTotal} + HDCP ${hdcpApplied}</small></td>
             <td><span class="fw-bold text-primary">${avgScore}</span></td>
             <td>${gamesPlayed}</td>
             <td><span class="badge bg-info">${bestScore > 0 ? bestScore : '-'}</span></td>
@@ -3554,6 +3587,8 @@ if ($sessionId) {
         players.forEach(player => {
         // Always show the actual data from the server - don't hide scores
         const totalScore = player.total_score || 0;
+        const scratchTotal = player.scratch_total ?? totalScore;
+        const hdcpApplied = player.hdcp_applied || 0;
         const avgScore = player.avg_score || 0;
         const gamesPlayed = player.games_played || 0;
         const bestScore = player.best_score || 0;
@@ -3578,7 +3613,7 @@ if ($sessionId) {
                 ${defaultLanes.map(lane => `<option value="${lane}" ${player.lane_number == lane ? 'selected' : ''}>Lane ${lane}</option>`).join('')}
               </select>
             </td>
-            <td><span class="fw-bold text-success">${totalScore}</span></td>
+            <td><span class="fw-bold text-success">${totalScore}</span><br><small class="text-muted">Scratch ${scratchTotal} + HDCP ${hdcpApplied}</small></td>
             <td><span class="fw-bold text-primary">${avgScore}</span></td>
             <td>${gamesPlayed}</td>
             <td><span class="badge bg-info">${bestScore > 0 ? bestScore : '-'}</span></td>
@@ -3684,7 +3719,7 @@ if ($sessionId) {
       
       players.forEach(player => {
         const gameScore = player[`game_${gameNumber}_score`] || null;
-        const score = gameScore ? gameScore.player_score : '';
+        const score = gameScore ? (gameScore.scratch_score ?? gameScore.player_score) : '';
         const strikes = gameScore ? gameScore.strikes : '';
         const spares = gameScore ? gameScore.spares : '';
         const openFrames = gameScore ? gameScore.open_frames : '';
@@ -3760,6 +3795,7 @@ if ($sessionId) {
               <input type="number" class="form-control form-control-sm score-input" 
                      data-user-id="${player.user_id}" data-field="score" data-game="${gameNumber}"
                      value="${score}" min="0" max="300" placeholder="0-300">
+              ${gameScore && gameScore.hdcp_applied ? `<small class="text-muted">HDCP applied: ${gameScore.hdcp_applied}</small>` : ''}
             </td>
             <td>
               <input type="number" class="form-control form-control-sm score-input" 

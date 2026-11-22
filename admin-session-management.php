@@ -806,6 +806,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                         </td>
                         <td>
                           <div class="d-flex gap-1">
+                            <button class="btn btn-outline-success btn-sm" onclick="manageHandicap(<?php echo $session['session_id']; ?>)" title="Configure and approve HDCP">
+                              <i class="ti ti-bowling"></i> HDCP
+                            </button>
                             <?php if ($session['status'] === 'Scheduled'): ?>
                                   <a href="select-participants.php?session_id=<?php echo $session['session_id']; ?>" class="btn btn-primary btn-sm" title="Select Participants">
                                     <i class="ti ti-users"></i>
@@ -1199,6 +1202,77 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     </div>
   </div>
 
+  <div class="modal fade" id="hdcpModal" tabindex="-1" aria-labelledby="hdcpModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="hdcpModalLabel">Session HDCP Review</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="hdcpSessionId">
+          <div class="alert alert-info" id="hdcpStatusMessage">Configure a past-game evaluation window and review the calculated results.</div>
+          <div class="row g-3 align-items-end mb-4">
+            <div class="col-md-3">
+              <label for="hdcpEvaluationStart" class="form-label">Evaluation start</label>
+              <input type="date" class="form-control" id="hdcpEvaluationStart">
+            </div>
+            <div class="col-md-3">
+              <label for="hdcpEvaluationEnd" class="form-label">Evaluation end</label>
+              <input type="date" class="form-control" id="hdcpEvaluationEnd">
+            </div>
+            <div class="col-md-2">
+              <label for="hdcpThreshold" class="form-label">Total threshold</label>
+              <input type="number" min="0" step="1" class="form-control" id="hdcpThreshold">
+            </div>
+            <div class="col-md-2">
+              <label for="hdcpFreePins" class="form-label">Free pins / game</label>
+              <input type="number" min="0" step="1" class="form-control" id="hdcpFreePins">
+            </div>
+            <div class="col-md-2 d-grid">
+              <button type="button" class="btn btn-primary" onclick="saveHdcpConfig()">Save settings</button>
+            </div>
+          </div>
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <h6 class="mb-0">Participant/team HDCP review</h6>
+            <div class="d-flex gap-2">
+              <button type="button" class="btn btn-outline-danger btn-sm" id="reopenHdcpButton" onclick="reopenHdcp()" hidden>
+                Reopen locked HDCP
+              </button>
+              <button type="button" class="btn btn-outline-primary btn-sm" onclick="evaluateHdcp()">Evaluate past scores</button>
+            </div>
+          </div>
+          <small class="form-text text-muted d-block mb-2">For Solo players, a saved non-zero player default is prefilled as the proposed HDCP. Otherwise, pins are calculated from the threshold. Duo/team awards use the threshold calculation. Review and approve every value before locking.</small>
+          <div class="table-responsive">
+            <table class="table table-sm table-striped align-middle">
+              <thead>
+                <tr>
+                  <th>Unit</th>
+                  <th>Past total</th>
+                  <th>Threshold</th>
+                  <th>Player default</th>
+                  <th>HDCP pins / game (editable)</th>
+                  <th>Override reason (if changed)</th>
+                  <th>Status</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="hdcpAwardsBody">
+                <tr><td colspan="8" class="text-center text-muted">No evaluation results loaded.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="d-flex justify-content-end mt-3">
+            <button type="button" class="btn btn-success" id="lockHdcpButton" onclick="lockHdcp()" disabled>
+              Approve all above and lock HDCP
+            </button>
+          </div>
+          <small class="form-text text-muted d-block mt-2">Every award must be approved before locking. Scores cannot be finalized for this session until HDCP is locked. Locked awards cannot be edited in this workflow; make changes before locking.</small>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Scripts -->
   <script src="./assets/libs/jquery/dist/jquery.min.js"></script>
   <script src="./assets/libs/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
@@ -1206,6 +1280,161 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
   <script src="./assets/js/app.min.js"></script>
 
   <script>
+    function escapeHdcpHtml(value) {
+      return String(value ?? '').replace(/[&<>"']/g, function(character) {
+        return ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'}[character]);
+      });
+    }
+
+    async function hdcpRequest(action, values = {}) {
+      const body = new FormData();
+      body.append('action', action);
+      Object.entries(values).forEach(([key, value]) => body.append(key, value));
+      const response = await fetch('ajax/session-management.php', {method: 'POST', body});
+      const result = await response.json();
+      if (!response.ok || !result.success) {
+        throw new Error(result.message || 'HDCP request failed.');
+      }
+      return result;
+    }
+
+    async function manageHandicap(sessionId) {
+      document.getElementById('hdcpSessionId').value = sessionId;
+      document.getElementById('hdcpAwardsBody').innerHTML =
+        '<tr><td colspan="8" class="text-center text-muted">Loading…</td></tr>';
+      const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('hdcpModal'));
+      modal.show();
+      try {
+        const result = await hdcpRequest('get_hdcp_awards', {session_id: sessionId});
+        const session = result.session;
+        document.getElementById('hdcpEvaluationStart').value = session.hdcp_evaluation_start || '';
+        document.getElementById('hdcpEvaluationEnd').value = session.hdcp_evaluation_end || '';
+        document.getElementById('hdcpThreshold').value = session.hdcp_threshold_total ?? '';
+        document.getElementById('hdcpFreePins').value = session.hdcp_free_pins_per_game ?? '';
+        renderHdcpAwards(result.awards, session.hdcp_status);
+      } catch (error) {
+        document.getElementById('hdcpAwardsBody').innerHTML =
+          `<tr><td colspan="8" class="text-danger">${escapeHdcpHtml(error.message)}</td></tr>`;
+      }
+    }
+
+    function renderHdcpAwards(awards, status) {
+      const statusMessage = document.getElementById('hdcpStatusMessage');
+      const lockButton = document.getElementById('lockHdcpButton');
+      const reopenButton = document.getElementById('reopenHdcpButton');
+      statusMessage.textContent = `HDCP status: ${status}. Thresholds use the full completed-score total in the selected date range. For Solo players, a non-zero saved player default is prefilled; locked awards require re-evaluation to change.`;
+      lockButton.disabled = status !== 'Approved';
+      reopenButton.hidden = status !== 'Locked';
+      if (!awards.length) {
+        document.getElementById('hdcpAwardsBody').innerHTML =
+          '<tr><td colspan="8" class="text-center text-muted">No units found. Select participants or save scores, then evaluate again.</td></tr>';
+        return;
+      }
+      document.getElementById('hdcpAwardsBody').innerHTML = awards.map(award => {
+        const unit = `${award.subject_type}: ${award.label || award.subject_key}`;
+        const disabled = award.decision === 'Locked' || status === 'Locked' ? 'disabled' : '';
+        const actionLabel = award.decision === 'Approved' ? 'Update approval' : 'Approve';
+        return `<tr>
+          <td>${escapeHdcpHtml(unit)}</td>
+          <td>${Number(award.evaluation_total)}</td>
+          <td>${Number(award.threshold_total)}</td>
+          <td>${award.player_default_hdcp_per_game === null || award.player_default_hdcp_per_game === undefined
+            ? '—' : Number(award.player_default_hdcp_per_game)}</td>
+          <td><input type="number" min="0" step="1" class="form-control form-control-sm hdcp-pins" value="${Number(award.hdcp_pins_per_game)}" ${disabled}></td>
+          <td><input type="text" maxlength="255" class="form-control form-control-sm hdcp-reason" value="${escapeHdcpHtml(award.override_reason || '')}" placeholder="Required if changing pins" ${disabled}></td>
+          <td>${escapeHdcpHtml(award.decision)}${Number(award.is_override) ? ' (override)' : ''}</td>
+          <td><button type="button" class="btn btn-sm btn-outline-success" ${disabled}
+            onclick="approveHdcpAward(${Number(award.handicap_id)}, this)">${actionLabel}</button></td>
+        </tr>`;
+      }).join('');
+    }
+
+    async function refreshHdcpAwards() {
+      const sessionId = document.getElementById('hdcpSessionId').value;
+      const result = await hdcpRequest('get_hdcp_awards', {session_id: sessionId});
+      renderHdcpAwards(result.awards, result.session.hdcp_status);
+      return result;
+    }
+
+    async function saveHdcpConfig() {
+      if (document.querySelector('#hdcpAwardsBody .hdcp-pins')
+          && !confirm('Saving these settings will reset the current HDCP awards and approvals. Continue?')) {
+        return;
+      }
+      const values = {
+        session_id: document.getElementById('hdcpSessionId').value,
+        evaluation_start: document.getElementById('hdcpEvaluationStart').value,
+        evaluation_end: document.getElementById('hdcpEvaluationEnd').value,
+        threshold_total: document.getElementById('hdcpThreshold').value,
+        free_pins_per_game: document.getElementById('hdcpFreePins').value
+      };
+      try {
+        const result = await hdcpRequest('save_hdcp_config', values);
+        showNotification(result.message, 'success');
+        await refreshHdcpAwards();
+      } catch (error) {
+        showNotification(error.message, 'error');
+      }
+    }
+
+    async function evaluateHdcp() {
+      if (document.querySelector('#hdcpAwardsBody .hdcp-pins')
+          && !confirm('Re-evaluating will reset all current approvals. Continue?')) {
+        return;
+      }
+      try {
+        const result = await hdcpRequest('evaluate_hdcp', {
+          session_id: document.getElementById('hdcpSessionId').value
+        });
+        showNotification(result.message, 'success');
+        await refreshHdcpAwards();
+      } catch (error) {
+        showNotification(error.message, 'error');
+      }
+    }
+
+    async function approveHdcpAward(awardId, button) {
+      const row = button.closest('tr');
+      try {
+        const result = await hdcpRequest('approve_hdcp_award', {
+          handicap_id: awardId,
+          hdcp_pins_per_game: row.querySelector('.hdcp-pins').value,
+          override_reason: row.querySelector('.hdcp-reason').value
+        });
+        showNotification(result.message, 'success');
+        await refreshHdcpAwards();
+      } catch (error) {
+        showNotification(error.message, 'error');
+      }
+    }
+
+    async function lockHdcp() {
+      try {
+        const result = await hdcpRequest('lock_hdcp', {
+          session_id: document.getElementById('hdcpSessionId').value
+        });
+        showNotification(result.message, 'success');
+        await refreshHdcpAwards();
+      } catch (error) {
+        showNotification(error.message, 'error');
+      }
+    }
+
+    async function reopenHdcp() {
+      if (!confirm('Reopen this locked HDCP? Score finalization will be blocked until all awards are reviewed, approved, and locked again. Existing scores will keep their current HDCP until the new awards are locked.')) {
+        return;
+      }
+      try {
+        const result = await hdcpRequest('reopen_hdcp', {
+          session_id: document.getElementById('hdcpSessionId').value
+        });
+        showNotification(result.message, 'success');
+        await refreshHdcpAwards();
+      } catch (error) {
+        showNotification(error.message, 'error');
+      }
+    }
+
     // Create Session Form Handler
     document.getElementById('createSessionForm').addEventListener('submit', async function(e) {
       e.preventDefault();

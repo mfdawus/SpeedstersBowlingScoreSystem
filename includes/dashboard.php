@@ -74,6 +74,13 @@ function getLeaderboard($limit = 10) {
                 u.last_name,
                 u.team_name,
                 u.skill_level,
+                (
+                    SELECT COALESCE(sg.scratch_score, sg.player_score) + COALESCE(sg.hdcp_applied, 0)
+                    FROM game_scores sg
+                    WHERE sg.user_id = u.user_id AND sg.status = 'Completed'
+                    ORDER BY sg.game_date DESC, sg.game_number DESC, sg.created_at DESC, sg.score_id DESC
+                    LIMIT 1
+                ) AS last_game_score,
                 AVG(gs.player_score) as average_score,
                 MAX(gs.player_score) as best_score,
                 COUNT(gs.score_id) as total_games
@@ -82,7 +89,7 @@ function getLeaderboard($limit = 10) {
             WHERE (u.user_role = 'Player' OR u.user_role = 'Admin')
             GROUP BY u.user_id
             HAVING total_games > 0
-            ORDER BY best_score DESC, average_score DESC
+            ORDER BY best_score DESC, average_score DESC, last_game_score DESC
             LIMIT ?
         ");
         $stmt->execute([$limit]);

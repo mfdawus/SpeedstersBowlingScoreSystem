@@ -100,6 +100,32 @@ function updateUser($userId, $data) {
     }
 }
 
+function updateUserDefaultHdcp($userId, $pinsPerGame) {
+    if (!is_scalar($pinsPerGame)) {
+        throw new InvalidArgumentException('HDCP pins must be a whole number between 0 and 4,294,967,295.');
+    }
+    $value = (string)$pinsPerGame;
+    if (!preg_match('/^\d+$/', $value)
+        || strlen($value) > 10
+        || (strlen($value) === 10 && strcmp($value, '4294967295') > 0)) {
+        throw new InvalidArgumentException('HDCP pins must be a whole number between 0 and 4,294,967,295.');
+    }
+
+    $pdo = getDBConnection();
+    $stmt = $pdo->prepare("SELECT 1 FROM users WHERE user_id = ?");
+    $stmt->execute([(int)$userId]);
+    if (!$stmt->fetchColumn()) {
+        throw new InvalidArgumentException('User not found.');
+    }
+
+    $stmt = $pdo->prepare("
+        UPDATE users
+        SET default_hdcp_pins_per_game = ?
+        WHERE user_id = ?
+    ");
+    return $stmt->execute([(int)$value, (int)$userId]);
+}
+
 // Delete user
 function deleteUser($userId) {
     try {

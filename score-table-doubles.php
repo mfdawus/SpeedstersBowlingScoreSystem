@@ -92,6 +92,8 @@ if ($selectedSession) {
             'games' => [],         // game_number => ['score' => ..., 'strikes' => ..., 'time' => ...] (combined)
             'player_scores' => [], // user_id => [game_number => ['score' => ..., 'strikes' => ..., 'time' => ...]] (individual)
             'total_score' => 0,
+            'scratch_total' => 0,
+            'hdcp_total' => 0,
             'games_played' => 0,
             'best_game' => 0,
             'combined_strikes' => 0,
@@ -108,6 +110,8 @@ if ($selectedSession) {
                     user_id,
                     game_number,
                     player_score,
+                    COALESCE(scratch_score, player_score) AS scratch_score,
+                    COALESCE(hdcp_applied, 0) AS hdcp_applied,
                     COALESCE(strikes, 0) as strikes,
                     COALESCE(spares, 0) as spares,
                     COALESCE(open_frames, 0) as open_frames,
@@ -135,7 +139,8 @@ if ($selectedSession) {
             }
             $userId = (int)$s['user_id'];
             $g = (int)$s['game_number'];
-            $score = (int)($s['player_score'] ?? 0);
+            $score = (int)($s['scratch_score'] ?? $s['player_score'] ?? 0);
+            $hdcpApplied = (int)($s['hdcp_applied'] ?? 0);
             $strikes = (int)($s['strikes'] ?? 0);
             $spares = (int)($s['spares'] ?? 0);
             $openFrames = (int)($s['open_frames'] ?? 0);
@@ -154,6 +159,7 @@ if ($selectedSession) {
             // Store individual player score
             $duo['player_scores'][$userId][$g] = [
                 'score' => $score,
+                'hdcp_applied' => $hdcpApplied,
                 'strikes' => $strikes,
                 'spares' => $spares,
                 'open_frames' => $openFrames,
@@ -164,19 +170,25 @@ if ($selectedSession) {
             if (!isset($duo['games'][$g])) {
                 $duo['games'][$g] = [
                     'score' => 0,
+                    'scratch_score' => 0,
+                    'hdcp_applied' => 0,
                     'strikes' => 0,
                     'spares' => 0,
                     'open_frames' => 0,
                     'time' => $time,
                 ];
             }
-            $duo['games'][$g]['score'] += $score;
+            $duo['games'][$g]['scratch_score'] += $score;
+            $duo['games'][$g]['hdcp_applied'] += $hdcpApplied;
+            $duo['games'][$g]['score'] += $score + $hdcpApplied;
             $duo['games'][$g]['strikes'] += $strikes;
             $duo['games'][$g]['spares'] += $spares;
             $duo['games'][$g]['open_frames'] += $openFrames;
             
             // Update totals for overall ranking
-            $duo['total_score'] += $score;
+            $duo['scratch_total'] += $score;
+            $duo['hdcp_total'] += $hdcpApplied;
+            $duo['total_score'] += $score + $hdcpApplied;
             $duo['combined_strikes'] += $strikes;
             $duo['games_played'] = count($duo['games']);
             if ($duo['games'][$g]['score'] > $duo['best_game']) {
@@ -486,7 +498,12 @@ usort($overallRanking, function ($a, $b) {
                                     </small>
                               </td>
                                   <td><span class="badge bg-primary">Lane <?php echo $duo['lane_number'] ?: '-'; ?></span></td>
-                                  <td><span class="fw-bold text-success"><?php echo (int)$duo['total_score']; ?></span></td>
+                                  <td>
+                                    <span class="fw-bold text-success"><?php echo (int)$duo['total_score']; ?></span>
+                                    <br><small class="text-muted">
+                                      Scratch <?php echo (int)$duo['scratch_total']; ?> + HDCP <?php echo (int)$duo['hdcp_total']; ?>
+                                    </small>
+                                  </td>
                                   <td>
                                     <?php if ($pinDiff === 0): ?>
                                       <span class="badge bg-success">Leader</span>
@@ -522,42 +539,23 @@ usort($overallRanking, function ($a, $b) {
                     <?php
                     // Function to render game tab with individual player rows
                     function renderGameTab($gameNumber, $duoTableData) {
-                      // Get individual player scores for this game
+                      // Each duo is one scoreboard unit, so its game bonus is counted once.
                       $playerScores = [];
                       foreach ($duoTableData as $duo) {
-                        if (isset($duo['player_scores'])) {
-                          foreach ($duo['player_scores'] as $userId => $games) {
-                            if (isset($games[$gameNumber])) {
-                              // Find which player this is
-                              $playerIndex = null;
-                              $playerName = '';
-                              $playerPic = '';
-                              if ($duo['players'][0]['id'] == $userId) {
-                                $playerIndex = 0;
-                                $playerName = $duo['players'][0]['name'];
-                                $playerPic = $duo['players'][0]['pic'];
-                              } elseif ($duo['players'][1]['id'] == $userId) {
-                                $playerIndex = 1;
-                                $playerName = $duo['players'][1]['name'];
-                                $playerPic = $duo['players'][1]['pic'];
-                              }
-                              
-                              if ($playerIndex !== null) {
-                                $playerScores[] = [
-                                  'duo' => $duo,
-                                  'player_id' => $userId,
-                                  'player_index' => $playerIndex,
-                                  'player_name' => $playerName,
-                                  'player_pic' => $playerPic,
-                                  'score' => $games[$gameNumber]['score'],
-                                  'strikes' => $games[$gameNumber]['strikes'],
-                                  'spares' => $games[$gameNumber]['spares'],
-                                  'open_frames' => $games[$gameNumber]['open_frames'],
-                                  'time' => $games[$gameNumber]['time']
-                                ];
-                              }
-                            }
-                          }
+                        if (isset($duo['games'][$gameNumber])) {
+                          $playerScores[] = [
+                            'duo' => $duo,
+                            'player_id' => $duo['players'][0]['id'],
+                            'player_name' => $duo['players'][0]['name'] . ' / ' . $duo['players'][1]['name'],
+                            'player_pic' => $duo['players'][0]['pic'],
+                            'score' => $duo['games'][$gameNumber]['score'],
+                            'scratch_score' => $duo['games'][$gameNumber]['scratch_score'],
+                            'hdcp_applied' => $duo['games'][$gameNumber]['hdcp_applied'],
+                            'strikes' => $duo['games'][$gameNumber]['strikes'],
+                            'spares' => $duo['games'][$gameNumber]['spares'],
+                            'open_frames' => $duo['games'][$gameNumber]['open_frames'],
+                            'time' => $duo['games'][$gameNumber]['time']
+                          ];
                         }
                       }
                       
@@ -633,12 +631,17 @@ usort($overallRanking, function ($a, $b) {
                                       <img src="<?php echo htmlspecialchars($currentPlayerPic); ?>" alt="Player" class="rounded-circle me-2" width="32">
                                       <div>
                                         <strong><?php echo htmlspecialchars($entry['player_name']); ?></strong>
-                                        <br><small class="text-muted">Player <?php echo $entry['player_index'] + 1; ?></small>
+                                        <br><small class="text-muted">Combined duo game</small>
                                       </div>
                                     </div>
                               </td>
                                   <td><span class="badge bg-primary">Lane <?php echo $duo['lane_number'] ?: '-'; ?></span></td>
-                                  <td><span class="fw-bold text-success"><?php echo $entry['score']; ?></span></td>
+                                  <td>
+                                    <span class="fw-bold text-success"><?php echo $entry['score']; ?></span>
+                                    <br><small class="text-muted">
+                                      Scratch <?php echo $entry['scratch_score']; ?> + HDCP <?php echo $entry['hdcp_applied']; ?>
+                                    </small>
+                                  </td>
                                   <td>
                                     <?php if ($pinDiff === 0): ?>
                                       <span class="badge bg-success">Leader</span>

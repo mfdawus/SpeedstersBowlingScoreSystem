@@ -363,6 +363,8 @@ function getDuoScores($duoId, $gameNumber = null) {
                 u.profile_picture,
                 gs.game_number,
                 gs.player_score,
+                COALESCE(gs.scratch_score, gs.player_score) as scratch_score,
+                COALESCE(gs.hdcp_applied, 0) as hdcp_applied,
                 gs.strikes,
                 gs.spares,
                 gs.open_frames,
@@ -395,13 +397,17 @@ function getDuoScores($duoId, $gameNumber = null) {
                     'game_number' => $game,
                     'players' => [],
                     'combined_score' => 0,
+                    'scratch_score' => 0,
+                    'hdcp_applied' => 0,
                     'total_strikes' => 0,
                     'total_spares' => 0
                 ];
             }
             
             $gameScores[$game]['players'][] = $score;
-            $gameScores[$game]['combined_score'] += $score['player_score'];
+            $gameScores[$game]['scratch_score'] += $score['scratch_score'];
+            $gameScores[$game]['hdcp_applied'] += $score['hdcp_applied'];
+            $gameScores[$game]['combined_score'] += $score['scratch_score'] + $score['hdcp_applied'];
             $gameScores[$game]['total_strikes'] += $score['strikes'];
             $gameScores[$game]['total_spares'] += $score['spares'];
         }
@@ -425,7 +431,7 @@ function updateDuoCombinedScore($duoId) {
         
         // Calculate total combined score from all games
         $stmt = $pdo->prepare("
-            SELECT COALESCE(SUM(player_score), 0) as total
+            SELECT COALESCE(SUM(COALESCE(scratch_score, player_score) + COALESCE(hdcp_applied, 0)), 0) as total
             FROM game_scores
             WHERE duo_id = ? AND status = 'Completed'
         ");
@@ -726,4 +732,3 @@ function recordLaneVote($duoId, $userId, $laneNumber) {
     }
 }
 ?>
-

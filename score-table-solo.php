@@ -566,6 +566,8 @@ $currentUser = getCurrentUser();
         const rank = index + 1;
         const rankClass = rank === 1 ? 'rank-1' : rank === 2 ? 'rank-2' : rank === 3 ? 'rank-3' : 'rank-other';
         const totalScore = player.total_score || 0;
+        const scratchTotal = player.scratch_total ?? totalScore;
+        const hdcpApplied = player.hdcp_applied || 0;
         const avgScore = player.avg_score || 0;
         const gamesPlayed = player.games_played || 0;
         const bestScore = player.best_score || 0;
@@ -602,7 +604,10 @@ $currentUser = getCurrentUser();
                 `-`
               }
             </td>
-            <td><span class="fw-bold text-success">${totalScore}</span></td>
+            <td>
+              <span class="fw-bold text-success">${totalScore}</span>
+              <br><small class="text-muted">Scratch ${scratchTotal} + HDCP ${hdcpApplied}</small>
+            </td>
             <td>${pinDiffDisplay}</td>
             <td>${avgScore}</td>
             <td>${gamesPlayed}</td>
@@ -660,8 +665,8 @@ $currentUser = getCurrentUser();
 
       // Sort by score for this game
       gamePlayers.sort((a, b) => {
-        const scoreA = a[`game_${gameNumber}_score`].player_score;
-        const scoreB = b[`game_${gameNumber}_score`].player_score;
+        const scoreA = a[`game_${gameNumber}_score`].adjusted_score ?? a[`game_${gameNumber}_score`].player_score;
+        const scoreB = b[`game_${gameNumber}_score`].adjusted_score ?? b[`game_${gameNumber}_score`].player_score;
         return scoreB - scoreA;
       });
 
@@ -670,14 +675,18 @@ $currentUser = getCurrentUser();
       const isFirstLoad = currentRows.length === 0 || (currentRows.length === 1 && currentRows[0].querySelector('.loading-spinner'));
 
       // Get first place score as benchmark for this game
-      const firstPlaceScore = gamePlayers.length > 0 ? gamePlayers[0][`game_${gameNumber}_score`].player_score : 0;
+      const firstPlaceScore = gamePlayers.length > 0
+        ? (gamePlayers[0][`game_${gameNumber}_score`].adjusted_score ?? gamePlayers[0][`game_${gameNumber}_score`].player_score)
+        : 0;
 
       let html = '';
       gamePlayers.forEach((player, index) => {
         const rank = index + 1;
         const rankClass = rank === 1 ? 'rank-1' : rank === 2 ? 'rank-2' : rank === 3 ? 'rank-3' : 'rank-other';
         const gameScore = player[`game_${gameNumber}_score`];
-        const score = gameScore.player_score;
+        const scratchScore = gameScore.scratch_score ?? gameScore.player_score;
+        const hdcpApplied = gameScore.hdcp_applied || 0;
+        const score = gameScore.adjusted_score ?? gameScore.player_score;
         const strikes = gameScore.strikes || 0;
         const spares = gameScore.spares || 0;
         const openFrames = gameScore.open_frames || 0;
@@ -706,7 +715,10 @@ $currentUser = getCurrentUser();
               </div>
             </td>
             <td><span class="badge bg-primary">${player.lane_number || '-'}</span></td>
-            <td><span class="fw-bold text-success">${score}</span></td>
+            <td>
+              <span class="fw-bold text-success">${score}</span>
+              <br><small class="text-muted">Scratch ${scratchScore} + HDCP ${hdcpApplied}</small>
+            </td>
             <td>${pinDiffDisplay}</td>
             <td>${strikes}</td>
             <td>${spares}</td>
@@ -801,13 +813,20 @@ $currentUser = getCurrentUser();
       
       for (let game = 1; game <= 5; game++) {
         const gameScoreObj = player[`game_${game}_score`];
-        const score = gameScoreObj ? gameScoreObj.player_score : '-';
+        const scratchScore = gameScoreObj ? (gameScoreObj.scratch_score ?? gameScoreObj.player_score) : '-';
+        const hdcpApplied = gameScoreObj ? (gameScoreObj.hdcp_applied || 0) : 0;
+        const score = gameScoreObj ? (gameScoreObj.adjusted_score ?? gameScoreObj.player_score) : '-';
         const strikes = gameScoreObj && gameScoreObj.strikes !== null ? gameScoreObj.strikes : '-';
         const spares = gameScoreObj && gameScoreObj.spares !== null ? gameScoreObj.spares : '-';
         const openFrames = gameScoreObj && gameScoreObj.open_frames !== null ? gameScoreObj.open_frames : '-';
         const isCompleted = gameScoreObj && gameScoreObj.player_score > 0;
         
-        const scoreDisplay = isCompleted ? (score == 300 ? '<span class="text-warning font-bold">300 🏆</span>' : `<span class="fw-bold text-dark fs-4">${score}</span>`) : '<span class="text-muted fs-5">-</span>';
+        const scoreLabel = scratchScore == 300
+          ? `<span class="text-warning font-bold">300 🏆</span>`
+          : `<span class="fw-bold text-dark fs-4">${score}</span>`;
+        const scoreDisplay = isCompleted
+          ? `${scoreLabel}<br><small class="text-muted">Scratch ${scratchScore} + HDCP ${hdcpApplied}</small>`
+          : '<span class="text-muted fs-5">-</span>';
         
         gameCardsHtml += `
           <div class="col-md-6 col-lg-4 mb-3">

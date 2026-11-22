@@ -29,13 +29,14 @@ function getAllUsersData() {
                 u.team_name,
                 u.profile_picture,
                 u.created_at,
+                u.default_hdcp_pins_per_game,
                 COUNT(gs.score_id) as total_games,
                 AVG(gs.player_score) as avg_score,
                 MAX(gs.player_score) as best_score
             FROM users u
             LEFT JOIN game_scores gs ON u.user_id = gs.user_id AND gs.status = 'Completed'
             WHERE u.status != 'Deleted'
-            GROUP BY u.user_id, u.username, u.first_name, u.last_name, u.email, u.phone, u.skill_level, u.user_role, u.status, u.team_name, u.profile_picture, u.created_at
+            GROUP BY u.user_id, u.username, u.first_name, u.last_name, u.email, u.phone, u.skill_level, u.user_role, u.status, u.team_name, u.profile_picture, u.created_at, u.default_hdcp_pins_per_game
             ORDER BY u.user_role DESC, u.first_name, u.last_name
         ");
         $stmt->execute();
@@ -112,7 +113,7 @@ $allUsers = getAllUsersData();
                   <div class="d-flex align-items-center justify-content-between mb-4">
                     <div>
                       <h5 class="card-title fw-semibold mb-1">User Management</h5>
-                      <span class="fw-normal text-muted">Manage all players and their information</span>
+                      <span class="fw-normal text-muted">Manage player information and set default HDCP for future Solo games. Locked session HDCP takes precedence.</span>
                     </div>
                     <div class="d-flex gap-2">
                       <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createUserModal">
@@ -180,6 +181,7 @@ $allUsers = getAllUsersData();
                           <th>Best Score</th>
                           <th>Average</th>
                           <th>Joined</th>
+                          <th>HDCP / Solo game</th>
                           <th>Actions</th>
                         </tr>
                       </thead>
@@ -225,6 +227,15 @@ $allUsers = getAllUsersData();
                               <td><?php echo $user['avg_score'] ? number_format($user['avg_score'], 1) : '0.0'; ?></td>
                               <td><?php echo $user['created_at'] ? date('M j, Y', strtotime($user['created_at'])) : 'N/A'; ?></td>
                               <td>
+                                <div class="input-group input-group-sm" style="min-width: 145px;">
+                                  <input type="number" class="form-control user-hdcp-pins" min="0" max="4294967295" step="1"
+                                    value="<?php echo (int)$user['default_hdcp_pins_per_game']; ?>"
+                                    aria-label="Default HDCP pins per Solo game for <?php echo htmlspecialchars($user['username']); ?>">
+                                  <button class="btn btn-outline-primary" type="button"
+                                    onclick="saveUserHdcp(<?php echo (int)$user['user_id']; ?>, this)">Save</button>
+                                </div>
+                              </td>
+                              <td>
                                 <div class="btn-group" role="group">
                                   <button class="btn btn-sm btn-outline-primary" onclick="viewUser(<?php echo $user['user_id']; ?>)" title="View Details">
                                     <i class="ti ti-eye"></i>
@@ -244,7 +255,7 @@ $allUsers = getAllUsersData();
                           <?php endforeach; ?>
                         <?php else: ?>
                           <tr>
-                            <td colspan="11" class="text-center text-muted py-4">
+                            <td colspan="12" class="text-center text-muted py-4">
                               <i class="ti ti-users fs-1 mb-2"></i>
                               <p class="mb-0">No users found</p>
                               <small>Users will appear here once they are added to the system</small>
@@ -906,6 +917,37 @@ $allUsers = getAllUsersData();
 
     function refreshUsers() {
       location.reload();
+    }
+
+    async function saveUserHdcp(userId, button) {
+      const input = button.closest('.input-group').querySelector('.user-hdcp-pins');
+      const value = input.value.trim();
+      if (!/^\d+$/.test(value) || Number(value) > 4294967295) {
+        showNotification('Enter a whole number between 0 and 4,294,967,295.', 'danger');
+        return;
+      }
+
+      button.disabled = true;
+      try {
+        const response = await fetch('ajax/user-crud.php', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+          body: new URLSearchParams({
+            action: 'update_default_hdcp',
+            user_id: String(userId),
+            hdcp_pins_per_game: value
+          })
+        });
+        const result = await response.json();
+        if (!response.ok || !result.success) {
+          throw new Error(result.message || 'Unable to save player HDCP.');
+        }
+        showNotification(result.message, 'success');
+      } catch (error) {
+        showNotification(error.message, 'danger');
+      } finally {
+        button.disabled = false;
+      }
     }
 
     function clearFilters() {

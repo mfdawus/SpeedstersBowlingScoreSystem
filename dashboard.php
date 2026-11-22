@@ -174,22 +174,27 @@ $weeklyTopPlayers = getWeeklyTopPlayers(3);
                   
                   <!-- Latest Games -->
                   <div class="mt-4">
-                    <h6 class="mb-3">Latest Games</h6>
+                    <h6 class="mb-3">Latest 5 Solo Games</h6>
                     <?php 
-                    // Get latest 10 individual games
+                    $latestGamesError = false;
                     try {
                         $pdo = getDBConnection();
                         $stmt = $pdo->prepare("
-                            SELECT game_date, game_time, player_score, game_mode, team_name, lane_number, game_number
-                            FROM game_scores 
-                            WHERE user_id = ? AND status = 'Completed'
-                            ORDER BY game_date DESC, game_time DESC
-                            LIMIT 10
+                            SELECT game_date, game_time, game_mode, lane_number, game_number,
+                                   COALESCE(scratch_score, player_score) AS scratch_score,
+                                   hdcp_applied,
+                                   COALESCE(scratch_score, player_score) + hdcp_applied AS adjusted_score
+                            FROM game_scores
+                            WHERE user_id = ? AND game_mode = 'Solo' AND status = 'Completed'
+                            ORDER BY created_at DESC, score_id DESC
+                            LIMIT 5
                         ");
                         $stmt->execute([$currentUser['user_id']]);
                         $latestGames = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     } catch(PDOException $e) {
+                        error_log('Dashboard latest Solo games query failed: ' . $e->getMessage());
                         $latestGames = [];
+                        $latestGamesError = true;
                     }
                     ?>
                     
@@ -205,9 +210,16 @@ $weeklyTopPlayers = getWeeklyTopPlayers(3);
                                     <small class="text-muted"><?php echo ucfirst($game['game_mode']); ?> • <?php echo date('M j', strtotime($game['game_date'])); ?></small>
                                   </div>
                                   <div class="text-end">
-                                    <span class="fw-bold text-primary fs-5"><?php echo $game['player_score']; ?></span>
+                                    <span class="fw-bold text-primary fs-5"><?php echo (int)$game['adjusted_score']; ?></span>
                                     <br>
-                                    <small class="text-muted">Lane <?php echo $game['lane_number']; ?></small>
+                                    <small class="text-muted">Adjusted</small>
+                                    <br>
+                                    <small class="text-muted">
+                                      Scratch <?php echo (int)$game['scratch_score']; ?>
+                                      + HDCP <?php echo (int)$game['hdcp_applied']; ?>
+                                    </small>
+                                    <br>
+                                    <small class="text-muted">Lane <?php echo htmlspecialchars((string)($game['lane_number'] ?? 'N/A')); ?></small>
                                   </div>
                                 </div>
                               </div>
@@ -217,9 +229,13 @@ $weeklyTopPlayers = getWeeklyTopPlayers(3);
                       </div>
                     <?php else: ?>
                       <div class="text-center text-muted py-4">
-                        <i class="ti ti-bowling fs-1 mb-2"></i>
-                        <p class="mb-0">No games played yet</p>
-                        <small>Start playing to see your latest games!</small>
+                        <?php if ($latestGamesError): ?>
+                          <p class="mb-0 text-danger">Unable to load your latest games right now.</p>
+                        <?php else: ?>
+                          <i class="ti ti-bowling fs-1 mb-2"></i>
+                          <p class="mb-0">No Solo games recorded yet</p>
+                          <small>Completed Solo games will appear here.</small>
+                        <?php endif; ?>
                       </div>
                     <?php endif; ?>
                   </div>

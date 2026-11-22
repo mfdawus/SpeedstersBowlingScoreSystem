@@ -494,6 +494,7 @@ $currentUser = getCurrentUser();
   <script>
     let currentData = null;
     let currentDateFilter = 'today';
+    let currentTeamHdcpTotals = {};
     const currentUserId = <?php echo $_SESSION['user_id'] ?? 'null'; ?>; // Current logged-in user
 
     // Helper function to get profile picture URL
@@ -526,6 +527,7 @@ $currentUser = getCurrentUser();
         
         if (data.success) {
           currentData = data.players;
+          currentTeamHdcpTotals = data.team_hdcp_totals || {};
           updateAllTables();
           
           // Update the session title
@@ -746,6 +748,7 @@ $currentUser = getCurrentUser();
           teamStats[teamName] = {
             teamName: teamName,
             totalScore: 0,
+            hdcpApplied: currentTeamHdcpTotals[teamName] || 0,
             totalGames: 0,
             players: [],
             totalStrikes: 0,
@@ -769,19 +772,25 @@ $currentUser = getCurrentUser();
       });
 
       // Convert to array and sort by total score
-      const teamArray = Object.values(teamStats).sort((a, b) => b.totalScore - a.totalScore);
+      const teamArray = Object.values(teamStats).sort((a, b) =>
+        (b.totalScore + b.hdcpApplied) - (a.totalScore + a.hdcpApplied)
+      );
 
       let html = '';
       teamArray.forEach((team, index) => {
         const rank = index + 1;
         const rankClass = rank === 1 ? 'rank-1' : rank === 2 ? 'rank-2' : rank === 3 ? 'rank-3' : 'rank-other';
-        const avgPerPlayer = team.players.length > 0 ? (team.totalScore / team.players.length).toFixed(1) : 0;
+        const adjustedTotal = team.totalScore + team.hdcpApplied;
+        const avgPerPlayer = team.players.length > 0 ? (adjustedTotal / team.players.length).toFixed(1) : 0;
 
         html += `
           <tr data-team-name="${team.teamName}" style="transition: all 0.3s ease;">
             <td><span class="rank-badge ${rankClass}">${rank}</span></td>
             <td><span class="badge bg-primary fs-6">${team.teamName}</span></td>
-            <td><span class="fw-bold text-success fs-5">${team.totalScore}</span></td>
+            <td>
+              <span class="fw-bold text-success fs-5">${adjustedTotal}</span>
+              <br><small class="text-muted">Scratch ${team.totalScore} + HDCP ${team.hdcpApplied}</small>
+            </td>
             <td><span class="fw-bold text-info">${avgPerPlayer}</span></td>
             <td><span class="badge bg-secondary">${team.players.length}</span></td>
             <td>${team.totalGames}</td>

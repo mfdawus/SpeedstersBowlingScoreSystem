@@ -123,6 +123,8 @@ if ($selectedSession) {
             user_id,
             game_number,
             player_score,
+            COALESCE(scratch_score, player_score) AS scratch_score,
+            COALESCE(hdcp_applied, 0) AS hdcp_applied,
             strikes,
             spares,
             open_frames,
@@ -501,6 +503,8 @@ if ($selectedSession) {
                                     // Get all scores for this duo
                                     $duoScores = getDuoScores($duo['duo_id']);
                                     $totalScore = 0;
+                                    $scratchTotal = 0;
+                                    $hdcpTotal = 0;
                                     $gamesPlayed = 0;
                                     $bestGame = 0;
                                     $totalStrikes = 0;
@@ -509,6 +513,8 @@ if ($selectedSession) {
                                     foreach ($duoScores as $scoreData) {
                                       if (!empty($scoreData['combined_score']) && $scoreData['combined_score'] > 0) {
                                         $totalScore += $scoreData['combined_score'];
+                                        $scratchTotal += $scoreData['scratch_score'];
+                                        $hdcpTotal += $scoreData['hdcp_applied'];
                                         $gamesPlayed++;
                                         if ($scoreData['combined_score'] > $bestGame) {
                                           $bestGame = $scoreData['combined_score'];
@@ -549,7 +555,10 @@ if ($selectedSession) {
                                                onchange="updateLane(<?php echo $duo['duo_id']; ?>, this.value)"
                                                placeholder="Lane">
                               </td>
-                                      <td><span class="fw-bold text-success fs-5"><?php echo $totalScore; ?></span></td>
+                                      <td>
+                                        <span class="fw-bold text-success fs-5"><?php echo $totalScore; ?></span>
+                                        <br><small class="text-muted">Scratch <?php echo $scratchTotal; ?> + HDCP <?php echo $hdcpTotal; ?></small>
+                                      </td>
                                       <td><span class="text-info"><?php echo $avgScore; ?></span></td>
                                       <td><?php echo $gamesPlayed; ?>/5</td>
                                       <td><span class="text-warning fw-bold"><?php echo $bestGame; ?></span></td>

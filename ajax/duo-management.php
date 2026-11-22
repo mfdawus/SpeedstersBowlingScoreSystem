@@ -19,6 +19,7 @@ try {
     require_once __DIR__ . '/../database.php';
     require_once __DIR__ . '/../includes/auth.php';
     require_once __DIR__ . '/../includes/duo-helper.php';
+    require_once __DIR__ . '/../includes/handicap.php';
     
     // Check if user is logged in
     if (!isset($_SESSION['user_id'])) {
@@ -32,7 +33,7 @@ try {
     // Define admin-only actions
     // NOTE: auto_pair_now is intentionally NOT admin-only so that
     // the system/player flow can trigger automatic pairing.
-    $adminActions = ['create_duo_session', 'override_lane', 'bulk_save_scores', 'admin_force_pair'];
+    $adminActions = ['create_duo_session', 'override_lane', 'bulk_save_scores', 'admin_force_pair', 'save_duo_score'];
     
     // Check admin access for admin-only actions
     if (in_array($action, $adminActions) && $userRole !== 'Admin') {
@@ -605,12 +606,13 @@ try {
             
             // Verify player is in this duo
             $pdo = getDBConnection();
+            hdcpEnsureScoringAllowed($pdo, $sessionId);
             $stmt = $pdo->prepare("
                 SELECT player1_id, player2_id, lane_number 
                 FROM duo_teams 
-                WHERE duo_id = ?
+                WHERE duo_id = ? AND session_id = ?
             ");
-            $stmt->execute([$duoId]);
+            $stmt->execute([$duoId, $sessionId]);
             $duo = $stmt->fetch(PDO::FETCH_ASSOC);
             
             if (!$duo || ($duo['player1_id'] != $playerId && $duo['player2_id'] != $playerId)) {
@@ -629,26 +631,35 @@ try {
                 // Update existing score
                 $updateStmt = $pdo->prepare("
                     UPDATE game_scores 
-                    SET player_score = ?, strikes = ?, spares = ?, open_frames = ?, 
+                    SET player_score = ?, scratch_score = ?, strikes = ?, spares = ?, open_frames = ?,
                         lane_number = ?
                     WHERE score_id = ?
                 ");
                 $updateStmt->execute([
-                    $playerScore, $strikes, $spares, $openFrames,
+                    $playerScore, $playerScore, $strikes, $spares, $openFrames,
                     $duo['lane_number'], $existing['score_id']
                 ]);
+                hdcpApplyToScore(
+                    $pdo, $sessionId, $existing['score_id'], $gameNumber, 'Doubles',
+                    $playerId, $duoId, null
+                );
             } else {
                 // Insert new score
                 $insertStmt = $pdo->prepare("
                     INSERT INTO game_scores (
-                        session_id, duo_id, user_id, game_number, player_score,
+                        session_id, duo_id, user_id, game_number, player_score, scratch_score, hdcp_applied,
                         strikes, spares, open_frames, lane_number, game_mode, status
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Doubles', 'Completed')
+                        , game_date, game_time
+                    ) VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, 'Doubles', 'Completed', CURDATE(), CURTIME())
                 ");
                 $insertStmt->execute([
-                    $sessionId, $duoId, $playerId, $gameNumber, $playerScore,
+                    $sessionId, $duoId, $playerId, $gameNumber, $playerScore, $playerScore,
                     $strikes, $spares, $openFrames, $duo['lane_number']
                 ]);
+                hdcpApplyToScore(
+                    $pdo, $sessionId, $pdo->lastInsertId(), $gameNumber, 'Doubles',
+                    $playerId, $duoId, null
+                );
             }
             
             // Update duo's combined total score
@@ -772,4 +783,3 @@ ob_clean();
 echo json_encode($response);
 exit;
 ?>
-

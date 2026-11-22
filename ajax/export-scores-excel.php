@@ -40,6 +40,8 @@ try {
             user_id,
             game_number,
             player_score,
+            COALESCE(scratch_score, player_score) AS scratch_score,
+            COALESCE(hdcp_applied, 0) AS hdcp_applied,
             strikes,
             spares,
             created_at
@@ -79,7 +81,12 @@ try {
     $csvContent = '';
     
     // Header row
-    $headers = ['No', 'Name', 'Team', 'Game1', 'Game2', 'Game3', 'Game4', 'Game5', 'Average', 'Clean Game', 'Penalty Per Game', 'Total', 'Rank'];
+    $headers = ['No', 'Name', 'Team'];
+    for ($gameNum = 1; $gameNum <= 5; $gameNum++) {
+        $headers[] = 'Game' . $gameNum . ' Scratch';
+        $headers[] = 'Game' . $gameNum . ' HDCP';
+    }
+    $headers = array_merge($headers, ['Scratch Total', 'HDCP Applied', 'Adjusted Record Total', 'Average Scratch', 'Clean Game', 'Penalty Per Game', 'Scratch Rank']);
     $csvContent .= implode(',', array_map('escapeCSV', $headers)) . "\n";
     
     // Calculate stats for each player
@@ -88,35 +95,58 @@ try {
         $playerGames = $scoresByUser[$player['user_id']] ?? [];
         
         $gameScores = [];
-        $totalScore = 0;
+        $gameHdcp = [];
+        $scratchTotal = 0;
+        $hdcpTotal = 0;
         $gamesPlayed = 0;
         
         // Get scores for each game (1-5)
         for ($gameNum = 1; $gameNum <= 5; $gameNum++) {
             if (isset($playerGames[$gameNum])) {
-                $score = $playerGames[$gameNum]['player_score'];
+                $score = (int)$playerGames[$gameNum]['scratch_score'];
+                $hdcp = (int)$playerGames[$gameNum]['hdcp_applied'];
                 $gameScores[$gameNum] = $score;
-                $totalScore += $score;
+                $gameHdcp[$gameNum] = $hdcp;
+                $scratchTotal += $score;
+                $hdcpTotal += $hdcp;
                 $gamesPlayed++;
             } else {
                 $gameScores[$gameNum] = '';
+                $gameHdcp[$gameNum] = '';
             }
         }
         
-        $average = $gamesPlayed > 0 ? round($totalScore / $gamesPlayed, 1) : 0;
+        $average = $gamesPlayed > 0 ? round($scratchTotal / $gamesPlayed, 1) : 0;
         
         $playerStats[] = [
             'player' => $player,
             'game_scores' => $gameScores,
-            'total_score' => $totalScore,
+            'game_hdcp' => $gameHdcp,
+            'scratch_total' => $scratchTotal,
+            'hdcp_total' => $hdcpTotal,
+            'adjusted_record_total' => $scratchTotal + $hdcpTotal,
             'average' => $average,
             'games_played' => $gamesPlayed
         ];
     }
     
-    // Sort by total score descending
+    // Scratch winner: scratch total first, then highest score from Game 5 down to Game 1.
     usort($playerStats, function($a, $b) {
-        return $b['total_score'] <=> $a['total_score'];
+        $totalComparison = $b['scratch_total'] <=> $a['scratch_total'];
+        if ($totalComparison !== 0) {
+            return $totalComparison;
+        }
+        for ($gameNumber = 5; $gameNumber >= 1; $gameNumber--) {
+            $aScore = isset($a['game_scores'][$gameNumber])
+                ? (int)$a['game_scores'][$gameNumber] : 0;
+            $bScore = isset($b['game_scores'][$gameNumber])
+                ? (int)$b['game_scores'][$gameNumber] : 0;
+            $gameComparison = $bScore <=> $aScore;
+            if ($gameComparison !== 0) {
+                return $gameComparison;
+            }
+        }
+        return (int)$a['player']['user_id'] <=> (int)$b['player']['user_id'];
     });
     
     // Add data rows
@@ -124,7 +154,8 @@ try {
     foreach ($playerStats as $stats) {
         $player = $stats['player'];
         $gameScores = $stats['game_scores'];
-        $totalScore = $stats['total_score'];
+        $scratchTotal = $stats['scratch_total'];
+        $hdcpTotal = $stats['hdcp_total'];
         $average = $stats['average'];
         
         $row = [];
@@ -140,13 +171,17 @@ try {
         $teamName = $player['team_name'] ?: 'No Team';
         $row[] = $teamName;
         
-        // Game1-5
+        // Game1-5 scratch scores and separately recorded HDCP
         for ($gameNum = 1; $gameNum <= 5; $gameNum++) {
             $score = $gameScores[$gameNum];
             $row[] = $score !== '' ? $score : '';
+            $row[] = $stats['game_hdcp'][$gameNum] !== '' ? $stats['game_hdcp'][$gameNum] : '';
         }
         
-        // Average
+        // Scratch, applied HDCP, adjusted record total, and scratch average
+        $row[] = $scratchTotal > 0 ? $scratchTotal : '';
+        $row[] = $hdcpTotal > 0 ? $hdcpTotal : '';
+        $row[] = $stats['adjusted_record_total'] > 0 ? $stats['adjusted_record_total'] : '';
         $row[] = $average > 0 ? $average : '';
         
         // Clean Game (blank - we don't have this data)
@@ -155,10 +190,7 @@ try {
         // Penalty Per Game (blank - we don't have this data)
         $row[] = '';
         
-        // Total
-        $row[] = $totalScore > 0 ? $totalScore : '';
-        
-        // Rank
+        // Scratch rank
         $row[] = $rank;
         
         $csvContent .= implode(',', array_map('escapeCSV', $row)) . "\n";
@@ -176,8 +208,8 @@ try {
     // Add BOM for UTF-8
     echo "\xEF\xBB\xBF";
     
-    echo "No,Name,Team,Game1,Game2,Game3,Game4,Game5,Average,Clean Game,Penalty Per Game,Total,Rank\n";
-    echo "1,Error,Error,Error,Error,Error,Error,Error,Error,Error,Error,Error,Error\n";
+    echo "No,Name,Team,Game1 Scratch,Game1 HDCP,Game2 Scratch,Game2 HDCP,Game3 Scratch,Game3 HDCP,Game4 Scratch,Game4 HDCP,Game5 Scratch,Game5 HDCP,Scratch Total,HDCP Applied,Adjusted Record Total,Average Scratch,Clean Game,Penalty Per Game,Scratch Rank\n";
+    echo "1,Error,Error,Error,Error,Error,Error,Error,Error,Error,Error,Error,Error,Error,Error,Error,Error,Error,Error,Error\n";
     echo "Error Details: " . $e->getMessage() . "\n";
 }
 ?>

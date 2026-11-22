@@ -33,6 +33,20 @@ try {
 
     $action = $_POST['action'] ?? '';
     switch ($action) {
+        case 'update_default_hdcp':
+            $userId = filter_var($_POST['user_id'] ?? null, FILTER_VALIDATE_INT);
+            if (!$userId || $userId < 1) {
+                throw new InvalidArgumentException('A valid user ID is required.');
+            }
+            if (!array_key_exists('hdcp_pins_per_game', $_POST)) {
+                throw new InvalidArgumentException('HDCP pins are required.');
+            }
+            if (!updateUserDefaultHdcp($userId, $_POST['hdcp_pins_per_game'])) {
+                throw new RuntimeException('Unable to save player HDCP.');
+            }
+            $response = ['success' => true, 'message' => 'Player HDCP saved for future Solo games.'];
+            break;
+
         case 'change_password':
             $userId = $_POST['user_id'] ?? 0;
             $newPassword = $_POST['new_password'] ?? '';

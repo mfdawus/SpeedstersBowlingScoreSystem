@@ -31,7 +31,9 @@ try {
     $adminActions = [
         'create_session', 'start_session', 'end_session', 'cancel_session', 'pause_session', 'restart_session',
         'add_score', 'save_multiple_scores', 'get_team_data', 'get_teams', 'create_team_session',
-        'auto_assign_remaining', 'lock_assignment', 'update_lane_config'
+        'auto_assign_remaining', 'lock_assignment', 'update_lane_config',
+        'get_hdcp_awards', 'save_hdcp_config', 'evaluate_hdcp',
+        'approve_hdcp_award', 'lock_hdcp', 'reopen_hdcp'
     ];
     
     // Check if user is admin for admin-only actions
@@ -45,6 +47,9 @@ try {
     function saveScoreDirectly($userId, $gameNumber, $playerScore, $strikes, $spares, $openFrames, $laneNumber, $gameMode, $sessionId = null) {
         try {
             $pdo = getDBConnection();
+            if ($sessionId) {
+                hdcpEnsureScoringAllowed($pdo, $sessionId);
+            }
             
             // Get player's team name
             $stmt = $pdo->prepare("SELECT team_name FROM users WHERE user_id = ?");
@@ -65,22 +70,34 @@ try {
                 // Update existing score
                 $updateStmt = $pdo->prepare("
                     UPDATE game_scores 
-                    SET player_score = ?, strikes = ?, spares = ?, open_frames = ?, 
+                    SET player_score = ?, scratch_score = ?, strikes = ?, spares = ?, open_frames = ?,
                         lane_number = ?
                     WHERE score_id = ?
                 ");
                 $result = $updateStmt->execute([
-                    $playerScore, $strikes, $spares, $openFrames, $laneNumber, $existingScore['score_id']
+                    $playerScore, $playerScore, $strikes, $spares, $openFrames, $laneNumber, $existingScore['score_id']
                 ]);
+                if ($result && $sessionId) {
+                    hdcpApplyToScore(
+                        $pdo, $sessionId, $existingScore['score_id'], $gameNumber, $gameMode,
+                        $userId, null, $teamName
+                    );
+                }
                 error_log("Direct score update result: " . ($result ? 'true' : 'false'));
                 return $result;
             } else {
                 // Insert new score
                 $stmt = $pdo->prepare("
-                    INSERT INTO game_scores (user_id, session_id, game_mode, game_number, player_score, strikes, spares, open_frames, lane_number, game_date, game_time, status, created_at, team_name) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), 'Completed', NOW(), ?)
+                    INSERT INTO game_scores (user_id, session_id, game_mode, game_number, player_score, scratch_score, hdcp_applied, strikes, spares, open_frames, lane_number, game_date, game_time, status, created_at, team_name)
+                    VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, NOW(), NOW(), 'Completed', NOW(), ?)
                 ");
-                $result = $stmt->execute([$userId, $sessionId, $gameMode, $gameNumber, $playerScore, $strikes, $spares, $openFrames, $laneNumber, $teamName]);
+                $result = $stmt->execute([$userId, $sessionId, $gameMode, $gameNumber, $playerScore, $playerScore, $strikes, $spares, $openFrames, $laneNumber, $teamName]);
+                if ($result && $sessionId) {
+                    hdcpApplyToScore(
+                        $pdo, $sessionId, $pdo->lastInsertId(), $gameNumber, $gameMode,
+                        $userId, null, $teamName
+                    );
+                }
                 error_log("Direct score insert result: " . ($result ? 'true' : 'false'));
                 return $result;
             }
@@ -91,6 +108,64 @@ try {
     }
 
     switch ($action) {
+        case 'get_hdcp_awards':
+            $sessionId = $_POST['session_id'] ?? 0;
+            if (!$sessionId) {
+                throw new Exception('Session ID is required');
+            }
+            $session = hdcpGetSession($pdo, $sessionId);
+            if (!$session) {
+                throw new Exception('Session not found');
+            }
+            $response = [
+                'success' => true,
+                'session' => $session,
+                'awards' => hdcpGetAwards($sessionId)
+            ];
+            break;
+
+        case 'save_hdcp_config':
+            hdcpSaveConfiguration(
+                $_POST['session_id'] ?? 0,
+                $_POST['evaluation_start'] ?? '',
+                $_POST['evaluation_end'] ?? '',
+                $_POST['threshold_total'] ?? '',
+                $_POST['free_pins_per_game'] ?? ''
+            );
+            $response = ['success' => true, 'message' => 'HDCP settings saved. Evaluate scores next.'];
+            break;
+
+        case 'evaluate_hdcp':
+            $awards = hdcpEvaluateSession($_POST['session_id'] ?? 0);
+            $response = [
+                'success' => true,
+                'message' => 'Evaluation complete. Review every row and approve the awards.',
+                'awards' => $awards
+            ];
+            break;
+
+        case 'approve_hdcp_award':
+            hdcpApproveAward(
+                $_POST['handicap_id'] ?? 0,
+                $_SESSION['user_id'],
+                $_POST['hdcp_pins_per_game'] ?? '',
+                $_POST['override_reason'] ?? ''
+            );
+            $response = ['success' => true, 'message' => 'HDCP award approved.'];
+            break;
+
+        case 'lock_hdcp':
+            hdcpLockSession($_POST['session_id'] ?? 0);
+            $response = ['success' => true, 'message' => 'HDCP awards locked for score entry.'];
+            break;
+
+        case 'reopen_hdcp':
+            hdcpReopenSession($_POST['session_id'] ?? 0);
+            $response = [
+                'success' => true,
+                'message' => 'HDCP reopened. Review the awards, then approve and lock them again.'
+            ];
+            break;
         case 'create':
             $data = [
                 'session_name' => $_POST['session_name'] ?? '',
@@ -240,65 +315,20 @@ try {
             
             error_log("Simple score update request: sessionId=$sessionId, userId=$userId, gameNumber=$gameNumber, playerScore=$playerScore");
             
-            if ($userId && $playerScore >= 0) {
+            if ($userId && is_numeric($playerScore) && $playerScore >= 0 && $sessionId) {
                 try {
-                    // Simple approach: Just update or insert the score directly
-                    $pdo = getDBConnection();
-                    
-                    // First, try to find and update existing score
-                    $checkStmt = $pdo->prepare("
-                        SELECT score_id FROM game_scores 
-                        WHERE user_id = ? AND game_number = ? AND session_id = ? AND status = 'Completed'
-                        ORDER BY created_at DESC LIMIT 1
-                    ");
-                    $checkStmt->execute([$userId, $gameNumber, $sessionId]);
-                    $existingScore = $checkStmt->fetch(PDO::FETCH_ASSOC);
-                    
-                    if ($existingScore) {
-                        // Update existing score
-                        $updateStmt = $pdo->prepare("
-                            UPDATE game_scores 
-                            SET player_score = ?, strikes = ?, spares = ?, open_frames = ?, 
-                                lane_number = ?
-                            WHERE score_id = ?
-                        ");
-                        $result = $updateStmt->execute([
-                            $playerScore, $strikes, $spares, $openFrames, $laneNumber, $existingScore['score_id']
-                        ]);
-                        error_log("Simple update result: " . ($result ? 'true' : 'false'));
-                        
-                        if ($result) {
-                            $response = ['success' => true, 'message' => 'Score updated successfully'];
-                        } else {
-                            $response['message'] = 'Failed to update existing score';
-                        }
-                    } else {
-                        // Insert new score
-                        $stmt = $pdo->prepare("SELECT team_name FROM users WHERE user_id = ?");
-                        $stmt->execute([$userId]);
-                        $user = $stmt->fetch(PDO::FETCH_ASSOC);
-                        $teamName = $user['team_name'] ?? null;
-                        
-                        $insertStmt = $pdo->prepare("
-                            INSERT INTO game_scores (user_id, session_id, game_mode, game_number, player_score, strikes, spares, open_frames, lane_number, game_date, game_time, status, created_at, team_name) 
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), 'Completed', NOW(), ?)
-                        ");
-                        $result = $insertStmt->execute([$userId, $sessionId, $gameMode, $gameNumber, $playerScore, $strikes, $spares, $openFrames, $laneNumber, $teamName]);
-                        error_log("Simple insert result: " . ($result ? 'true' : 'false'));
-                        
-                        if ($result) {
-                            $response = ['success' => true, 'message' => 'Score saved successfully'];
-                        } else {
-                            $response['message'] = 'Failed to save new score';
-                        }
-                    }
-                    
-                } catch (PDOException $e) {
-                    error_log("Simple score save error: " . $e->getMessage());
-                    $response['message'] = 'Database error: ' . $e->getMessage();
+                    $result = addScoreToSession(
+                        $sessionId, $userId, $gameNumber, (int)$playerScore,
+                        (int)$strikes, (int)$spares, (int)$openFrames, $laneNumber, $gameMode
+                    );
+                    $response = $result
+                        ? ['success' => true, 'message' => 'Score saved successfully']
+                        : ['success' => false, 'message' => 'Failed to save score'];
+                } catch (Exception $e) {
+                    $response['message'] = $e->getMessage();
                 }
             } else {
-                $response['message'] = 'Invalid user ID or score. Values: userId=' . $userId . ', playerScore=' . $playerScore;
+                $response['message'] = 'A session, user ID, and non-negative numeric score are required.';
             }
     break;
 
@@ -499,7 +529,10 @@ case 'get_players_data':
         if (isset($activeSession) && $activeSession) {
             error_log("DEBUG: Looking for scores in session_id: " . $activeSession['session_id']);
             $stmt = $pdo->prepare("
-                SELECT gs.user_id, gs.game_number, gs.player_score, gs.strikes, gs.spares, gs.open_frames, gs.created_at
+                SELECT gs.user_id, gs.game_number, gs.player_score,
+                       COALESCE(gs.scratch_score, gs.player_score) AS scratch_score,
+                       COALESCE(gs.hdcp_applied, 0) AS hdcp_applied,
+                       gs.team_name, gs.strikes, gs.spares, gs.open_frames, gs.created_at
                 FROM game_scores gs
                 WHERE gs.status = 'Completed' AND gs.session_id = ?
                 ORDER BY gs.user_id, gs.game_number, gs.created_at DESC
@@ -519,11 +552,18 @@ case 'get_players_data':
     $processStart = microtime(true);
     $scoresByUser = [];
     $statsByUser = [];
+    $teamHdcpTotals = [];
     
     if ($selectedDate !== 'all') {
         foreach ($allScores as $score) {
         $userId = $score['user_id'];
         $gameNumber = $score['game_number'];
+        $scratchScore = (int)$score['scratch_score'];
+        $hdcpApplied = (int)$score['hdcp_applied'];
+        $score['adjusted_score'] = $scratchScore + $hdcpApplied;
+        if ($sessionType === 'Team' && !empty($score['team_name'])) {
+            $teamHdcpTotals[$score['team_name']] = ($teamHdcpTotals[$score['team_name']] ?? 0) + $hdcpApplied;
+        }
         
         // Group by user and game
         if (!isset($scoresByUser[$userId])) {
@@ -537,6 +577,8 @@ case 'get_players_data':
         if (!isset($statsByUser[$userId])) {
             $statsByUser[$userId] = [
                 'total_score' => 0,
+                'scratch_total' => 0,
+                'hdcp_applied' => 0,
                 'games_played' => 0,
                 'total_strikes' => 0,
                 'total_spares' => 0,
@@ -545,11 +587,18 @@ case 'get_players_data':
             ];
         }
         
-        $statsByUser[$userId]['total_score'] += $score['player_score'];
+        $statsByUser[$userId]['scratch_total'] += $scratchScore;
+        $statsByUser[$userId]['hdcp_applied'] += $hdcpApplied;
+        $statsByUser[$userId]['total_score'] += $sessionType === 'Solo'
+            ? $scratchScore + $hdcpApplied
+            : $scratchScore;
         $statsByUser[$userId]['games_played']++;
         $statsByUser[$userId]['total_strikes'] += $score['strikes'];
         $statsByUser[$userId]['total_spares'] += $score['spares'];
-        $statsByUser[$userId]['best_score'] = max($statsByUser[$userId]['best_score'], $score['player_score']);
+        $statsByUser[$userId]['best_score'] = max(
+            $statsByUser[$userId]['best_score'],
+            $sessionType === 'Solo' ? $scratchScore + $hdcpApplied : $scratchScore
+        );
         $statsByUser[$userId]['last_updated'] = $score['created_at'];
         }
     }
@@ -562,6 +611,8 @@ case 'get_players_data':
             // For All Time view, we already have the aggregate data from SQL
             // For Overall Rankings, show the average score instead of total
             $player['total_score'] = $player['avg_score'];
+            $player['scratch_total'] = $player['avg_score'];
+            $player['hdcp_applied'] = 0;
             $player['last_updated'] = $player['last_updated'] ? date('M j, g:i A', strtotime($player['last_updated'])) : 'Never';
             
             // No individual game scores for All Time view
@@ -572,6 +623,8 @@ case 'get_players_data':
             // For session-specific view, use processed stats
             $stats = $statsByUser[$userId] ?? [
                 'total_score' => 0,
+                'scratch_total' => 0,
+                'hdcp_applied' => 0,
                 'games_played' => 0,
                 'total_strikes' => 0,
                 'total_spares' => 0,
@@ -580,6 +633,8 @@ case 'get_players_data':
             ];
             
             $player['total_score'] = $stats['total_score'];
+            $player['scratch_total'] = $stats['scratch_total'];
+            $player['hdcp_applied'] = $stats['hdcp_applied'];
             $player['avg_score'] = $stats['games_played'] > 0 ? round($stats['total_score'] / $stats['games_played'], 1) : 0;
             $player['best_score'] = $stats['best_score'];
             $player['games_played'] = $stats['games_played'];
@@ -594,9 +649,29 @@ case 'get_players_data':
         }
     }
     
-    // Sort by total score
+    // Overall winner: adjusted total first, then the highest-most-recent game (Game 5 down to Game 1).
     usort($players, function($a, $b) {
-        return $b['total_score'] <=> $a['total_score'];
+        $totalComparison = $b['total_score'] <=> $a['total_score'];
+        if ($totalComparison !== 0) {
+            return $totalComparison;
+        }
+
+        for ($gameNumber = 5; $gameNumber >= 1; $gameNumber--) {
+            $aGame = $a["game_{$gameNumber}_score"] ?? null;
+            $bGame = $b["game_{$gameNumber}_score"] ?? null;
+            $aScore = $aGame
+                ? (int)(($aGame['adjusted_score'] ?? $aGame['player_score'] ?? 0))
+                : 0;
+            $bScore = $bGame
+                ? (int)(($bGame['adjusted_score'] ?? $bGame['player_score'] ?? 0))
+                : 0;
+            $gameComparison = $bScore <=> $aScore;
+            if ($gameComparison !== 0) {
+                return $gameComparison;
+            }
+        }
+
+        return (int)$a['user_id'] <=> (int)$b['user_id'];
     });
     
     $processTime = (microtime(true) - $processStart) * 1000;
@@ -607,16 +682,17 @@ case 'get_players_data':
     if ($selectedDate !== 'all') {
         $targetDate = ($selectedDate === 'today') ? date('Y-m-d') : $selectedDate;
         $stmt = $pdo->prepare("
-            SELECT session_id, session_name 
+        SELECT session_id, session_name, hdcp_status
             FROM game_sessions 
-            WHERE DATE(session_date) = ? AND (status = 'Active' OR status = 'Completed')
+        WHERE DATE(session_date) = ? AND game_mode = ? AND (status = 'Active' OR status = 'Completed')
             ORDER BY created_at DESC 
             LIMIT 1
         ");
-        $stmt->execute([$targetDate]);
+        $stmt->execute([$targetDate, $sessionType]);
         $session = $stmt->fetch(PDO::FETCH_ASSOC);
         if ($session) {
             $sessionId = $session['session_id'];
+        $sessionHdcpStatus = $session['hdcp_status'];
         }
     }
     
@@ -637,6 +713,8 @@ case 'get_players_data':
         'selected_date' => $selectedDate,
         'session_id' => $sessionId,
         'session_name' => $sessionName,
+        'session_hdcp_status' => $sessionHdcpStatus ?? 'Disabled',
+        'team_hdcp_totals' => $teamHdcpTotals,
         'debug' => [
             'query1_time' => round($query1Time, 2),
             'query2_time' => round($query2Time, 2),
